@@ -1,9 +1,21 @@
+# Node
 node_modules/
 .next/
-.env
-.env.local
-.vscode/
-.venv/
+out/
 *.log
-firebase-service-account.json
 
+# Env
+.env
+.env.*
+!.env.example
+
+# OS / tooling
+.DS_Store
+.vscode/
+.idea/
+
+# Python venv (if you use it)
+.venv/
+
+# Firebase service account (never commit real secrets)
+server/firebase-service-account.json
