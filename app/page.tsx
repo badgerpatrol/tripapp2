@@ -36,8 +36,7 @@ export default function Home() {
             </div>
             <button
               onClick={() => signOut(auth)}
-              className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg transition-colors"
-              style={{ minHeight: 'var(--tap-target-min)' }}
+              className="tap-target px-4 py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg transition-colors"
             >
               Sign Out
             </button>
