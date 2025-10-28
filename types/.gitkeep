@@ -1,0 +1,2 @@
+# Shared TypeScript types and Zod schemas
+# Per CLAUDE.md rule #15: Define Zod schemas in /types/schemas.ts

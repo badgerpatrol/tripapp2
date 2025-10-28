@@ -1,0 +1,2 @@
+# Server-side business logic and services
+# Per CLAUDE.md rule #14: Place business logic in /server/services/*.ts

@@ -19,3 +19,5 @@ out/
 
 # Firebase service account (never commit real secrets)
 server/firebase-service-account.json
+
+/lib/generated/prisma
