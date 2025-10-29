@@ -534,6 +534,7 @@ export default function TripDetailPage() {
           isOpen={isInviteDialogOpen}
           onClose={() => setIsInviteDialogOpen(false)}
           onSuccess={handleInviteSuccess}
+          currentMembers={trip.participants}
         />
       )}
     </div>

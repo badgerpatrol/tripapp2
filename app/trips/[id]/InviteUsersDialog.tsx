@@ -9,6 +9,16 @@ interface InviteUsersDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  currentMembers: Array<{
+    id: string;
+    role: string;
+    rsvpStatus: string;
+    user: {
+      id: string;
+      email: string;
+      displayName: string | null;
+    };
+  }>;
 }
 
 export default function InviteUsersDialog({
@@ -17,6 +27,7 @@ export default function InviteUsersDialog({
   isOpen,
   onClose,
   onSuccess,
+  currentMembers,
 }: InviteUsersDialogProps) {
   const { user } = useAuth();
   const [emailInput, setEmailInput] = useState("");
@@ -228,6 +239,82 @@ export default function InviteUsersDialog({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Current Members Section */}
+            <div className="p-4 bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-700 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <svg
+                  className="w-5 h-5 text-zinc-600 dark:text-zinc-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Current Members ({currentMembers.length})
+                </label>
+              </div>
+              <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg p-2 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800">
+                <div className="space-y-1.5">
+                  {currentMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                            {(member.user.displayName || member.user.email)[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                            {member.user.displayName || member.user.email}
+                          </p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                            {member.user.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                          {member.role}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                            member.rsvpStatus === "ACCEPTED"
+                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                              : member.rsvpStatus === "DECLINED"
+                              ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                              : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+                          }`}
+                        >
+                          {member.rsvpStatus}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-300 dark:border-zinc-600"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  Add New Members
+                </span>
+              </div>
+            </div>
+
             {/* Email Input */}
             <div>
               <label
