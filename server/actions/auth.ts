@@ -111,17 +111,17 @@ export async function syncUserToDatabase(
       phoneNumber: user.phoneNumber,
       role: user.role,
       subscription: user.subscription,
-      timezone: user.timezone,
-      language: user.language,
-      defaultCurrency: user.defaultCurrency,
+      timezone: user.timezone || "UTC",
+      language: user.language || "en",
+      defaultCurrency: user.defaultCurrency || "USD",
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
 
-    return SignUpResponseSchema.parse({
+    return {
       success: true,
       user: userProfile,
-    });
+    };
   } catch (error) {
     console.error("Error syncing user to database:", error);
     return {
@@ -183,17 +183,17 @@ export async function getUserProfile(
       phoneNumber: user.phoneNumber,
       role: user.role,
       subscription: user.subscription,
-      timezone: user.timezone,
-      language: user.language,
-      defaultCurrency: user.defaultCurrency,
+      timezone: user.timezone || "UTC",
+      language: user.language || "en",
+      defaultCurrency: user.defaultCurrency || "USD",
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
 
-    return SignUpResponseSchema.parse({
+    return {
       success: true,
       user: userProfile,
-    });
+    };
   } catch (error) {
     console.error("Error getting user profile:", error);
     return {
