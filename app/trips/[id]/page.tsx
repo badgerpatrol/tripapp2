@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import EditTripDialog from "./EditTripDialog";
 
 interface TripDetail {
   id: string;
@@ -76,6 +77,7 @@ export default function TripDetailPage() {
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const tripId = params.id as string;
 
@@ -150,6 +152,33 @@ export default function TripDetailPage() {
     });
   };
 
+  const handleEditSuccess = () => {
+    // Refetch the trip data after successful edit
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
+  const isOwner = trip?.userRole === "OWNER";
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -177,17 +206,30 @@ export default function TripDetailPage() {
                 <p className="text-zinc-600 dark:text-zinc-400">{trip.description}</p>
               )}
             </div>
-            <span
-              className={`px-3 py-1 text-sm font-medium rounded-full ${
-                trip.status === "PLANNING"
-                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                  : trip.status === "ACTIVE"
-                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                  : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-              }`}
-            >
-              {trip.status}
-            </span>
+            <div className="flex items-center gap-3">
+              {isOwner && (
+                <button
+                  onClick={() => setIsEditDialogOpen(true)}
+                  className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              )}
+              <span
+                className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  trip.status === "PLANNING"
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                    : trip.status === "ACTIVE"
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                    : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                {trip.status}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -434,6 +476,16 @@ export default function TripDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Trip Dialog */}
+      {trip && (
+        <EditTripDialog
+          trip={trip}
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 }

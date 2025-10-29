@@ -83,10 +83,10 @@ async function testTripOverview(idToken: string, tripId: string) {
 }
 
 // Get parameters from command line
-const token = process.argv[2];
+const overviewToken = process.argv[2];
 const tripId = process.argv[3];
 
-if (!token || !tripId) {
+if (!overviewToken || !tripId) {
   console.error("Usage: npx tsx scripts/test-trip-overview.ts <firebase-id-token> <trip-id>");
   console.error("\nOr use curl:");
   console.error(`
@@ -96,4 +96,4 @@ curl http://localhost:3000/api/trips/TRIP_ID \\
   process.exit(1);
 }
 
-testTripOverview(token, tripId);
+testTripOverview(overviewToken, tripId);

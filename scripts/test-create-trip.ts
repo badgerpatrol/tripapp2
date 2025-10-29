@@ -65,9 +65,9 @@ async function testCreateTrip(idToken: string) {
 }
 
 // Get token from command line
-const token = process.argv[2];
+const createTripToken = process.argv[2];
 
-if (!token) {
+if (!createTripToken) {
   console.error("Usage: npx tsx scripts/test-create-trip.ts <firebase-id-token>");
   console.error("\nOr use curl:");
   console.error(`
@@ -79,4 +79,4 @@ curl -X POST http://localhost:3000/api/trips \\
   process.exit(1);
 }
 
-testCreateTrip(token);
+testCreateTrip(createTripToken);

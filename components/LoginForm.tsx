@@ -54,7 +54,7 @@ export default function LoginForm() {
       const validation = schema.safeParse({ email, password });
 
       if (!validation.success) {
-        const firstError = validation.error.errors[0];
+        const firstError = validation.error.issues[0];
         setError(firstError.message);
         setLoading(false);
         return;

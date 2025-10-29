@@ -29,7 +29,7 @@ export async function logEvent(
         entityId,
         eventType,
         byUser,
-        payload: payload || {},
+        payload: payload as any,
       },
     });
   } catch (error) {
