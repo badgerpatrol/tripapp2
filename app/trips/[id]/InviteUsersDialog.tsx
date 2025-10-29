@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+
+interface AvailableUser {
+  id: string;
+  email: string;
+  displayName: string | null;
+  photoURL: string | null;
+}
 
 interface InviteUsersDialogProps {
   tripId: string;
@@ -30,8 +37,10 @@ export default function InviteUsersDialog({
   currentMembers,
 }: InviteUsersDialogProps) {
   const { user } = useAuth();
-  const [emailInput, setEmailInput] = useState("");
-  const [emails, setEmails] = useState<string[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -40,40 +49,74 @@ export default function InviteUsersDialog({
     notFound: Array<{ email: string; status: "not_found" }>;
   } | null>(null);
 
-  if (!isOpen) return null;
-
-  const handleAddEmail = () => {
-    const trimmedEmail = emailInput.trim().toLowerCase();
-
-    if (!trimmedEmail) return;
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setError("Please enter a valid email address");
-      return;
+  // Fetch available users when dialog opens
+  useEffect(() => {
+    if (isOpen && user) {
+      fetchAvailableUsers();
     }
+  }, [isOpen, user]);
 
-    // Check for duplicates
-    if (emails.includes(trimmedEmail)) {
-      setError("This email has already been added");
-      return;
+  const fetchAvailableUsers = async () => {
+    if (!user) return;
+
+    setIsLoadingUsers(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/available-users`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch available users");
+      }
+
+      const data = await response.json();
+      setAvailableUsers(data.users || []);
+    } catch (err) {
+      console.error("Error fetching available users:", err);
+      setError("Failed to load available users. Please try again.");
+    } finally {
+      setIsLoadingUsers(false);
     }
-
-    setEmails([...emails, trimmedEmail]);
-    setEmailInput("");
-    setError(null);
   };
 
-  const handleRemoveEmail = (emailToRemove: string) => {
-    setEmails(emails.filter(email => email !== emailToRemove));
+  const handleToggleUser = (userId: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAddEmail();
+  const handleSelectAll = () => {
+    const filtered = getFilteredUsers();
+    const filteredIds = filtered.map(u => u.id);
+    const allSelected = filteredIds.every(id => selectedUserIds.includes(id));
+
+    if (allSelected) {
+      // Deselect all filtered users
+      setSelectedUserIds(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      // Select all filtered users
+      setSelectedUserIds(prev => {
+        const newSet = new Set([...prev, ...filteredIds]);
+        return Array.from(newSet);
+      });
     }
+  };
+
+  const getFilteredUsers = () => {
+    if (!searchQuery.trim()) {
+      return availableUsers;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return availableUsers.filter(u =>
+      u.email.toLowerCase().includes(query) ||
+      (u.displayName && u.displayName.toLowerCase().includes(query))
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,8 +124,8 @@ export default function InviteUsersDialog({
     setError(null);
     setResult(null);
 
-    if (emails.length === 0) {
-      setError("Please add at least one email address");
+    if (selectedUserIds.length === 0) {
+      setError("Please select at least one user to invite");
       return;
     }
 
@@ -92,6 +135,10 @@ export default function InviteUsersDialog({
       if (!user) {
         throw new Error("You must be logged in to invite users");
       }
+
+      // Get emails of selected users
+      const selectedUsers = availableUsers.filter(u => selectedUserIds.includes(u.id));
+      const emails = selectedUsers.map(u => u.email);
 
       const idToken = await user.getIdToken();
 
@@ -121,14 +168,23 @@ export default function InviteUsersDialog({
       });
 
       // If all invitations were successful, show success and close after a delay
-      if (data.invited.length === emails.length) {
+      if (data.invited.length === selectedUserIds.length) {
         setTimeout(() => {
           onSuccess();
           onClose();
           // Reset state
-          setEmails([]);
+          setSelectedUserIds([]);
+          setSearchQuery("");
           setResult(null);
         }, 2000);
+      } else {
+        // Some invitations failed, remove successful ones from selection
+        setSelectedUserIds(prev =>
+          prev.filter(id => {
+            const user = availableUsers.find(u => u.id === id);
+            return user && !data.invited.some((inv: any) => inv.email === user.email);
+          })
+        );
       }
     } catch (err) {
       console.error("Error inviting users:", err);
@@ -147,17 +203,22 @@ export default function InviteUsersDialog({
       onClose();
       // Reset state after closing
       setTimeout(() => {
-        setEmails([]);
-        setEmailInput("");
+        setSelectedUserIds([]);
+        setSearchQuery("");
         setError(null);
         setResult(null);
       }, 300);
     }
   };
 
+  if (!isOpen) return null;
+
+  const filteredUsers = getFilteredUsers();
+  const selectedUsers = availableUsers.filter(u => selectedUserIds.includes(u.id));
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 md:p-8">
           <div className="flex justify-between items-start mb-6">
             <div>
@@ -165,7 +226,7 @@ export default function InviteUsersDialog({
                 Invite Users
               </h2>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                Invite people to join {tripName}
+                Select users to invite to {tripName}
               </p>
             </div>
             <button
@@ -218,19 +279,6 @@ export default function InviteUsersDialog({
                   <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
                     {result.alreadyMembers.map(item => (
                       <li key={item.email}>{item.email}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {result.notFound.length > 0 && (
-                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                  <p className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-2">
-                    Not registered ({result.notFound.length})
-                  </p>
-                  <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1">
-                    {result.notFound.map(item => (
-                      <li key={item.email}>{item.email} - User needs to create an account first</li>
                     ))}
                   </ul>
                 </div>
@@ -310,86 +358,154 @@ export default function InviteUsersDialog({
               </div>
               <div className="relative flex justify-center">
                 <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  Add New Members
+                  Select Users to Invite
                 </span>
               </div>
             </div>
 
-            {/* Email Input */}
+            {/* Search Box */}
             <div>
               <label
-                htmlFor="email"
+                htmlFor="search"
                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
               >
-                Email Address
+                Search Users
               </label>
-              <div className="flex gap-2">
+              <div className="relative">
                 <input
-                  type="email"
-                  id="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                  placeholder="user@example.com"
-                  disabled={isSubmitting}
+                  type="text"
+                  id="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by name or email..."
+                  disabled={isSubmitting || isLoadingUsers}
+                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
-                <button
-                  type="button"
-                  onClick={handleAddEmail}
-                  disabled={isSubmitting || !emailInput.trim()}
-                  className="tap-target px-6 py-3 rounded-lg bg-zinc-600 hover:bg-zinc-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  Add
-                </button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
               </div>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Press Enter or click Add to add the email to the list
-              </p>
             </div>
 
-            {/* Email List */}
-            {emails.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Users to Invite ({emails.length})
-                </label>
-                <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg p-3 max-h-48 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/50">
-                  <div className="space-y-2">
-                    {emails.map((email) => (
-                      <div
-                        key={email}
-                        className="flex items-center justify-between bg-white dark:bg-zinc-800 px-3 py-2 rounded-md"
+            {/* Selected Users Summary */}
+            {selectedUserIds.length > 0 && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  {selectedUserIds.length} user{selectedUserIds.length !== 1 ? 's' : ''} selected
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedUsers.map(user => (
+                    <span
+                      key={user.id}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-full"
+                    >
+                      {user.displayName || user.email}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleUser(user.id)}
+                        className="hover:text-blue-900 dark:hover:text-blue-100"
                       >
-                        <span className="text-sm text-zinc-900 dark:text-zinc-100">
-                          {email}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveEmail(email)}
-                          disabled={isSubmitting}
-                          className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
+
+            {/* Available Users List */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Available Users ({filteredUsers.length})
+                </label>
+                {filteredUsers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                    disabled={isSubmitting}
+                  >
+                    {filteredUsers.every(u => selectedUserIds.includes(u.id)) ? 'Deselect All' : 'Select All'}
+                  </button>
+                )}
+              </div>
+
+              {isLoadingUsers ? (
+                <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg p-8 text-center bg-white dark:bg-zinc-900">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-zinc-300 border-t-blue-600"></div>
+                  <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Loading users...</p>
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg p-8 text-center bg-white dark:bg-zinc-900">
+                  <svg
+                    className="w-12 h-12 mx-auto text-zinc-400 mb-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    {searchQuery ? 'No users found matching your search' : 'No users available to invite'}
+                  </p>
+                </div>
+              ) : (
+                <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg max-h-96 overflow-y-auto bg-white dark:bg-zinc-900">
+                  <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
+                    {filteredUsers.map((availableUser) => {
+                      const isSelected = selectedUserIds.includes(availableUser.id);
+                      return (
+                        <label
+                          key={availableUser.id}
+                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
+                            isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleUser(availableUser.id)}
+                            disabled={isSubmitting}
+                            className="w-4 h-4 text-blue-600 border-zinc-300 rounded focus:ring-blue-500"
+                          />
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-sm font-semibold text-white">
+                              {(availableUser.displayName || availableUser.email)[0].toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                              {availableUser.displayName || availableUser.email}
+                            </p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                              {availableUser.email}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Info Box */}
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -412,7 +528,7 @@ export default function InviteUsersDialog({
                     How Invitations Work
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                    Invited users will receive an in-app notification and will be added to the trip with PENDING status.
+                    Selected users will receive an in-app notification and will be added to the trip with PENDING status.
                     They can accept or decline the invitation from the trip page.
                   </p>
                 </div>
@@ -431,10 +547,10 @@ export default function InviteUsersDialog({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || emails.length === 0}
+                disabled={isSubmitting || selectedUserIds.length === 0}
                 className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Sending..." : `Invite ${emails.length} User${emails.length !== 1 ? 's' : ''}`}
+                {isSubmitting ? "Sending..." : `Invite ${selectedUserIds.length} User${selectedUserIds.length !== 1 ? 's' : ''}`}
               </button>
             </div>
           </form>
