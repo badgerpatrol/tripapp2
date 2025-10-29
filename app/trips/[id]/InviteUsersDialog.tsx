@@ -216,6 +216,9 @@ export default function InviteUsersDialog({
 
       // Success - refresh the trip data
       onSuccess();
+
+      // Refresh the available users list to show the removed user
+      await fetchAvailableUsers();
     } catch (err) {
       console.error("Error removing member:", err);
       setError(
@@ -527,33 +530,7 @@ export default function InviteUsersDialog({
               )}
             </div>
 
-            {/* Info Box */}
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex gap-2">
-                <svg
-                  className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                    How Invitations Work
-                  </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                    Selected users will receive an in-app notification and will be added to the trip with PENDING status.
-                    They can accept or decline the invitation from the trip page.
-                  </p>
-                </div>
-              </div>
-            </div>
+            
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
@@ -563,7 +540,7 @@ export default function InviteUsersDialog({
                 disabled={isSubmitting}
                 className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
+                Done
               </button>
               <button
                 type="submit"
