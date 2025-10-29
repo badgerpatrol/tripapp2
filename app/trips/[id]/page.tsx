@@ -80,6 +80,7 @@ export default function TripDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
   const tripId = params.id as string;
 
@@ -202,6 +203,51 @@ export default function TripDetailPage() {
     };
 
     fetchTrip();
+  };
+
+  const handleRemoveMember = async (userId: string, userName: string) => {
+    if (!user) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to remove ${userName} from this trip?`
+    );
+
+    if (!confirmed) return;
+
+    setRemovingUserId(userId);
+    setError(null);
+
+    try {
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`/api/trips/${tripId}/members/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error || `Failed to remove member (${response.status})`
+        );
+      }
+
+      // Success - refresh the trip data
+      handleInviteSuccess();
+    } catch (err) {
+      console.error("Error removing member:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to remove member. Please try again."
+      );
+    } finally {
+      setRemovingUserId(null);
+    }
   };
 
   const isOwner = trip?.userRole === "OWNER";
@@ -474,7 +520,20 @@ export default function TripDetailPage() {
 
         {/* Members */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8">
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Members</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
+            {canInvite && (
+              <button
+                onClick={() => setIsInviteDialogOpen(true)}
+                className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Invite Users
+              </button>
+            )}
+          </div>
           <div className="space-y-3">
             {trip.participants.map((member) => (
               <div
@@ -511,6 +570,23 @@ export default function TripDetailPage() {
                   >
                     {member.rsvpStatus}
                   </span>
+                  {member.role !== "OWNER" && canInvite && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member.user.id, member.user.displayName || member.user.email)}
+                      disabled={removingUserId === member.user.id}
+                      className="ml-1 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Remove member"
+                    >
+                      {removingUserId === member.user.id ? (
+                        <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
