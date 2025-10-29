@@ -495,9 +495,11 @@ export default function TripDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                    {member.role}
-                  </span>
+                  {member.role === "OWNER" && (
+                    <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                      {member.role}
+                    </span>
+                  )}
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded ${
                       member.rsvpStatus === "ACCEPTED"
