@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyPasskeyAuthentication } from "@/server/passkey";
 import { adminAuth } from "@/lib/firebase/admin";
 import { logEvent } from "@/server/eventLog";
-import { EventType } from "@prisma/client";
+import { EventType } from "@/lib/generated/prisma";
 
 /**
  * POST /api/passkey/authenticate/verify

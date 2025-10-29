@@ -1,6 +1,6 @@
 import { adminAuth } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma";
-import { TripMemberRole } from "@prisma/client";
+import { TripMemberRole } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth & Authorization Helpers

@@ -9,7 +9,7 @@ import {
   type SignUpResponse,
   type UserProfile,
 } from "@/types/schemas";
-import { EventType } from "@prisma/client";
+import { EventType } from "@/lib/generated/prisma";
 
 /**
  * Syncs a Firebase user to the Prisma database.

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { EventType } from "@prisma/client";
+import { EventType } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Event Logging

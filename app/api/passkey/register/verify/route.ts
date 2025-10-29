@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyPasskeyRegistration } from "@/server/passkey";
 import { verifyIdToken } from "@/server/authz";
 import { logEvent } from "@/server/eventLog";
-import { EventType } from "@prisma/client";
+import { EventType } from "@/lib/generated/prisma";
 
 /**
  * POST /api/passkey/register/verify
