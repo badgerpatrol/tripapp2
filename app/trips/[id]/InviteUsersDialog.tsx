@@ -161,32 +161,16 @@ export default function InviteUsersDialog({
         );
       }
 
-      const data = await response.json();
-      setResult({
-        invited: data.invited || [],
-        alreadyMembers: data.alreadyMembers || [],
-        notFound: data.notFound || [],
-      });
+      await response.json();
 
-      // If all invitations were successful, show success and close after a delay
-      if (data.invited.length === selectedUserIds.length) {
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-          // Reset state
-          setSelectedUserIds([]);
-          setSearchQuery("");
-          setResult(null);
-        }, 2000);
-      } else {
-        // Some invitations failed, remove successful ones from selection
-        setSelectedUserIds(prev =>
-          prev.filter(id => {
-            const user = availableUsers.find(u => u.id === id);
-            return user && !data.invited.some((inv: any) => inv.email === user.email);
-          })
-        );
-      }
+      // Refresh the trip data to show new members
+      onSuccess();
+
+      // Clear the selected users so more can be invited
+      setSelectedUserIds([]);
+
+      // Refresh the available users list to remove newly invited users
+      await fetchAvailableUsers();
     } catch (err) {
       console.error("Error inviting users:", err);
       setError(
@@ -460,34 +444,6 @@ export default function InviteUsersDialog({
                 </svg>
               </div>
             </div>
-
-            {/* Selected Users Summary */}
-            {selectedUserIds.length > 0 && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  {selectedUserIds.length} user{selectedUserIds.length !== 1 ? 's' : ''} selected
-                </p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedUsers.map(user => (
-                    <span
-                      key={user.id}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 text-xs font-medium rounded-full"
-                    >
-                      {user.displayName || user.email}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleUser(user.id)}
-                        className="hover:text-blue-900 dark:hover:text-blue-100"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Available Users List */}
             <div>

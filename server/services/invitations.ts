@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { RsvpStatus, TripMemberRole, EventType, NotificationType } from "@/lib/generated/prisma";
+import { RsvpStatus, TripMemberRole, EventType, NotificationType, NotificationStatus } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
 import { createBatchNotifications } from "./notifications";
 
@@ -39,21 +39,31 @@ export async function inviteUsersToTrip(
   // Create a map of email -> user
   const usersByEmail = new Map(users.map(u => [u.email.toLowerCase(), u]));
 
-  // Find existing members
+  // Find existing members (both active and soft-deleted)
   const existingMembers = await prisma.tripMember.findMany({
     where: {
       tripId,
       userId: {
         in: users.map(u => u.id),
       },
-      deletedAt: null,
     },
     select: {
       userId: true,
+      deletedAt: true,
     },
   });
 
-  const existingMemberIds = new Set(existingMembers.map(m => m.userId));
+  // Separate active members from soft-deleted ones
+  const activeMemberIds = new Set(
+    existingMembers
+      .filter(m => m.deletedAt === null)
+      .map(m => m.userId)
+  );
+  const softDeletedMemberIds = new Set(
+    existingMembers
+      .filter(m => m.deletedAt !== null)
+      .map(m => m.userId)
+  );
 
   // Get trip details for notifications
   const trip = await prisma.trip.findUnique({
@@ -79,10 +89,12 @@ export async function inviteUsersToTrip(
   const invited: Array<{ email: string; userId: string; status: "invited" }> = [];
   const alreadyMembers: Array<{ email: string; userId: string; status: "already_member" }> = [];
   const notFound: Array<{ email: string; status: "not_found" }> = [];
+  const usersToReInvite: typeof users = [];
 
   // Determine which users to invite
   const usersToInvite = users.filter(user => {
-    if (existingMemberIds.has(user.id)) {
+    // User is already an active member
+    if (activeMemberIds.has(user.id)) {
       alreadyMembers.push({
         email: user.email,
         userId: user.id,
@@ -90,6 +102,13 @@ export async function inviteUsersToTrip(
       });
       return false;
     }
+
+    // User was previously removed (soft-deleted), needs re-invitation
+    if (softDeletedMemberIds.has(user.id)) {
+      usersToReInvite.push(user);
+      return false;
+    }
+
     return true;
   });
 
@@ -101,46 +120,72 @@ export async function inviteUsersToTrip(
   }
 
   // Create TripMember records and notifications in a transaction
-  if (usersToInvite.length > 0) {
+  const allUsersToProcess = [...usersToInvite, ...usersToReInvite];
+
+  if (allUsersToProcess.length > 0) {
     await prisma.$transaction(async (tx) => {
-      // Create TripMember records with PENDING status
-      await tx.tripMember.createMany({
-        data: usersToInvite.map(user => ({
+      // Create new TripMember records for new invites
+      if (usersToInvite.length > 0) {
+        await tx.tripMember.createMany({
+          data: usersToInvite.map(user => ({
+            tripId,
+            userId: user.id,
+            role: TripMemberRole.MEMBER,
+            rsvpStatus: RsvpStatus.PENDING,
+            invitedById,
+          })),
+        });
+      }
+
+      // Re-activate soft-deleted members (undelete and reset to PENDING)
+      if (usersToReInvite.length > 0) {
+        for (const user of usersToReInvite) {
+          await tx.tripMember.update({
+            where: {
+              tripId_userId: {
+                tripId,
+                userId: user.id,
+              },
+            },
+            data: {
+              deletedAt: null,
+              rsvpStatus: RsvpStatus.PENDING,
+              invitedById,
+            },
+          });
+        }
+      }
+
+      // Create notifications for all invited/re-invited users
+      await tx.notification.createMany({
+        data: allUsersToProcess.map(user => ({
+          recipientId: user.id,
+          senderId: invitedById,
           tripId,
-          userId: user.id,
-          role: TripMemberRole.MEMBER,
-          rsvpStatus: RsvpStatus.PENDING,
-          invitedById,
+          type: NotificationType.TRIP_INVITE,
+          status: NotificationStatus.UNREAD,
+          title: `Invitation to ${trip.name}`,
+          message: `${trip.createdBy.displayName || trip.createdBy.email} invited you to join "${trip.name}"`,
+          actionUrl: `/trips/${tripId}`,
+          metadata: {
+            tripId,
+            tripName: trip.name,
+            invitedBy: invitedById,
+            invitedByName: trip.createdBy.displayName || trip.createdBy.email,
+          },
         })),
       });
-
-      // Create notifications for each invited user
-      const notifications = usersToInvite.map(user => ({
-        recipientId: user.id,
-        senderId: invitedById,
-        tripId,
-        type: NotificationType.TRIP_INVITE,
-        title: `Invitation to ${trip.name}`,
-        message: `${trip.createdBy.displayName || trip.createdBy.email} invited you to join "${trip.name}"`,
-        actionUrl: `/trips/${tripId}`,
-        metadata: {
-          tripId,
-          tripName: trip.name,
-          invitedBy: invitedById,
-          invitedByName: trip.createdBy.displayName || trip.createdBy.email,
-        },
-      }));
-
-      await createBatchNotifications(notifications);
     });
 
     // Log events for each invitation (outside transaction for idempotency)
-    for (const user of usersToInvite) {
+    for (const user of allUsersToProcess) {
       invited.push({
         email: user.email,
         userId: user.id,
         status: "invited",
       });
+
+      const isReInvite = usersToReInvite.includes(user);
 
       // Log the invitation event
       await logEvent(
@@ -149,7 +194,7 @@ export async function inviteUsersToTrip(
         EventType.TRIP_UPDATED, // Using TRIP_UPDATED as generic event, could add MEMBER_INVITED if needed
         invitedById,
         {
-          action: "member_invited",
+          action: isReInvite ? "member_re_invited" : "member_invited",
           invitedUserId: user.id,
           invitedUserEmail: user.email,
         }
