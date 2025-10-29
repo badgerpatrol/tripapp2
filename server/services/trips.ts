@@ -417,9 +417,7 @@ async function calculateUserBalance(tripId: string, userId: string) {
       deletedAt: null,
     },
     include: {
-      assignments: {
-        where: { deletedAt: null },
-      },
+      assignments: true,
     },
   });
 
@@ -565,7 +563,7 @@ export async function getTripOverviewForMember(
             },
           },
           assignments: {
-            where: { userId, deletedAt: null },
+            where: { userId },
           },
         },
         orderBy: { date: "desc" },
@@ -596,7 +594,6 @@ export async function getTripOverviewForMember(
         tripId,
         deletedAt: null,
       },
-      deletedAt: null,
     },
   });
 

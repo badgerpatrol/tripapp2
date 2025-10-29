@@ -17,7 +17,7 @@ import { UpdateTripSchema } from "@/types/schemas";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Authenticate user
@@ -34,7 +34,7 @@ export async function GET(
     // Verify user exists in database
     await requireAuth(auth.uid);
 
-    const tripId = params.id;
+    const { id: tripId } = await params;
 
     // 2. Get trip with basic info to check membership
     const basicOverview = await getTripOverviewForInvitee(tripId, auth.uid);
@@ -81,7 +81,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. Authenticate user
@@ -98,7 +98,7 @@ export async function PUT(
     // Verify user exists in database
     await requireAuth(auth.uid);
 
-    const tripId = params.id;
+    const { id: tripId } = await params;
 
     // 2. Check if user is trip owner
     const isOwner = await isTripOwner(auth.uid, tripId);

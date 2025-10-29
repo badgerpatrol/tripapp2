@@ -41,11 +41,17 @@ export default function Home() {
               Sign Out
             </button>
           </div>
-          
+
           <div className="text-center py-12">
-            <p className="text-zinc-600 dark:text-zinc-400 text-lg">
-              Your trip dashboard will appear here.
+            <p className="text-zinc-600 dark:text-zinc-400 text-lg mb-8">
+              Start planning your next adventure!
             </p>
+            <a
+              href="/trips/new"
+              className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors shadow-sm"
+            >
+              Create Your First Trip
+            </a>
           </div>
         </div>
       </div>
