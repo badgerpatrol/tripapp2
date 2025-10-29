@@ -40,6 +40,33 @@ interface TripDetail {
     completedAt: string | null;
     order: number;
   }>;
+  spends?: Array<{
+    id: string;
+    description: string;
+    amount: number;
+    currency: string;
+    normalizedAmount: number;
+    date: string;
+    paidBy: {
+      id: string;
+      email: string;
+      displayName: string | null;
+    };
+    category: {
+      id: string;
+      name: string;
+    } | null;
+  }>;
+  userAssignments?: Array<{
+    id: string;
+    userId: string;
+    shareAmount: number;
+    normalizedShareAmount: number;
+    splitType: string;
+  }>;
+  totalSpent?: number;
+  userOwes?: number;
+  userIsOwed?: number;
 }
 
 export default function TripDetailPage() {
@@ -208,6 +235,44 @@ export default function TripDetailPage() {
           </div>
         </div>
 
+        {/* Balance Summary (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined) && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Your Balance</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Total Trip Spend */}
+              {trip.totalSpent !== undefined && (
+                <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Total Trip Spend</p>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {trip.baseCurrency} {trip.totalSpent.toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {/* You Owe */}
+              {trip.userOwes !== undefined && (
+                <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800">
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium mb-1">You Owe</p>
+                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                    {trip.baseCurrency} {trip.userOwes.toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {/* You Are Owed */}
+              {trip.userIsOwed !== undefined && (
+                <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">You Are Owed</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    {trip.baseCurrency} {trip.userIsOwed.toFixed(2)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Timeline (if available) */}
         {trip.timeline && trip.timeline.length > 0 && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
@@ -245,6 +310,80 @@ export default function TripDetailPage() {
                         {formatDate(item.date)}
                       </p>
                     )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Spends (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && trip.spends && trip.spends.length > 0 && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Spends</h2>
+            <div className="space-y-3">
+              {trip.spends.map((spend) => (
+                <div
+                  key={spend.id}
+                  className="flex items-start justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{spend.description}</p>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                          Paid by {spend.paidBy.displayName || spend.paidBy.email}
+                        </p>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                          {spend.currency} {spend.amount.toFixed(2)}
+                        </p>
+                        {spend.currency !== trip.baseCurrency && (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                            {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-500">
+                      <span>{formatDate(spend.date)}</span>
+                      {spend.category && (
+                        <>
+                          <span>•</span>
+                          <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
+                            {spend.category.name}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Your Assignments (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && trip.userAssignments && trip.userAssignments.length > 0 && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Your Assignments</h2>
+            <div className="space-y-3">
+              {trip.userAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
+                >
+                  <div>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Share Amount</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+                      Split Type: {assignment.splitType}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                      {trip.baseCurrency} {assignment.normalizedShareAmount.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               ))}
