@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import EditTripDialog from "./EditTripDialog";
+import InviteUsersDialog from "./InviteUsersDialog";
 
 interface TripDetail {
   id: string;
@@ -78,6 +79,7 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
   const tripId = params.id as string;
 
@@ -177,7 +179,33 @@ export default function TripDetailPage() {
     fetchTrip();
   };
 
+  const handleInviteSuccess = () => {
+    // Refetch the trip data after successful invitations
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
   const isOwner = trip?.userRole === "OWNER";
+  const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
@@ -207,6 +235,17 @@ export default function TripDetailPage() {
               )}
             </div>
             <div className="flex items-center gap-3">
+              {canInvite && (
+                <button
+                  onClick={() => setIsInviteDialogOpen(true)}
+                  className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Invite Users
+                </button>
+              )}
               {isOwner && (
                 <button
                   onClick={() => setIsEditDialogOpen(true)}
@@ -484,6 +523,17 @@ export default function TripDetailPage() {
           isOpen={isEditDialogOpen}
           onClose={() => setIsEditDialogOpen(false)}
           onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* Invite Users Dialog */}
+      {trip && (
+        <InviteUsersDialog
+          tripId={trip.id}
+          tripName={trip.name}
+          isOpen={isInviteDialogOpen}
+          onClose={() => setIsInviteDialogOpen(false)}
+          onSuccess={handleInviteSuccess}
         />
       )}
     </div>
