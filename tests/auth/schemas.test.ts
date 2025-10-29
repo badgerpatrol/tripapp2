@@ -5,6 +5,7 @@ import {
   AuthTokenSchema,
   UserProfileSchema,
 } from "@/types/schemas";
+import { UserRole, SubscriptionTier } from "@/lib/generated/prisma";
 
 describe("Auth Schemas", () => {
   describe("SignUpSchema", () => {
@@ -118,6 +119,8 @@ describe("Auth Schemas", () => {
         displayName: "Test User",
         photoURL: "https://example.com/photo.jpg",
         phoneNumber: "+1234567890",
+        role: UserRole.USER,
+        subscription: SubscriptionTier.FREE,
         timezone: "America/New_York",
         language: "en",
         defaultCurrency: "USD",
@@ -136,6 +139,8 @@ describe("Auth Schemas", () => {
         displayName: null,
         photoURL: null,
         phoneNumber: null,
+        role: UserRole.ADMIN,
+        subscription: SubscriptionTier.PREMIUM,
         timezone: "UTC",
         language: "en",
         defaultCurrency: "USD",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UserRole, SubscriptionTier } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth Schemas
@@ -25,6 +26,8 @@ export const UserProfileSchema = z.object({
   displayName: z.string().nullable(),
   photoURL: z.string().nullable(),
   phoneNumber: z.string().nullable(),
+  role: z.nativeEnum(UserRole),
+  subscription: z.nativeEnum(SubscriptionTier),
   timezone: z.string(),
   language: z.string(),
   defaultCurrency: z.string(),

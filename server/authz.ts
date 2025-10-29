@@ -1,6 +1,6 @@
 import { adminAuth } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma";
-import { TripMemberRole } from "@/lib/generated/prisma";
+import { TripMemberRole, UserRole } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth & Authorization Helpers
@@ -158,4 +158,64 @@ export async function isTripOwner(
   });
 
   return membership?.role === TripMemberRole.OWNER;
+}
+
+/**
+ * Requires a user to have a specific global role.
+ * Throws an error if the user doesn't have the required role.
+ *
+ * @param userId - Firebase UID of the user
+ * @param minRole - Minimum required global role (defaults to USER)
+ */
+export async function requireUserRole(
+  userId: string,
+  minRole: UserRole = UserRole.USER
+) {
+  const user = await requireAuth(userId);
+
+  const roleHierarchy = {
+    [UserRole.USER]: 0,
+    [UserRole.ADMIN]: 1,
+    [UserRole.SUPERADMIN]: 2,
+  };
+
+  const userRoleLevel = roleHierarchy[user.role];
+  const requiredRoleLevel = roleHierarchy[minRole];
+
+  if (userRoleLevel < requiredRoleLevel) {
+    throw new Error(
+      `Forbidden: ${minRole} role required for this action`
+    );
+  }
+
+  return user;
+}
+
+/**
+ * Checks if a user has a specific global role or higher.
+ */
+export async function hasUserRole(
+  userId: string,
+  requiredRole: UserRole
+): Promise<boolean> {
+  try {
+    await requireUserRole(userId, requiredRole);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks if a user is an admin (global role).
+ */
+export async function isAdmin(userId: string): Promise<boolean> {
+  return hasUserRole(userId, UserRole.ADMIN);
+}
+
+/**
+ * Checks if a user is a superadmin (global role).
+ */
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+  return hasUserRole(userId, UserRole.SUPERADMIN);
 }

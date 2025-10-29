@@ -15,6 +15,18 @@ datasource db {
 // ENUMS
 // ============================================================================
 
+enum UserRole {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  ENTERPRISE
+}
+
 enum TripStatus {
   PLANNING
   ACTIVE
@@ -96,6 +108,8 @@ model User {
   displayName String?
   photoURL    String?
   phoneNumber String?
+  role        UserRole @default(USER)
+  subscription SubscriptionTier @default(FREE)
   timezone    String?  @default("UTC")
   language    String?  @default("en")
   defaultCurrency String? @default("USD")
