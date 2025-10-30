@@ -564,7 +564,18 @@ export async function getTripOverviewForMember(
               name: true,
             },
           },
-          assignments: true,
+          assignments: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  displayName: true,
+                  photoURL: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { date: "desc" },
       },
@@ -646,6 +657,11 @@ export async function getTripOverviewForMember(
         paidBy: s.paidBy,
         category: s.category,
         assignedPercentage: Math.round(assignedPercentage * 10) / 10,
+        assignments: s.assignments.map((a) => ({
+          id: a.id,
+          userId: a.userId,
+          user: a.user,
+        })),
       };
     }),
     userAssignments: userAssignments.map((a) => ({

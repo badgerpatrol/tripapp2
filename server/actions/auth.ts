@@ -91,7 +91,7 @@ export async function syncUserToDatabase(
           phoneNumber: phone_number || null,
           timezone: "UTC",
           language: "en",
-          defaultCurrency: "USD",
+          defaultCurrency: "GBP",
         },
       });
 

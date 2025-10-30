@@ -17,7 +17,7 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
-  const [baseCurrency, setBaseCurrency] = useState("USD");
+  const [baseCurrency, setBaseCurrency] = useState("GBP");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);

@@ -7,6 +7,7 @@ import { SpendStatus } from "@/lib/generated/prisma";
 import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
 import AddSpendDialog from "./AddSpendDialog";
+import AssignSpendDialog from "./AssignSpendDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 
@@ -65,6 +66,15 @@ interface TripDetail {
       name: string;
     } | null;
     assignedPercentage?: number;
+    assignments?: Array<{
+      id: string;
+      userId: string;
+      user: {
+        id: string;
+        email: string;
+        displayName: string | null;
+      };
+    }>;
   }>;
   userAssignments?: Array<{
     id: string;
@@ -88,6 +98,8 @@ export default function TripDetailPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isAddSpendDialogOpen, setIsAddSpendDialogOpen] = useState(false);
+  const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
+  const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
   // Spend filtering and sorting state
@@ -283,8 +295,8 @@ export default function TripDetailPage() {
   };
 
   const handleAssignSpend = (spendId: string) => {
-    // TODO: Implement assign spend dialog
-    console.log("Assign spend:", spendId);
+    setSelectedSpendId(spendId);
+    setIsAssignSpendDialogOpen(true);
   };
 
   const handleFinalizeSpend = async (spendId: string) => {
@@ -855,6 +867,91 @@ export default function TripDetailPage() {
           </div>
         )}
 
+        {/* Assign Tasks (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && user && (() => {
+          // Find all spends where the current user is involved but has shareAmount = 0 (pending assignment)
+          const pendingAssignments = trip.spends
+            ?.filter((spend) => {
+              const userAssignment = spend.assignments?.find((a) => a.userId === user.uid);
+              return userAssignment !== undefined; // User is tagged as involved
+            })
+            .map((spend) => {
+              const userAssignment = spend.assignments?.find((a) => a.userId === user.uid);
+              return {
+                spend,
+                assignment: userAssignment,
+              };
+            }) || [];
+
+          if (pendingAssignments.length === 0) return null;
+
+          return (
+            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+                Assign Your Costs
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                You have been tagged in the following spends. Click on each to assign your portion of the costs.
+              </p>
+
+              <div className="space-y-3">
+                {pendingAssignments.map(({ spend }) => (
+                  <button
+                    key={spend.id}
+                    onClick={() => handleAssignSpend(spend.id)}
+                    className="w-full flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border-2 border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-all text-left"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <svg
+                          className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                          />
+                        </svg>
+                        <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {spend.description}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
+                        <span>
+                          Total: {spend.currency} {spend.amount.toFixed(2)}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Paid by: {spend.paidBy.displayName || spend.paidBy.email}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Spends (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
@@ -1064,6 +1161,28 @@ export default function TripDetailPage() {
           trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
           isOpen={isAddSpendDialogOpen}
           onClose={() => setIsAddSpendDialogOpen(false)}
+          onSuccess={handleAddSpendSuccess}
+        />
+      )}
+
+      {/* Assign Spend Dialog */}
+      {trip && selectedSpendId && (
+        <AssignSpendDialog
+          spend={
+            trip.spends?.find((s) => s.id === selectedSpendId) || {
+              id: selectedSpendId,
+              description: "",
+              amount: 0,
+              currency: trip.baseCurrency,
+            }
+          }
+          participants={trip.participants}
+          tripId={trip.id}
+          isOpen={isAssignSpendDialogOpen}
+          onClose={() => {
+            setIsAssignSpendDialogOpen(false);
+            setSelectedSpendId(null);
+          }}
           onSuccess={handleAddSpendSuccess}
         />
       )}

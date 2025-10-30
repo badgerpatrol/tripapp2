@@ -211,7 +211,7 @@ export default function EditTripDialog({
                 maxLength={3}
                 pattern="[A-Z]{3}"
                 className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                placeholder="USD"
+                placeholder="GBP"
               />
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 3-letter currency code (e.g., USD, EUR, GBP)

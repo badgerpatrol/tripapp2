@@ -123,7 +123,7 @@ describe("Auth Schemas", () => {
         subscription: SubscriptionTier.FREE,
         timezone: "America/New_York",
         language: "en",
-        defaultCurrency: "USD",
+        defaultCurrency: "GBP",
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -143,7 +143,7 @@ describe("Auth Schemas", () => {
         subscription: SubscriptionTier.PREMIUM,
         timezone: "UTC",
         language: "en",
-        defaultCurrency: "USD",
+        defaultCurrency: "GBP",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
