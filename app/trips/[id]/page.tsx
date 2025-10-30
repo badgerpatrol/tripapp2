@@ -461,11 +461,7 @@ export default function TripDetailPage() {
 
     console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus });
 
-    const message = isClosing
-      ? "Close spending for this trip? No one will be able to add or edit spends."
-      : "Reopen spending for this trip? Members will be able to add and edit spends again.";
-
-    if (!confirm(message)) return;
+    
 
     try {
       const idToken = await user.getIdToken();
@@ -895,23 +891,7 @@ export default function TripDetailPage() {
             </div>
 
             {/* Spending Status Notice */}
-            {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
-              <div className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                      Spending is closed for this trip
-                    </p>
-                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                      No one can add new spends or edit existing ones. {canInvite && "Click 'Reopen Spending' to allow changes."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            
 
             {trip.spends && trip.spends.length > 0 ? (
               <>
