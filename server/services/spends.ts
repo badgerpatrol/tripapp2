@@ -13,6 +13,20 @@ import { Decimal } from "@prisma/client/runtime/library";
  * @returns Created spend object
  */
 export async function createSpend(userId: string, data: CreateSpendInput) {
+  // Check if trip spend is closed
+  const trip = await prisma.trip.findUnique({
+    where: { id: data.tripId, deletedAt: null },
+    select: { spendStatus: true },
+  });
+
+  if (!trip) {
+    throw new Error("Trip not found");
+  }
+
+  if (trip.spendStatus === SpendStatus.CLOSED) {
+    throw new Error("Cannot add spends. The trip organizer has closed spending for this trip.");
+  }
+
   // Calculate normalized amount (amount * fxRate)
   const normalizedAmount = data.amount * (data.fxRate || 1.0);
 
@@ -161,10 +175,20 @@ export async function updateSpend(spendId: string, userId: string, data: UpdateS
   // Get current spend to check status
   const currentSpend = await prisma.spend.findUnique({
     where: { id: spendId, deletedAt: null },
+    include: {
+      trip: {
+        select: { spendStatus: true },
+      },
+    },
   });
 
   if (!currentSpend) {
     throw new Error("Spend not found");
+  }
+
+  // Check if trip spending is closed
+  if (currentSpend.trip.spendStatus === SpendStatus.CLOSED) {
+    throw new Error("Cannot edit spends. The trip organizer has closed spending for this trip.");
   }
 
   // Prevent editing closed spends - completely locked
@@ -405,6 +429,24 @@ export async function calculateAssignmentPercentage(spendId: string): Promise<nu
  * Soft deletes a spend (sets deletedAt timestamp).
  */
 export async function deleteSpend(spendId: string, userId: string) {
+  // Check if trip spending is closed
+  const currentSpend = await prisma.spend.findUnique({
+    where: { id: spendId, deletedAt: null },
+    include: {
+      trip: {
+        select: { spendStatus: true },
+      },
+    },
+  });
+
+  if (!currentSpend) {
+    throw new Error("Spend not found");
+  }
+
+  if (currentSpend.trip.spendStatus === SpendStatus.CLOSED) {
+    throw new Error("Cannot delete spends. The trip organizer has closed spending for this trip.");
+  }
+
   const spend = await prisma.spend.update({
     where: { id: spendId },
     data: { deletedAt: new Date() },

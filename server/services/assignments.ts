@@ -23,10 +23,20 @@ export async function createAssignments(
   // Get the spend to check status
   const spend = await prisma.spend.findUnique({
     where: { id: spendId, deletedAt: null },
+    include: {
+      trip: {
+        select: { spendStatus: true },
+      },
+    },
   });
 
   if (!spend) {
     throw new Error("Spend not found");
+  }
+
+  // Check if trip spending is closed
+  if (spend.trip.spendStatus === SpendStatus.CLOSED) {
+    throw new Error("Cannot add assignments. The trip organizer has closed spending for this trip.");
   }
 
   // Prevent adding assignments to closed spends
@@ -84,12 +94,23 @@ export async function updateAssignment(
   const assignment = await prisma.spendAssignment.findUnique({
     where: { id: assignmentId },
     include: {
-      spend: true,
+      spend: {
+        include: {
+          trip: {
+            select: { spendStatus: true },
+          },
+        },
+      },
     },
   });
 
   if (!assignment) {
     throw new Error("Assignment not found");
+  }
+
+  // Check if trip spending is closed
+  if (assignment.spend.trip.spendStatus === SpendStatus.CLOSED) {
+    throw new Error("Cannot edit assignments. The trip organizer has closed spending for this trip.");
   }
 
   // Prevent editing assignments for closed spends
@@ -141,12 +162,23 @@ export async function deleteAssignment(assignmentId: string) {
   const assignment = await prisma.spendAssignment.findUnique({
     where: { id: assignmentId },
     include: {
-      spend: true,
+      spend: {
+        include: {
+          trip: {
+            select: { spendStatus: true },
+          },
+        },
+      },
     },
   });
 
   if (!assignment) {
     throw new Error("Assignment not found");
+  }
+
+  // Check if trip spending is closed
+  if (assignment.spend.trip.spendStatus === SpendStatus.CLOSED) {
+    throw new Error("Cannot delete assignments. The trip organizer has closed spending for this trip.");
   }
 
   // Prevent deleting assignments for closed spends

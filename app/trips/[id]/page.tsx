@@ -18,6 +18,7 @@ interface TripDetail {
   startDate: string | null;
   endDate: string | null;
   status: string;
+  spendStatus: SpendStatus;
   createdAt: string;
   organizer: {
     id: string;
@@ -297,10 +298,7 @@ export default function TripDetailPage() {
 
       // If already closed, reopen it using the reopen endpoint
       if (spend.status === "CLOSED") {
-        if (!confirm("Are you sure you want to reopen this spend? It will become editable again.")) {
-          return;
-        }
-
+        
         const response = await fetch(`/api/spends/${spendId}/reopen`, {
           method: "POST",
           headers: {
@@ -335,11 +333,7 @@ export default function TripDetailPage() {
             `Close anyway? (Once closed, the spend cannot be edited)`
           );
           if (!shouldForce) return;
-        } else {
-          if (!confirm("Close this spend? Once closed, it cannot be edited.")) {
-            return;
-          }
-        }
+        } 
 
         // Close the spend
         const response = await fetch(`/api/spends/${spendId}/finalize`, {
@@ -458,6 +452,55 @@ export default function TripDetailPage() {
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
+  const handleToggleTripSpendStatus = async () => {
+    if (!user || !trip) return;
+
+    // Default to OPEN if spendStatus is undefined (for backwards compatibility)
+    const currentStatus = trip.spendStatus || SpendStatus.OPEN;
+    const isClosing = currentStatus === SpendStatus.OPEN;
+
+    console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus });
+
+    const message = isClosing
+      ? "Close spending for this trip? No one will be able to add or edit spends."
+      : "Reopen spending for this trip? Members will be able to add and edit spends again.";
+
+    if (!confirm(message)) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/spend-status`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        // Refetch trip data
+        const tripResponse = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (tripResponse.ok) {
+          const data = await tripResponse.json();
+          setTrip(data.trip);
+        } else {
+          alert("Failed to refresh trip data after status change");
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        alert(`Failed to ${isClosing ? "close" : "open"} spending: ${errorData.error}`);
+      }
+    } catch (err) {
+      console.error("Error toggling trip spend status:", err);
+      alert(`Failed to toggle spending status: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
   const handleRsvpResponse = async (status: "ACCEPTED" | "DECLINED" | "MAYBE") => {
     if (!user) return;
 
@@ -513,17 +556,7 @@ export default function TripDetailPage() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              {canInvite && (
-                <button
-                  onClick={() => setIsInviteDialogOpen(true)}
-                  className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  Invite Users
-                </button>
-              )}
+              
               {isOwner && (
                 <button
                   onClick={() => setIsEditDialogOpen(true)}
@@ -697,9 +730,9 @@ export default function TripDetailPage() {
                       ? "text-red-700 dark:text-red-300"
                       : "text-yellow-700 dark:text-yellow-300"
                   }`}>
-                    {trip.userRsvpStatus === "ACCEPTED" && "You're all set! You can now view trip details, spends, and balances."}
-                    {trip.userRsvpStatus === "DECLINED" && "You can change your response anytime using the buttons below."}
-                    {trip.userRsvpStatus === "MAYBE" && "Let the organizer know when you're sure about your availability."}
+                    {trip.userRsvpStatus === "ACCEPTED" && "Of course you're in!"}
+                    {trip.userRsvpStatus === "DECLINED" && "Shunning it."}
+                    {trip.userRsvpStatus === "MAYBE" && "Faffing at the moment but will make your mind up later."}
                   </p>
                 </div>
               </div>
@@ -830,14 +863,55 @@ export default function TripDetailPage() {
         {trip.userRsvpStatus === "ACCEPTED" && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
-              <button
-                onClick={() => setIsAddSpendDialogOpen(true)}
-                className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
-              >
-                Add Spend
-              </button>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
+                {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
+                  <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                    Spending Closed
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsAddSpendDialogOpen(true)}
+                  disabled={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
+                  className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium transition-colors"
+                >
+                  Add Spend
+                </button>
+                {canInvite && (
+                  <button
+                    onClick={handleToggleTripSpendStatus}
+                    className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                      (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
+                        ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                        : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
+                    }`}
+                  >
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen Spending" : "Close Spending"}
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Spending Status Notice */}
+            {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
+              <div className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                      Spending is closed for this trip
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                      No one can add new spends or edit existing ones. {canInvite && "Click 'Reopen Spending' to allow changes."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {trip.spends && trip.spends.length > 0 ? (
               <>

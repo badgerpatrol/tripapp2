@@ -495,6 +495,7 @@ export async function getTripOverviewForInvitee(
     startDate: trip.startDate,
     endDate: trip.endDate,
     status: trip.status,
+    spendStatus: trip.spendStatus,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,
     participants: trip.members.map((m) => ({
@@ -604,6 +605,7 @@ export async function getTripOverviewForMember(
     startDate: trip.startDate,
     endDate: trip.endDate,
     status: trip.status,
+    spendStatus: trip.spendStatus,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,
     participants: trip.members.map((m) => ({

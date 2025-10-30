@@ -170,16 +170,17 @@ model Passkey {
 // ============================================================================
 
 model Trip {
-  id           String     @id @default(uuid())
+  id           String      @id @default(uuid())
   name         String
   description  String?
-  baseCurrency String     @default("USD")
+  baseCurrency String      @default("USD")
   startDate    DateTime?
   endDate      DateTime?
-  status       TripStatus @default(PLANNING)
+  status       TripStatus  @default(PLANNING)
+  spendStatus  SpendStatus @default(OPEN) // Controls whether any spend can be added/edited on this trip
   createdById  String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   deletedAt    DateTime?
 
   // Relationships
