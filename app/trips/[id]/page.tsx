@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { SpendStatus } from "@/lib/generated/prisma";
 import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
 import AddSpendDialog from "./AddSpendDialog";
+import { SpendListView } from "@/components/SpendListView";
+import { SpendFilters } from "@/components/SpendFilters";
 
 interface TripDetail {
   id: string;
@@ -50,6 +53,7 @@ interface TripDetail {
     currency: string;
     normalizedAmount: number;
     date: string;
+    status: SpendStatus;
     paidBy: {
       id: string;
       email: string;
@@ -59,6 +63,7 @@ interface TripDetail {
       id: string;
       name: string;
     } | null;
+    assignedPercentage?: number;
   }>;
   userAssignments?: Array<{
     id: string;
@@ -83,6 +88,11 @@ export default function TripDetailPage() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isAddSpendDialogOpen, setIsAddSpendDialogOpen] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+
+  // Spend filtering and sorting state
+  const [statusFilter, setStatusFilter] = useState<SpendStatus | "all">("all");
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "description">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const tripId = params.id as string;
 
@@ -230,6 +240,155 @@ export default function TripDetailPage() {
     };
 
     fetchTrip();
+  };
+
+  // Filter and sort spends
+  const getFilteredAndSortedSpends = () => {
+    if (!trip?.spends) return [];
+
+    let filteredSpends = [...trip.spends];
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filteredSpends = filteredSpends.filter((spend) => spend.status === statusFilter);
+    }
+
+    // Apply sorting
+    filteredSpends.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case "date":
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case "amount":
+          comparison = a.normalizedAmount - b.normalizedAmount;
+          break;
+        case "description":
+          comparison = a.description.localeCompare(b.description);
+          break;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return filteredSpends;
+  };
+
+  // Spend action handlers
+  const handleEditSpend = (spendId: string) => {
+    // TODO: Implement edit spend dialog
+    console.log("Edit spend:", spendId);
+  };
+
+  const handleAssignSpend = (spendId: string) => {
+    // TODO: Implement assign spend dialog
+    console.log("Assign spend:", spendId);
+  };
+
+  const handleFinalizeSpend = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === spendId);
+
+      if (!spend) return;
+
+      // If already finalized, reopen it by setting status to OPEN
+      if (spend.status === "FINALIZED") {
+        const response = await fetch(`/api/spends/${spendId}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: "OPEN" }),
+        });
+
+        if (response.ok) {
+          // Refetch trip data
+          const tripResponse = await fetch(`/api/trips/${tripId}`, {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          if (tripResponse.ok) {
+            const data = await tripResponse.json();
+            setTrip(data.trip);
+          }
+        } else {
+          alert("Failed to reopen spend");
+        }
+      } else {
+        // Finalize the spend
+        const response = await fetch(`/api/spends/${spendId}/finalize`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (response.ok) {
+          // Refetch trip data
+          const tripResponse = await fetch(`/api/trips/${tripId}`, {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          if (tripResponse.ok) {
+            const data = await tripResponse.json();
+            setTrip(data.trip);
+          }
+        } else {
+          const errorData = await response.json();
+          alert(`Failed to finalize spend: ${errorData.error}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error finalizing/reopening spend:", err);
+      alert("Failed to finalize/reopen spend");
+    }
+  };
+
+  const handleDeleteSpend = async (spendId: string) => {
+    if (!user) return;
+
+    const confirmed = window.confirm("Are you sure you want to delete this spend?");
+    if (!confirmed) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/spends/${spendId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.ok) {
+        // Refetch trip data
+        const tripResponse = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (tripResponse.ok) {
+          const data = await tripResponse.json();
+          setTrip(data.trip);
+        }
+      } else {
+        alert("Failed to delete spend");
+      }
+    } catch (err) {
+      console.error("Error deleting spend:", err);
+      alert("Failed to delete spend");
+    }
   };
 
   const handleRemoveMember = async (userId: string, userName: string) => {
@@ -649,7 +808,7 @@ export default function TripDetailPage() {
         )}
 
         {/* Spends (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && trip.spends && trip.spends.length > 0 && (
+        {trip.userRsvpStatus === "ACCEPTED" && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
@@ -660,68 +819,42 @@ export default function TripDetailPage() {
                 Add Spend
               </button>
             </div>
-            <div className="space-y-3">
-              {trip.spends.map((spend) => (
-                <div
-                  key={spend.id}
-                  className="flex items-start justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{spend.description}</p>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                          Paid by {spend.paidBy.displayName || spend.paidBy.email}
-                        </p>
-                      </div>
-                      <div className="text-right ml-4">
-                        <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                          {spend.currency} {spend.amount.toFixed(2)}
-                        </p>
-                        {spend.currency !== trip.baseCurrency && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                            {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-500">
-                      <span>{formatDate(spend.date)}</span>
-                      {spend.category && (
-                        <>
-                          <span>•</span>
-                          <span className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
-                            {spend.category.name}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* Empty state for spends (when accepted but no spends yet) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (!trip.spends || trip.spends.length === 0) && (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
-              <button
-                onClick={() => setIsAddSpendDialogOpen(true)}
-                className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
-              >
-                Add Spend
-              </button>
-            </div>
-            <div className="text-center py-8">
-              <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
-            </div>
+            {trip.spends && trip.spends.length > 0 ? (
+              <>
+                {/* Filters */}
+                <div className="mb-4">
+                  <SpendFilters
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={setStatusFilter}
+                    sortBy={sortBy}
+                    onSortByChange={setSortBy}
+                    sortOrder={sortOrder}
+                    onSortOrderChange={setSortOrder}
+                  />
+                </div>
+
+                {/* Spend List */}
+                <SpendListView
+                  spends={getFilteredAndSortedSpends().map((spend) => ({
+                    ...spend,
+                    date: new Date(spend.date),
+                  }))}
+                  onEdit={handleEditSpend}
+                  onAssign={handleAssignSpend}
+                  onFinalize={handleFinalizeSpend}
+                  onDelete={handleDeleteSpend}
+                />
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
+              </div>
+            )}
           </div>
         )}
 

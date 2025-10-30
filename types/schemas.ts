@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole, SubscriptionTier } from "@/lib/generated/prisma";
+import { UserRole, SubscriptionTier, SpendStatus } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth Schemas
@@ -142,6 +142,7 @@ export const SpendSummarySchema = z.object({
   currency: z.string(),
   normalizedAmount: z.number(),
   date: z.coerce.date(),
+  status: z.nativeEnum(SpendStatus),
   paidBy: UserSummarySchema,
   category: z.object({
     id: z.string(),
@@ -240,11 +241,35 @@ export const CreateSpendResponseSchema = z.object({
     fxRate: z.number(),
     normalizedAmount: z.number(),
     date: z.coerce.date(),
+    status: z.nativeEnum(SpendStatus),
     notes: z.string().nullable(),
     paidById: z.string(),
     categoryId: z.string().nullable(),
   }).optional(),
   error: z.string().optional(),
+});
+
+export const UpdateSpendSchema = z.object({
+  description: z.string().min(1, "Description is required").max(500, "Description is too long").optional(),
+  amount: z.number().positive("Amount must be positive").optional(),
+  currency: z.string().length(3, "Currency must be a 3-letter code (e.g., USD)").optional(),
+  fxRate: z.number().positive("FX rate must be positive").optional(),
+  date: z.coerce.date().optional(),
+  status: z.nativeEnum(SpendStatus).optional(),
+  notes: z.string().max(2000, "Notes are too long").optional().nullable(),
+  categoryId: z.string().uuid().optional().nullable(),
+});
+
+export const FinalizeSpendSchema = z.object({
+  force: z.boolean().optional().default(false), // Force finalize even if assignments don't equal 100%
+});
+
+export const GetSpendsQuerySchema = z.object({
+  tripId: z.string().uuid("Valid trip ID required"),
+  status: z.nativeEnum(SpendStatus).optional(),
+  paidById: z.string().uuid().optional(),
+  sortBy: z.enum(["date", "amount", "description"]).optional().default("date"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
 // ============================================================================
@@ -273,3 +298,6 @@ export type UpdateRsvpInput = z.infer<typeof UpdateRsvpSchema>;
 export type InvitationResponse = z.infer<typeof InvitationResponseSchema>;
 export type CreateSpendInput = z.infer<typeof CreateSpendSchema>;
 export type CreateSpendResponse = z.infer<typeof CreateSpendResponseSchema>;
+export type UpdateSpendInput = z.infer<typeof UpdateSpendSchema>;
+export type FinalizeSpendInput = z.infer<typeof FinalizeSpendSchema>;
+export type GetSpendsQuery = z.infer<typeof GetSpendsQuerySchema>;

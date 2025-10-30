@@ -563,9 +563,7 @@ export async function getTripOverviewForMember(
               name: true,
             },
           },
-          assignments: {
-            where: { userId },
-          },
+          assignments: true,
         },
         orderBy: { date: "desc" },
       },
@@ -626,16 +624,28 @@ export async function getTripOverviewForMember(
       completedAt: t.completedAt,
       order: t.order,
     })),
-    spends: trip.spends.map((s) => ({
-      id: s.id,
-      description: s.description,
-      amount: Number(s.amount),
-      currency: s.currency,
-      normalizedAmount: Number(s.normalizedAmount),
-      date: s.date,
-      paidBy: s.paidBy,
-      category: s.category,
-    })),
+    spends: trip.spends.map((s) => {
+      // Calculate assignment percentage for this spend
+      const totalAssigned = s.assignments.reduce(
+        (sum, assignment) => sum + Number(assignment.normalizedShareAmount),
+        0
+      );
+      const spendAmount = Number(s.normalizedAmount);
+      const assignedPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
+
+      return {
+        id: s.id,
+        description: s.description,
+        amount: Number(s.amount),
+        currency: s.currency,
+        normalizedAmount: Number(s.normalizedAmount),
+        date: s.date,
+        status: s.status,
+        paidBy: s.paidBy,
+        category: s.category,
+        assignedPercentage: Math.round(assignedPercentage * 10) / 10,
+      };
+    }),
     userAssignments: userAssignments.map((a) => ({
       id: a.id,
       userId: a.userId,

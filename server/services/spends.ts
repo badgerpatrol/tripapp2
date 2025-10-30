@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { EventType } from "@/lib/generated/prisma";
+import { EventType, SpendStatus } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
-import type { CreateSpendInput } from "@/types/schemas";
+import type { CreateSpendInput, UpdateSpendInput, GetSpendsQuery } from "@/types/schemas";
 import { Decimal } from "@prisma/client/runtime/library";
 
 /**
@@ -97,14 +97,28 @@ export async function getSpendById(spendId: string) {
 }
 
 /**
- * Gets all spends for a trip.
+ * Gets all spends for a trip with optional filtering and sorting.
  */
-export async function getTripSpends(tripId: string) {
+export async function getTripSpends(tripId: string, query?: GetSpendsQuery) {
+  const where: any = {
+    tripId,
+    deletedAt: null,
+  };
+
+  // Apply filters
+  if (query?.status) {
+    where.status = query.status;
+  }
+  if (query?.paidById) {
+    where.paidById = query.paidById;
+  }
+
+  // Determine sort field and order
+  const sortBy = query?.sortBy || "date";
+  const sortOrder = query?.sortOrder || "desc";
+
   return prisma.spend.findMany({
-    where: {
-      tripId,
-      deletedAt: null,
-    },
+    where,
     include: {
       paidBy: {
         select: {
@@ -120,11 +134,214 @@ export async function getTripSpends(tripId: string) {
           name: true,
         },
       },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              photoURL: true,
+            },
+          },
+        },
+      },
     },
     orderBy: {
-      date: "desc",
+      [sortBy]: sortOrder,
     },
   });
+}
+
+/**
+ * Updates a spend.
+ * Throws error if spend is finalized and trying to change amount/assignments.
+ */
+export async function updateSpend(spendId: string, userId: string, data: UpdateSpendInput) {
+  // Get current spend to check status
+  const currentSpend = await prisma.spend.findUnique({
+    where: { id: spendId, deletedAt: null },
+  });
+
+  if (!currentSpend) {
+    throw new Error("Spend not found");
+  }
+
+  // Prevent editing finalized spends (except notes and status for reopening)
+  if (currentSpend.status === SpendStatus.FINALIZED) {
+    const allowedFields = ["notes", "status"];
+    const attemptedFields = Object.keys(data);
+    const invalidFields = attemptedFields.filter((f) => !allowedFields.includes(f));
+
+    if (invalidFields.length > 0) {
+      throw new Error("Cannot edit finalized spend. Only notes and status can be updated.");
+    }
+  }
+
+  // Build update data
+  const updateData: any = {};
+
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.amount !== undefined) {
+    updateData.amount = new Decimal(data.amount);
+    // Recalculate normalized amount
+    const fxRate = data.fxRate !== undefined ? data.fxRate : currentSpend.fxRate.toNumber();
+    updateData.normalizedAmount = new Decimal(data.amount * fxRate);
+  }
+  if (data.currency !== undefined) updateData.currency = data.currency;
+  if (data.fxRate !== undefined) {
+    updateData.fxRate = new Decimal(data.fxRate);
+    // Recalculate normalized amount
+    const amount = data.amount !== undefined ? data.amount : currentSpend.amount.toNumber();
+    updateData.normalizedAmount = new Decimal(amount * data.fxRate);
+  }
+  if (data.date !== undefined) updateData.date = data.date;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+
+  const spend = await prisma.spend.update({
+    where: { id: spendId },
+    data: updateData,
+    include: {
+      paidBy: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          photoURL: true,
+        },
+      },
+      category: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              photoURL: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  await logEvent("Spend", spendId, EventType.SPEND_UPDATED, userId, {
+    tripId: spend.tripId,
+    changes: data,
+  });
+
+  return spend;
+}
+
+/**
+ * Finalizes a spend (marks as FINALIZED).
+ * Validates that assignments equal 100% unless force=true.
+ */
+export async function finalizeSpend(spendId: string, userId: string, force: boolean = false) {
+  const spend = await prisma.spend.findUnique({
+    where: { id: spendId, deletedAt: null },
+    include: {
+      assignments: true,
+    },
+  });
+
+  if (!spend) {
+    throw new Error("Spend not found");
+  }
+
+  if (spend.status === SpendStatus.FINALIZED) {
+    throw new Error("Spend is already finalized");
+  }
+
+  // Calculate assignment percentage
+  const totalAssigned = spend.assignments.reduce(
+    (sum, assignment) => sum + assignment.normalizedShareAmount.toNumber(),
+    0
+  );
+  const spendAmount = spend.normalizedAmount.toNumber();
+  const assignmentPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
+
+  // Validate assignments unless force=true
+  if (!force && Math.abs(assignmentPercentage - 100) > 0.01) {
+    throw new Error(
+      `Cannot finalize: assignments total ${assignmentPercentage.toFixed(1)}%, must be 100%. Use force=true to override.`
+    );
+  }
+
+  const updatedSpend = await prisma.spend.update({
+    where: { id: spendId },
+    data: { status: SpendStatus.FINALIZED },
+    include: {
+      paidBy: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          photoURL: true,
+        },
+      },
+      category: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      assignments: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              photoURL: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  await logEvent("Spend", spendId, EventType.SPEND_UPDATED, userId, {
+    tripId: spend.tripId,
+    action: "finalized",
+    assignmentPercentage: assignmentPercentage.toFixed(2),
+    forced: force,
+  });
+
+  return updatedSpend;
+}
+
+/**
+ * Calculates the assignment percentage for a spend.
+ * Returns percentage (0-100+) of how much is assigned.
+ */
+export async function calculateAssignmentPercentage(spendId: string): Promise<number> {
+  const spend = await prisma.spend.findUnique({
+    where: { id: spendId, deletedAt: null },
+    include: {
+      assignments: true,
+    },
+  });
+
+  if (!spend) {
+    throw new Error("Spend not found");
+  }
+
+  const totalAssigned = spend.assignments.reduce(
+    (sum, assignment) => sum + assignment.normalizedShareAmount.toNumber(),
+    0
+  );
+  const spendAmount = spend.normalizedAmount.toNumber();
+
+  return spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
 }
 
 /**

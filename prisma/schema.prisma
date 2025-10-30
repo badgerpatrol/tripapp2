@@ -55,6 +55,11 @@ enum SplitType {
   SHARE
 }
 
+enum SpendStatus {
+  OPEN
+  FINALIZED
+}
+
 enum SettlementStatus {
   PENDING
   PARTIALLY_PAID
@@ -265,20 +270,21 @@ model Category {
 // ============================================================================
 
 model Spend {
-  id               String    @id @default(uuid())
+  id               String      @id @default(uuid())
   tripId           String
   description      String
-  amount           Decimal   @db.Decimal(19, 4)
-  currency         String    @default("USD")
-  fxRate           Decimal   @default(1.0) @db.Decimal(19, 6)
-  normalizedAmount Decimal   @db.Decimal(19, 4) // In trip base currency
+  amount           Decimal     @db.Decimal(19, 4)
+  currency         String      @default("USD")
+  fxRate           Decimal     @default(1.0) @db.Decimal(19, 6)
+  normalizedAmount Decimal     @db.Decimal(19, 4) // In trip base currency
   paidById         String
   categoryId       String?
-  date             DateTime  @default(now())
+  date             DateTime    @default(now())
+  status           SpendStatus @default(OPEN)
   receiptUrl       String?
   notes            String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
   deletedAt        DateTime?
 
   // Relationships
@@ -291,6 +297,7 @@ model Spend {
   @@index([paidById])
   @@index([categoryId])
   @@index([date])
+  @@index([status])
   @@index([deletedAt])
   @@map("spends")
 }
