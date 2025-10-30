@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
+import AddSpendDialog from "./AddSpendDialog";
 
 interface TripDetail {
   id: string;
@@ -80,6 +81,7 @@ export default function TripDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isAddSpendDialogOpen, setIsAddSpendDialogOpen] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
   const tripId = params.id as string;
@@ -182,6 +184,31 @@ export default function TripDetailPage() {
 
   const handleInviteSuccess = () => {
     // Refetch the trip data after successful invitations
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
+  const handleAddSpendSuccess = () => {
+    // Refetch the trip data after successful spend creation
     const fetchTrip = async () => {
       if (!user) return;
 
@@ -624,7 +651,15 @@ export default function TripDetailPage() {
         {/* Spends (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && trip.spends && trip.spends.length > 0 && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Spends</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
+              <button
+                onClick={() => setIsAddSpendDialogOpen(true)}
+                className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+              >
+                Add Spend
+              </button>
+            </div>
             <div className="space-y-3">
               {trip.spends.map((spend) => (
                 <div
@@ -664,6 +699,28 @@ export default function TripDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state for spends (when accepted but no spends yet) */}
+        {trip.userRsvpStatus === "ACCEPTED" && (!trip.spends || trip.spends.length === 0) && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
+              <button
+                onClick={() => setIsAddSpendDialogOpen(true)}
+                className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+              >
+                Add Spend
+              </button>
+            </div>
+            <div className="text-center py-8">
+              <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
             </div>
           </div>
         )}
@@ -792,6 +849,16 @@ export default function TripDetailPage() {
           onClose={() => setIsInviteDialogOpen(false)}
           onSuccess={handleInviteSuccess}
           currentMembers={trip.participants}
+        />
+      )}
+
+      {/* Add Spend Dialog */}
+      {trip && (
+        <AddSpendDialog
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
+          isOpen={isAddSpendDialogOpen}
+          onClose={() => setIsAddSpendDialogOpen(false)}
+          onSuccess={handleAddSpendSuccess}
         />
       )}
     </div>

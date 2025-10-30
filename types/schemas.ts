@@ -215,6 +215,39 @@ export const InvitationResponseSchema = z.object({
 });
 
 // ============================================================================
+// Spend Schemas
+// ============================================================================
+
+export const CreateSpendSchema = z.object({
+  tripId: z.string().uuid("Valid trip ID required"),
+  description: z.string().min(1, "Description is required").max(500, "Description is too long"),
+  amount: z.number().positive("Amount must be positive"),
+  currency: z.string().length(3, "Currency must be a 3-letter code (e.g., USD)"),
+  fxRate: z.number().positive("FX rate must be positive").default(1.0),
+  date: z.coerce.date().optional(),
+  notes: z.string().max(2000, "Notes are too long").optional(),
+  categoryId: z.string().uuid().optional(),
+});
+
+export const CreateSpendResponseSchema = z.object({
+  success: z.boolean(),
+  spend: z.object({
+    id: z.string(),
+    tripId: z.string(),
+    description: z.string(),
+    amount: z.number(),
+    currency: z.string(),
+    fxRate: z.number(),
+    normalizedAmount: z.number(),
+    date: z.coerce.date(),
+    notes: z.string().nullable(),
+    paidById: z.string(),
+    categoryId: z.string().nullable(),
+  }).optional(),
+  error: z.string().optional(),
+});
+
+// ============================================================================
 // Type exports
 // ============================================================================
 
@@ -238,3 +271,5 @@ export type TripOverviewMember = z.infer<typeof TripOverviewMemberSchema>;
 export type InviteUsersInput = z.infer<typeof InviteUsersSchema>;
 export type UpdateRsvpInput = z.infer<typeof UpdateRsvpSchema>;
 export type InvitationResponse = z.infer<typeof InvitationResponseSchema>;
+export type CreateSpendInput = z.infer<typeof CreateSpendSchema>;
+export type CreateSpendResponse = z.infer<typeof CreateSpendResponseSchema>;
