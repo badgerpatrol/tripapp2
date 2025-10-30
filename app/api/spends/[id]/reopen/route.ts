@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
-import { getSpendById, closeSpend } from "@/server/services/spends";
-import { CloseSpendSchema } from "@/types/schemas";
+import { getSpendById } from "@/server/services/spends";
+import { reopenSpend } from "@/server/services/spends";
 
 /**
- * POST /api/spends/[id]/finalize - Close a spend
+ * POST /api/spends/[id]/reopen - Reopen a closed spend
  *
  * Authorization: User must be authenticated and a member of the trip
  *
- * Request body:
- * - force: boolean (optional, default: false) - Force close even if assignments don't equal 100%
+ * This endpoint allows reopening a closed spend, making it editable again.
  */
 export async function POST(
   request: NextRequest,
@@ -44,26 +43,10 @@ export async function POST(
     // 3. Authorize - verify user is a member of the trip
     await requireTripMember(auth.uid, existingSpend.tripId);
 
-    // 4. Parse and validate request body
-    const body = await request.json().catch(() => ({})); // Default to empty object if no body
-    const validationResult = CloseSpendSchema.safeParse(body);
+    // 4. Reopen the spend
+    const spend = await reopenSpend(id, auth.uid);
 
-    if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid request data",
-          details: validationResult.error.issues
-        },
-        { status: 400 }
-      );
-    }
-
-    const { force = false } = validationResult.data;
-
-    // 5. Close the spend
-    const spend = await closeSpend(id, auth.uid, force);
-
-    // 6. Calculate assignment percentage
+    // 5. Calculate assignment percentage
     const totalAssigned = spend.assignments.reduce(
       (sum, assignment) => sum + Number(assignment.normalizedShareAmount),
       0
@@ -71,7 +54,7 @@ export async function POST(
     const spendAmount = Number(spend.normalizedAmount);
     const assignedPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
 
-    // 7. Return closed spend
+    // 6. Return reopened spend
     return NextResponse.json(
       {
         success: true,
@@ -104,15 +87,10 @@ export async function POST(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error closing spend:", error);
-    console.error("Error details:", {
-      name: error instanceof Error ? error.name : "Unknown",
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    console.error("Error reopening spend:", error);
 
     if (error instanceof Error) {
-      if (error.message.includes("Cannot close") || error.message.includes("already closed")) {
+      if (error.message.includes("Cannot reopen") || error.message.includes("not closed")) {
         return NextResponse.json(
           { error: error.message },
           { status: 400 }
@@ -127,10 +105,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      {
-        error: "Failed to close spend",
-        details: error instanceof Error ? error.message : String(error)
-      },
+      { error: "Failed to reopen spend" },
       { status: 500 }
     );
   }

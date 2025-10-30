@@ -155,7 +155,7 @@ export async function getTripSpends(tripId: string, query?: GetSpendsQuery) {
 
 /**
  * Updates a spend.
- * Throws error if spend is finalized and trying to change amount/assignments.
+ * Throws error if spend is closed and trying to change amount/assignments.
  */
 export async function updateSpend(spendId: string, userId: string, data: UpdateSpendInput) {
   // Get current spend to check status
@@ -167,15 +167,9 @@ export async function updateSpend(spendId: string, userId: string, data: UpdateS
     throw new Error("Spend not found");
   }
 
-  // Prevent editing finalized spends (except notes and status for reopening)
-  if (currentSpend.status === SpendStatus.FINALIZED) {
-    const allowedFields = ["notes", "status"];
-    const attemptedFields = Object.keys(data);
-    const invalidFields = attemptedFields.filter((f) => !allowedFields.includes(f));
-
-    if (invalidFields.length > 0) {
-      throw new Error("Cannot edit finalized spend. Only notes and status can be updated.");
-    }
+  // Prevent editing closed spends - completely locked
+  if (currentSpend.status === SpendStatus.CLOSED) {
+    throw new Error("Cannot edit closed spend. Items and assignments are locked.");
   }
 
   // Build update data
@@ -242,43 +236,108 @@ export async function updateSpend(spendId: string, userId: string, data: UpdateS
 }
 
 /**
- * Finalizes a spend (marks as FINALIZED).
+ * Closes a spend (marks as CLOSED).
  * Validates that assignments equal 100% unless force=true.
+ * Once closed, the spend and its assignments are locked from editing.
  */
-export async function finalizeSpend(spendId: string, userId: string, force: boolean = false) {
+export async function closeSpend(spendId: string, userId: string, force: boolean = false) {
+  try {
+    const spend = await prisma.spend.findUnique({
+      where: { id: spendId, deletedAt: null },
+      include: {
+        assignments: true,
+      },
+    });
+
+    if (!spend) {
+      throw new Error("Spend not found");
+    }
+
+    if (spend.status === SpendStatus.CLOSED) {
+      throw new Error("Spend is already closed");
+    }
+
+    // Calculate assignment percentage
+    const totalAssigned = spend.assignments.reduce(
+      (sum, assignment) => sum + assignment.normalizedShareAmount.toNumber(),
+      0
+    );
+    const spendAmount = spend.normalizedAmount.toNumber();
+    const assignmentPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
+
+    // Validate assignments unless force=true
+    if (!force && Math.abs(assignmentPercentage - 100) > 0.01) {
+      throw new Error(
+        `Cannot close: assignments total ${assignmentPercentage.toFixed(1)}%, must be 100%. Use force=true to override.`
+      );
+    }
+
+    const updatedSpend = await prisma.spend.update({
+      where: { id: spendId },
+      data: { status: SpendStatus.CLOSED },
+      include: {
+        paidBy: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            photoURL: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        assignments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                displayName: true,
+                photoURL: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    await logEvent("Spend", spendId, EventType.SPEND_CLOSED, userId, {
+      tripId: spend.tripId,
+      assignmentPercentage: assignmentPercentage.toFixed(2),
+      forced: force,
+    });
+
+    return updatedSpend;
+  } catch (error) {
+    console.error("Error in closeSpend service:", error);
+    throw error;
+  }
+}
+
+/**
+ * Reopens a closed spend (marks as OPEN).
+ * Allows a spend to become editable again.
+ */
+export async function reopenSpend(spendId: string, userId: string) {
   const spend = await prisma.spend.findUnique({
     where: { id: spendId, deletedAt: null },
-    include: {
-      assignments: true,
-    },
   });
 
   if (!spend) {
     throw new Error("Spend not found");
   }
 
-  if (spend.status === SpendStatus.FINALIZED) {
-    throw new Error("Spend is already finalized");
-  }
-
-  // Calculate assignment percentage
-  const totalAssigned = spend.assignments.reduce(
-    (sum, assignment) => sum + assignment.normalizedShareAmount.toNumber(),
-    0
-  );
-  const spendAmount = spend.normalizedAmount.toNumber();
-  const assignmentPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
-
-  // Validate assignments unless force=true
-  if (!force && Math.abs(assignmentPercentage - 100) > 0.01) {
-    throw new Error(
-      `Cannot finalize: assignments total ${assignmentPercentage.toFixed(1)}%, must be 100%. Use force=true to override.`
-    );
+  if (spend.status !== SpendStatus.CLOSED) {
+    throw new Error("Spend is not closed");
   }
 
   const updatedSpend = await prisma.spend.update({
     where: { id: spendId },
-    data: { status: SpendStatus.FINALIZED },
+    data: { status: SpendStatus.OPEN },
     include: {
       paidBy: {
         select: {
@@ -311,9 +370,7 @@ export async function finalizeSpend(spendId: string, userId: string, force: bool
 
   await logEvent("Spend", spendId, EventType.SPEND_UPDATED, userId, {
     tripId: spend.tripId,
-    action: "finalized",
-    assignmentPercentage: assignmentPercentage.toFixed(2),
-    forced: force,
+    action: "reopened",
   });
 
   return updatedSpend;

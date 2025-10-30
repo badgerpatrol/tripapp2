@@ -41,7 +41,7 @@ export function SpendFilters({
         >
           <option value="all">All Statuses</option>
           <option value={SpendStatus.OPEN}>Open</option>
-          <option value={SpendStatus.FINALIZED}>Finalized</option>
+          <option value={SpendStatus.CLOSED}>Closed</option>
         </select>
       </div>
 

@@ -10,7 +10,7 @@ import { CreateSpendSchema, GetSpendsQuerySchema } from "@/types/schemas";
  *
  * Query parameters:
  * - tripId: string (UUID, required)
- * - status: "DRAFT" | "OPEN" | "FINALIZED" (optional)
+ * - status: "OPEN" | "CLOSED" (optional)
  * - paidById: string (UUID, optional)
  * - sortBy: "date" | "amount" | "description" (optional, default: "date")
  * - sortOrder: "asc" | "desc" (optional, default: "desc")

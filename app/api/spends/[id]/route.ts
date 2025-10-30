@@ -203,7 +203,7 @@ export async function PUT(
     console.error("Error updating spend:", error);
 
     if (error instanceof Error) {
-      if (error.message.includes("Cannot edit finalized")) {
+      if (error.message.includes("Cannot edit closed")) {
         return NextResponse.json(
           { error: error.message },
           { status: 400 }

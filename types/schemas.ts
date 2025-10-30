@@ -260,8 +260,8 @@ export const UpdateSpendSchema = z.object({
   categoryId: z.string().uuid().optional().nullable(),
 });
 
-export const FinalizeSpendSchema = z.object({
-  force: z.boolean().optional().default(false), // Force finalize even if assignments don't equal 100%
+export const CloseSpendSchema = z.object({
+  force: z.boolean().optional().default(false), // Force close even if assignments don't equal 100%
 });
 
 export const GetSpendsQuerySchema = z.object({
@@ -299,5 +299,5 @@ export type InvitationResponse = z.infer<typeof InvitationResponseSchema>;
 export type CreateSpendInput = z.infer<typeof CreateSpendSchema>;
 export type CreateSpendResponse = z.infer<typeof CreateSpendResponseSchema>;
 export type UpdateSpendInput = z.infer<typeof UpdateSpendSchema>;
-export type FinalizeSpendInput = z.infer<typeof FinalizeSpendSchema>;
+export type CloseSpendInput = z.infer<typeof CloseSpendSchema>;
 export type GetSpendsQuery = z.infer<typeof GetSpendsQuerySchema>;

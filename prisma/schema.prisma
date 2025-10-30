@@ -57,7 +57,7 @@ enum SplitType {
 
 enum SpendStatus {
   OPEN
-  FINALIZED
+  CLOSED
 }
 
 enum SettlementStatus {
@@ -96,6 +96,7 @@ enum EventType {
   TRIP_DELETED
   SPEND_CREATED
   SPEND_UPDATED
+  SPEND_CLOSED
   SPEND_DELETED
   SETTLEMENT_CREATED
   SETTLEMENT_UPDATED

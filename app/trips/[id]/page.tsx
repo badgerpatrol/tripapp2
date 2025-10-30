@@ -295,15 +295,18 @@ export default function TripDetailPage() {
 
       if (!spend) return;
 
-      // If already finalized, reopen it by setting status to OPEN
-      if (spend.status === "FINALIZED") {
-        const response = await fetch(`/api/spends/${spendId}`, {
-          method: "PUT",
+      // If already closed, reopen it using the reopen endpoint
+      if (spend.status === "CLOSED") {
+        if (!confirm("Are you sure you want to reopen this spend? It will become editable again.")) {
+          return;
+        }
+
+        const response = await fetch(`/api/spends/${spendId}/reopen`, {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${idToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status: "OPEN" }),
         });
 
         if (response.ok) {
@@ -322,14 +325,30 @@ export default function TripDetailPage() {
           alert("Failed to reopen spend");
         }
       } else {
-        // Finalize the spend
+        // Check if assignments are 100% before closing
+        const assignedPercentage = spend.assignedPercentage || 0;
+        const isFullyAssigned = Math.abs(assignedPercentage - 100) < 0.1;
+
+        if (!isFullyAssigned) {
+          const shouldForce = confirm(
+            `This spend is only ${assignedPercentage.toFixed(1)}% assigned. ` +
+            `Close anyway? (Once closed, the spend cannot be edited)`
+          );
+          if (!shouldForce) return;
+        } else {
+          if (!confirm("Close this spend? Once closed, it cannot be edited.")) {
+            return;
+          }
+        }
+
+        // Close the spend
         const response = await fetch(`/api/spends/${spendId}/finalize`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${idToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({}),
+          body: JSON.stringify({ force: !isFullyAssigned }),
         });
 
         if (response.ok) {
@@ -346,12 +365,12 @@ export default function TripDetailPage() {
           }
         } else {
           const errorData = await response.json();
-          alert(`Failed to finalize spend: ${errorData.error}`);
+          alert(`Failed to close spend: ${errorData.error}`);
         }
       }
     } catch (err) {
-      console.error("Error finalizing/reopening spend:", err);
-      alert("Failed to finalize/reopen spend");
+      console.error("Error closing/reopening spend:", err);
+      alert("Failed to close/reopen spend");
     }
   };
 

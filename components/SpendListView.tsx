@@ -66,8 +66,8 @@ export function SpendListView({
         label: "Open",
         className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
       },
-      [SpendStatus.FINALIZED]: {
-        label: "Finalized",
+      [SpendStatus.CLOSED]: {
+        label: "Closed",
         className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
       },
     };
@@ -107,7 +107,7 @@ export function SpendListView({
       items.push({
         label: "Edit",
         onClick: () => onEdit(spendId),
-        disabled: spend.status === SpendStatus.FINALIZED,
+        disabled: spend.status === SpendStatus.CLOSED,
       });
     }
 
@@ -119,14 +119,14 @@ export function SpendListView({
     }
 
     if (onFinalize) {
-      if (spend.status === SpendStatus.FINALIZED) {
+      if (spend.status === SpendStatus.CLOSED) {
         items.push({
           label: "Reopen",
           onClick: () => onFinalize(spendId),
         });
       } else {
         items.push({
-          label: "Finalize",
+          label: "Close",
           onClick: () => onFinalize(spendId),
         });
       }
@@ -214,6 +214,40 @@ export function SpendListView({
                   </div>
                 </div>
               </div>
+
+              {/* Close/Open Toggle Button */}
+              {onFinalize && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFinalize(spend.id);
+                    }}
+                    className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+                      spend.status === SpendStatus.CLOSED
+                        ? "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400"
+                        : "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                    }`}
+                  >
+                    {spend.status === SpendStatus.CLOSED ? (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                        </svg>
+                        Reopen Spend
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Close Spend
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
