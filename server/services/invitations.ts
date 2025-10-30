@@ -214,12 +214,12 @@ export async function inviteUsersToTrip(
  *
  * @param tripId - The ID of the trip
  * @param userId - The user ID responding to the invitation
- * @param status - The RSVP status (ACCEPTED or DECLINED)
+ * @param status - The RSVP status (ACCEPTED, DECLINED, or MAYBE)
  */
 export async function updateRsvpStatus(
   tripId: string,
   userId: string,
-  status: RsvpStatus.ACCEPTED | RsvpStatus.DECLINED
+  status: RsvpStatus
 ) {
   const member = await prisma.tripMember.findUnique({
     where: {
@@ -266,6 +266,11 @@ export async function updateRsvpStatus(
   });
 
   // Notify the trip organizer about the RSVP
+  const rsvpAction =
+    status === RsvpStatus.ACCEPTED ? 'accepted' :
+    status === RsvpStatus.DECLINED ? 'declined' :
+    'responded maybe to';
+
   await createBatchNotifications([
     {
       recipientId: member.trip.createdById,
@@ -273,7 +278,7 @@ export async function updateRsvpStatus(
       tripId,
       type: NotificationType.TRIP_INVITE,
       title: `RSVP Update: ${member.trip.name}`,
-      message: `${member.user.displayName || member.user.email} ${status === RsvpStatus.ACCEPTED ? 'accepted' : 'declined'} your invitation to "${member.trip.name}"`,
+      message: `${member.user.displayName || member.user.email} ${rsvpAction} your invitation to "${member.trip.name}"`,
       actionUrl: `/trips/${tripId}`,
       metadata: {
         tripId,

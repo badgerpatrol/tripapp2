@@ -2,11 +2,19 @@
 
 import { useAuth } from '@/lib/auth/AuthContext';
 import LoginForm from '@/components/LoginForm';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  // Redirect logged-in users to /trips to see their invitations and trips
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/trips');
+    }
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -20,41 +28,10 @@ export default function Home() {
     return <LoginForm />;
   }
 
-  // User is logged in - show dashboard
+  // While redirecting, show loading state
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-8">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                Welcome to TripPlanner
-              </h1>
-              <p className="text-zinc-600 dark:text-zinc-400 mt-2">
-                Logged in as: {user.email}
-              </p>
-            </div>
-            <button
-              onClick={() => signOut(auth)}
-              className="tap-target px-4 py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-
-          <div className="text-center py-12">
-            <p className="text-zinc-600 dark:text-zinc-400 text-lg mb-8">
-              Start planning your next adventure!
-            </p>
-            <a
-              href="/trips/new"
-              className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors shadow-sm"
-            >
-              Create Your First Trip
-            </a>
-          </div>
-        </div>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <div className="text-zinc-600 dark:text-zinc-400">Redirecting...</div>
     </div>
   );
 }

@@ -191,6 +191,10 @@ export const InviteUsersSchema = z.object({
   emails: z.array(z.string().email("Invalid email address")).min(1, "At least one email is required"),
 });
 
+export const UpdateRsvpSchema = z.object({
+  rsvpStatus: z.enum(["ACCEPTED", "DECLINED", "MAYBE"]),
+});
+
 export const InvitationResponseSchema = z.object({
   success: z.boolean(),
   invited: z.array(z.object({
@@ -232,4 +236,5 @@ export type SpendAssignmentSummary = z.infer<typeof SpendAssignmentSummarySchema
 export type TripOverviewInvitee = z.infer<typeof TripOverviewInviteeSchema>;
 export type TripOverviewMember = z.infer<typeof TripOverviewMemberSchema>;
 export type InviteUsersInput = z.infer<typeof InviteUsersSchema>;
+export type UpdateRsvpInput = z.infer<typeof UpdateRsvpSchema>;
 export type InvitationResponse = z.infer<typeof InvitationResponseSchema>;

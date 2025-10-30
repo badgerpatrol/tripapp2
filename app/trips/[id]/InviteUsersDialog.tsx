@@ -260,7 +260,7 @@ export default function InviteUsersDialog({
                 Invite Users
               </h2>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                Select users to invite to {tripName}
+                Invite people to {tripName}
               </p>
             </div>
             <button
@@ -373,6 +373,8 @@ export default function InviteUsersDialog({
                               ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
                               : member.rsvpStatus === "DECLINED"
                               ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                              : member.rsvpStatus === "MAYBE"
+                              ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
                               : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
                           }`}
                         >
@@ -409,7 +411,7 @@ export default function InviteUsersDialog({
               </div>
               <div className="relative flex justify-center">
                 <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  Select Users to Invite
+                  Invite people
                 </span>
               </div>
             </div>

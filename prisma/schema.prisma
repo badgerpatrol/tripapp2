@@ -45,6 +45,7 @@ enum RsvpStatus {
   PENDING
   ACCEPTED
   DECLINED
+  MAYBE
 }
 
 enum SplitType {

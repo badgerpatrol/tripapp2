@@ -386,6 +386,7 @@ export async function getUserTrips(userId: string) {
         where: { deletedAt: null },
         select: {
           id: true,
+          userId: true,
           role: true,
           rsvpStatus: true,
           user: {

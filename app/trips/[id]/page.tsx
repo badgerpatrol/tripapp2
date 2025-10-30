@@ -253,6 +253,33 @@ export default function TripDetailPage() {
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
+  const handleRsvpResponse = async (status: "ACCEPTED" | "DECLINED" | "MAYBE") => {
+    if (!user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/members/${user.uid}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ rsvpStatus: status }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `Failed to update RSVP (${response.status})`);
+      }
+
+      // Success - refresh the trip data
+      handleEditSuccess();
+    } catch (err) {
+      console.error("Error updating RSVP:", err);
+      setError(err instanceof Error ? err.message : "Failed to update RSVP. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -361,6 +388,156 @@ export default function TripDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* RSVP Response Card (for invitees) */}
+        {trip.userRsvpStatus === "PENDING" && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 md:p-8 mb-6">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+                  You've been invited to {trip.name}!
+                </h2>
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  {trip.organizer.displayName || trip.organizer.email} has invited you to join this trip.
+                  Please respond to let them know if you can make it.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => handleRsvpResponse("ACCEPTED")}
+                className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Accept
+              </button>
+              <button
+                onClick={() => handleRsvpResponse("MAYBE")}
+                className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Maybe
+              </button>
+              <button
+                onClick={() => handleRsvpResponse("DECLINED")}
+                className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Decline
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Current RSVP Status (for users who have responded) */}
+        {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
+          <div className={`rounded-xl shadow-sm border p-6 md:p-8 mb-6 ${
+            trip.userRsvpStatus === "ACCEPTED"
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+              : trip.userRsvpStatus === "DECLINED"
+              ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+              : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "bg-green-100 dark:bg-green-900/50"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "bg-red-100 dark:bg-red-900/50"
+                    : "bg-yellow-100 dark:bg-yellow-900/50"
+                }`}>
+                  <svg className={`w-6 h-6 ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "text-green-600 dark:text-green-400"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-yellow-600 dark:text-yellow-400"
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {trip.userRsvpStatus === "ACCEPTED" ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    ) : trip.userRsvpStatus === "DECLINED" ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    )}
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-lg font-bold mb-1 ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "text-green-900 dark:text-green-100"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "text-red-900 dark:text-red-100"
+                      : "text-yellow-900 dark:text-yellow-100"
+                  }`}>
+                    You {trip.userRsvpStatus === "ACCEPTED" ? "accepted" : trip.userRsvpStatus === "DECLINED" ? "declined" : "might attend"} this invitation
+                  </h3>
+                  <p className={`text-sm ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "text-green-700 dark:text-green-300"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "text-red-700 dark:text-red-300"
+                      : "text-yellow-700 dark:text-yellow-300"
+                  }`}>
+                    {trip.userRsvpStatus === "ACCEPTED" && "You're all set! You can now view trip details, spends, and balances."}
+                    {trip.userRsvpStatus === "DECLINED" && "You can change your response anytime using the buttons below."}
+                    {trip.userRsvpStatus === "MAYBE" && "Let the organizer know when you're sure about your availability."}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditDialogOpen(true)}
+                className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/70 text-red-700 dark:text-red-300"
+                    : "bg-yellow-100 dark:bg-yellow-900/50 hover:bg-yellow-200 dark:hover:bg-yellow-900/70 text-yellow-700 dark:text-yellow-300"
+                }`}
+              >
+                Change Response
+              </button>
+            </div>
+
+            {/* Quick change buttons */}
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-current/20">
+              <button
+                onClick={() => handleRsvpResponse("ACCEPTED")}
+                disabled={trip.userRsvpStatus === "ACCEPTED"}
+                className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+              >
+                Accept
+              </button>
+              <button
+                onClick={() => handleRsvpResponse("MAYBE")}
+                disabled={trip.userRsvpStatus === "MAYBE"}
+                className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+              >
+                Maybe
+              </button>
+              <button
+                onClick={() => handleRsvpResponse("DECLINED")}
+                disabled={trip.userRsvpStatus === "DECLINED"}
+                className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+              >
+                Decline
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Balance Summary (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined) && (
@@ -565,6 +742,8 @@ export default function TripDetailPage() {
                         ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
                         : member.rsvpStatus === "DECLINED"
                         ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                        : member.rsvpStatus === "MAYBE"
+                        ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
                         : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
                     }`}
                   >
