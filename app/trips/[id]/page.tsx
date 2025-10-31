@@ -7,6 +7,7 @@ import { SpendStatus } from "@/lib/generated/prisma";
 import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
 import AddSpendDialog from "./AddSpendDialog";
+import EditSpendDialog from "./EditSpendDialog";
 import AssignSpendDialog from "./AssignSpendDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
@@ -53,9 +54,11 @@ interface TripDetail {
     description: string;
     amount: number;
     currency: string;
+    fxRate: number;
     normalizedAmount: number;
     date: string;
     status: SpendStatus;
+    notes: string | null;
     paidBy: {
       id: string;
       email: string;
@@ -98,6 +101,7 @@ export default function TripDetailPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isAddSpendDialogOpen, setIsAddSpendDialogOpen] = useState(false);
+  const [isEditSpendDialogOpen, setIsEditSpendDialogOpen] = useState(false);
   const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
@@ -290,8 +294,8 @@ export default function TripDetailPage() {
 
   // Spend action handlers
   const handleEditSpend = (spendId: string) => {
-    // TODO: Implement edit spend dialog
-    console.log("Edit spend:", spendId);
+    setSelectedSpendId(spendId);
+    setIsEditSpendDialogOpen(true);
   };
 
   const handleAssignSpend = (spendId: string) => {
@@ -1032,8 +1036,8 @@ export default function TripDetailPage() {
               };
             }) || [];
 
-
-          
+          // TODO: Implement pending assignments display
+          return null;
         })()}
 
         {/* Spends (for accepted members) */}
@@ -1249,6 +1253,20 @@ export default function TripDetailPage() {
           trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
           isOpen={isAddSpendDialogOpen}
           onClose={() => setIsAddSpendDialogOpen(false)}
+          onSuccess={handleAddSpendSuccess}
+        />
+      )}
+
+      {/* Edit Spend Dialog */}
+      {trip && selectedSpendId && (
+        <EditSpendDialog
+          spend={trip.spends?.find((s) => s.id === selectedSpendId) || null}
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
+          isOpen={isEditSpendDialogOpen}
+          onClose={() => {
+            setIsEditSpendDialogOpen(false);
+            setSelectedSpendId(null);
+          }}
           onSuccess={handleAddSpendSuccess}
         />
       )}
