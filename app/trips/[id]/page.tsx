@@ -104,8 +104,8 @@ export default function TripDetailPage() {
 
   // Spend filtering and sorting state
   const [statusFilter, setStatusFilter] = useState<SpendStatus | "all">("all");
-  const [sortBy, setSortBy] = useState<"date" | "amount" | "description">("date");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "description">("description");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const tripId = params.id as string;
 
@@ -299,6 +299,142 @@ export default function TripDetailPage() {
     setIsAssignSpendDialogOpen(true);
   };
 
+  const handleJoinSpend = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === spendId);
+
+      if (!spend) return;
+
+      // Get existing assignments
+      const existingAssignments = spend.assignments || [];
+
+      // Check if user is already involved
+      if (existingAssignments.some(a => a.userId === user.uid)) {
+        alert("You are already involved in this spend");
+        return;
+      }
+
+      // Add current user to the assignments
+      const newAssignments = [
+        ...existingAssignments.map(a => ({
+          userId: a.userId,
+          shareAmount: 0,
+          normalizedShareAmount: 0,
+          splitType: "EQUAL" as const,
+        })),
+        {
+          userId: user.uid,
+          shareAmount: 0,
+          normalizedShareAmount: 0,
+          splitType: "EQUAL" as const,
+        }
+      ];
+
+      const response = await fetch(`/api/spends/${spendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: newAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to join spend");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+    } catch (err) {
+      console.error("Error joining spend:", err);
+      alert(err instanceof Error ? err.message : "Failed to join spend");
+    }
+  };
+
+  const handleLeaveSpend = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === spendId);
+
+      if (!spend) return;
+
+      // Get existing assignments
+      const existingAssignments = spend.assignments || [];
+
+      // Check if user is the spender
+      if (spend.paidBy.id === user.uid) {
+        alert("You cannot leave a spend you created. Delete it instead.");
+        return;
+      }
+
+      // Check if user is involved
+      if (!existingAssignments.some(a => a.userId === user.uid)) {
+        alert("You are not involved in this spend");
+        return;
+      }
+
+      // Remove current user from the assignments
+      const newAssignments = existingAssignments
+        .filter(a => a.userId !== user.uid)
+        .map(a => ({
+          userId: a.userId,
+          shareAmount: 0,
+          normalizedShareAmount: 0,
+          splitType: "EQUAL" as const,
+        }));
+
+      const response = await fetch(`/api/spends/${spendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: newAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to leave spend");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+    } catch (err) {
+      console.error("Error leaving spend:", err);
+      alert(err instanceof Error ? err.message : "Failed to leave spend");
+    }
+  };
+
   const handleFinalizeSpend = async (spendId: string) => {
     if (!user || !trip) return;
 
@@ -463,6 +599,19 @@ export default function TripDetailPage() {
 
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
+
+  // Check if current user can finalize (close/reopen) a specific spend
+  const canUserFinalizeSpend = (spend: { paidBy: { id: string } }) => {
+    if (!user) return false;
+
+    // User can finalize if they are:
+    // 1. The spender (person who paid for the spend)
+    // 2. The trip organizer (OWNER or ADMIN role)
+    const isSpender = spend.paidBy.id === user.uid;
+    const isOrganizer = canInvite;
+
+    return isSpender || isOrganizer;
+  };
 
   const handleToggleTripSpendStatus = async () => {
     if (!user || !trip) return;
@@ -883,73 +1032,8 @@ export default function TripDetailPage() {
               };
             }) || [];
 
-          if (pendingAssignments.length === 0) return null;
 
-          return (
-            <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-                Assign Your Costs
-              </h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                You have been tagged in the following spends. Click on each to assign your portion of the costs.
-              </p>
-
-              <div className="space-y-3">
-                {pendingAssignments.map(({ spend }) => (
-                  <button
-                    key={spend.id}
-                    onClick={() => handleAssignSpend(spend.id)}
-                    className="w-full flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border-2 border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-all text-left"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <svg
-                          className="w-5 h-5 text-blue-600 dark:text-blue-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                          />
-                        </svg>
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {spend.description}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-                        <span>
-                          Total: {spend.currency} {spend.amount.toFixed(2)}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          Paid by: {spend.paidBy.displayName || spend.paidBy.email}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5 text-blue-600 dark:text-blue-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
+          
         })()}
 
         {/* Spends (for accepted members) */}
@@ -1010,8 +1094,12 @@ export default function TripDetailPage() {
                     ...spend,
                     date: new Date(spend.date),
                   }))}
+                  currentUserId={user?.uid}
+                  canUserFinalize={canUserFinalizeSpend}
                   onEdit={handleEditSpend}
                   onAssign={handleAssignSpend}
+                  onJoin={handleJoinSpend}
+                  onLeave={handleLeaveSpend}
                   onFinalize={handleFinalizeSpend}
                   onDelete={handleDeleteSpend}
                 />

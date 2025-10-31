@@ -33,8 +33,7 @@ export async function generatePasskeyRegistrationOptions(
     userID: new TextEncoder().encode(userId),
     attestationType: "none",
     excludeCredentials: existingAuthenticators.map((auth) => ({
-      id: Buffer.from(auth.credentialID, "base64"),
-      type: "public-key",
+      id: auth.credentialID,
       transports: auth.transports as AuthenticatorTransport[],
     })),
     authenticatorSelection: {
@@ -86,7 +85,7 @@ export async function verifyPasskeyRegistration(
  * Generates authentication options for signing in with a passkey.
  */
 export async function generatePasskeyAuthenticationOptions(email?: string) {
-  let allowCredentials: { id: Buffer; type: "public-key"; transports?: AuthenticatorTransport[] }[] = [];
+  let allowCredentials: { id: string; transports?: AuthenticatorTransport[] }[] = [];
 
   if (email) {
     // If email is provided, look up user and their passkeys
@@ -97,8 +96,7 @@ export async function generatePasskeyAuthenticationOptions(email?: string) {
 
     if (user && user.passkeys.length > 0) {
       allowCredentials = user.passkeys.map((passkey) => ({
-        id: Buffer.from(passkey.credentialID, "base64"),
-        type: "public-key" as const,
+        id: passkey.credentialID,
         transports: passkey.transports as AuthenticatorTransport[],
       }));
     }
@@ -138,7 +136,7 @@ export async function verifyPasskeyAuthentication(
     expectedOrigin: origin,
     expectedRPID: rpID,
     credential: {
-      id: Buffer.from(passkey.credentialID, "base64"),
+      id: passkey.credentialID,
       publicKey: Buffer.from(passkey.credentialPublicKey, "base64"),
       counter: passkey.counter,
     },
