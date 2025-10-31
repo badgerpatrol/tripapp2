@@ -74,6 +74,8 @@ interface TripDetail {
     assignments?: Array<{
       id: string;
       userId: string;
+      shareAmount: number;
+      normalizedShareAmount: number;
       user: {
         id: string;
         email: string;
@@ -577,7 +579,7 @@ export default function TripDetailPage() {
         if (!isFullyAssigned) {
           const shouldForce = confirm(
             `This spend is only ${assignedPercentage.toFixed(1)}% assigned. ` +
-            `Close anyway? (Once closed, the spend cannot be edited)`
+            `Close anyway?`
           );
           if (!shouldForce) return;
         } 

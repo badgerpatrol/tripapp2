@@ -25,6 +25,8 @@ interface Spend {
   assignments?: Array<{
     id: string;
     userId: string;
+    shareAmount?: number;
+    normalizedShareAmount?: number;
     user: {
       id: string;
       email: string;
@@ -256,12 +258,12 @@ export default function ViewSpendDialog({
                       key={assignment.id}
                       className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
                     >
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
                           {(assignment.user.displayName || assignment.user.email)[0].toUpperCase()}
                         </span>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           {assignment.user.displayName || assignment.user.email}
                         </p>
@@ -269,6 +271,18 @@ export default function ViewSpendDialog({
                           <p className="text-xs text-zinc-600 dark:text-zinc-400">{assignment.user.email}</p>
                         )}
                       </div>
+                      {assignment.shareAmount !== undefined && (
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                            {spend.currency} {assignment.shareAmount.toFixed(2)}
+                          </p>
+                          {assignment.shareAmount > 0 && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                              {((assignment.shareAmount / spend.amount) * 100).toFixed(1)}%
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

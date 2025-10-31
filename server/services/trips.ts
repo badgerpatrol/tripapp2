@@ -662,6 +662,8 @@ export async function getTripOverviewForMember(
         assignments: s.assignments.map((a) => ({
           id: a.id,
           userId: a.userId,
+          shareAmount: Number(a.shareAmount),
+          normalizedShareAmount: Number(a.normalizedShareAmount),
           user: a.user,
         })),
       };
