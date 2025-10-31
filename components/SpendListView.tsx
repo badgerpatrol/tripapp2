@@ -12,6 +12,7 @@ interface SpendCardProps {
   getStatusBadge: (status: SpendStatus) => React.ReactElement;
   getAssignmentBadge: (percentage: number) => React.ReactElement;
   onLongPress: (e: React.Touch | React.MouseEvent) => void;
+  onClick?: (spendId: string) => void;
   onFinalize?: (spendId: string) => void;
   canUserFinalize?: (spend: SpendWithAssignments) => boolean;
 }
@@ -23,6 +24,7 @@ function SpendCard({
   getStatusBadge,
   getAssignmentBadge,
   onLongPress,
+  onClick,
   onFinalize,
   canUserFinalize,
 }: SpendCardProps) {
@@ -30,9 +32,16 @@ function SpendCard({
     onLongPress,
   });
 
+  const handleClick = () => {
+    if (onClick) {
+      onClick(spend.id);
+    }
+  };
+
   return (
     <div
       {...longPressHandlers}
+      onClick={handleClick}
       className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
     >
       {/* Header: Description & Status */}
@@ -185,6 +194,7 @@ export interface SpendListViewProps {
   spends: SpendWithAssignments[];
   currentUserId?: string;
   canUserFinalize?: (spend: SpendWithAssignments) => boolean;
+  onView?: (spendId: string) => void;
   onEdit?: (spendId: string) => void;
   onAssign?: (spendId: string) => void;
   onJoin?: (spendId: string) => void;
@@ -206,6 +216,7 @@ export function SpendListView({
   spends,
   currentUserId,
   canUserFinalize,
+  onView,
   onEdit,
   onAssign,
   onJoin,
@@ -363,6 +374,7 @@ export function SpendListView({
             getStatusBadge={getStatusBadge}
             getAssignmentBadge={getAssignmentBadge}
             onLongPress={handleLongPress(spend.id)}
+            onClick={onView}
             onFinalize={onFinalize}
             canUserFinalize={canUserFinalize}
           />

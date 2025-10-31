@@ -8,6 +8,7 @@ import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
 import AddSpendDialog from "./AddSpendDialog";
 import EditSpendDialog from "./EditSpendDialog";
+import ViewSpendDialog from "./ViewSpendDialog";
 import AssignSpendDialog from "./AssignSpendDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
@@ -101,6 +102,7 @@ export default function TripDetailPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isAddSpendDialogOpen, setIsAddSpendDialogOpen] = useState(false);
+  const [isViewSpendDialogOpen, setIsViewSpendDialogOpen] = useState(false);
   const [isEditSpendDialogOpen, setIsEditSpendDialogOpen] = useState(false);
   const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
@@ -293,6 +295,11 @@ export default function TripDetailPage() {
   };
 
   // Spend action handlers
+  const handleViewSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsViewSpendDialogOpen(true);
+  };
+
   const handleEditSpend = (spendId: string) => {
     setSelectedSpendId(spendId);
     setIsEditSpendDialogOpen(true);
@@ -1100,6 +1107,7 @@ export default function TripDetailPage() {
                   }))}
                   currentUserId={user?.uid}
                   canUserFinalize={canUserFinalizeSpend}
+                  onView={handleViewSpend}
                   onEdit={handleEditSpend}
                   onAssign={handleAssignSpend}
                   onJoin={handleJoinSpend}
@@ -1257,6 +1265,27 @@ export default function TripDetailPage() {
         />
       )}
 
+      {/* View Spend Dialog */}
+      {trip && selectedSpendId && (
+        <ViewSpendDialog
+          spend={trip.spends?.find((s) => s.id === selectedSpendId) || null}
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
+          currentUserId={user?.uid}
+          isOpen={isViewSpendDialogOpen}
+          onClose={() => {
+            setIsViewSpendDialogOpen(false);
+            setSelectedSpendId(null);
+          }}
+          canUserFinalize={canUserFinalizeSpend}
+          onEdit={handleEditSpend}
+          onAssign={handleAssignSpend}
+          onJoin={handleJoinSpend}
+          onLeave={handleLeaveSpend}
+          onFinalize={handleFinalizeSpend}
+          onDelete={handleDeleteSpend}
+        />
+      )}
+
       {/* Edit Spend Dialog */}
       {trip && selectedSpendId && (
         <EditSpendDialog
@@ -1264,8 +1293,8 @@ export default function TripDetailPage() {
           trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
           isOpen={isEditSpendDialogOpen}
           onClose={() => {
+            // Just close the edit dialog, keep view dialog open and selectedSpendId
             setIsEditSpendDialogOpen(false);
-            setSelectedSpendId(null);
           }}
           onSuccess={handleAddSpendSuccess}
         />
@@ -1286,8 +1315,8 @@ export default function TripDetailPage() {
           tripId={trip.id}
           isOpen={isAssignSpendDialogOpen}
           onClose={() => {
+            // Just close the assign dialog, keep view dialog open and selectedSpendId
             setIsAssignSpendDialogOpen(false);
-            setSelectedSpendId(null);
           }}
           onSuccess={handleAddSpendSuccess}
         />
