@@ -289,7 +289,14 @@ export async function closeSpend(spendId: string, userId: string, force: boolean
     const spendAmount = spend.normalizedAmount.toNumber();
     const assignmentPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
 
-    // Validate assignments unless force=true
+    // Always prevent closing if assignments exceed 100%
+    if (assignmentPercentage > 100.01) {
+      throw new Error(
+        `Cannot close spend: assignments exceed 100% (currently ${assignmentPercentage.toFixed(1)}%). Please adjust assignments before closing.`
+      );
+    }
+
+    // Validate assignments equal 100% unless force=true
     if (!force && Math.abs(assignmentPercentage - 100) > 0.01) {
       throw new Error(
         `Cannot close: assignments total ${assignmentPercentage.toFixed(1)}%, must be 100%. Use force=true to override.`

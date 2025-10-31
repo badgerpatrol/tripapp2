@@ -11,6 +11,8 @@ import EditSpendDialog from "./EditSpendDialog";
 import ViewSpendDialog from "./ViewSpendDialog";
 import AssignSpendDialog from "./AssignSpendDialog";
 import SelfAssignDialog from "./SelfAssignDialog";
+import SplitRemainderDialog from "./SplitRemainderDialog";
+import EditAssignmentDialog from "./EditAssignmentDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 
@@ -109,7 +111,10 @@ export default function TripDetailPage() {
   const [isEditSpendDialogOpen, setIsEditSpendDialogOpen] = useState(false);
   const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
   const [isSelfAssignDialogOpen, setIsSelfAssignDialogOpen] = useState(false);
+  const [isSplitRemainderDialogOpen, setIsSplitRemainderDialogOpen] = useState(false);
+  const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
   // Spend filtering and sorting state
@@ -319,6 +324,131 @@ export default function TripDetailPage() {
     setIsSelfAssignDialogOpen(true);
   };
 
+  const handleSplitRemainderSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsSplitRemainderDialogOpen(true);
+  };
+
+  const handleEditAssignment = (assignmentId: string) => {
+    setSelectedAssignmentId(assignmentId);
+    setIsEditAssignmentDialogOpen(true);
+  };
+
+  const handleEditAssignmentSubmit = async (amount: number) => {
+    if (!user || !trip || !selectedAssignmentId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Find the assignment and its spend
+      let assignment: any = null;
+      let spend: any = null;
+
+      for (const s of trip.spends || []) {
+        const found = s.assignments?.find(a => a.id === selectedAssignmentId);
+        if (found) {
+          assignment = found;
+          spend = s;
+          break;
+        }
+      }
+
+      if (!assignment || !spend) {
+        throw new Error("Assignment not found");
+      }
+
+      // Calculate normalized amount
+      const normalizedAmount = amount * spend.fxRate;
+
+      // Update the assignment via API
+      const response = await fetch(`/api/spends/${spend.id}/assignments/${selectedAssignmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          shareAmount: amount,
+          normalizedShareAmount: normalizedAmount,
+          splitType: "EXACT",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update assignment");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsEditAssignmentDialogOpen(false);
+    } catch (err) {
+      console.error("Error updating assignment:", err);
+      throw err;
+    }
+  };
+
+  const handleRemoveAssignment = async () => {
+    if (!user || !trip || !selectedAssignmentId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Find the assignment's spend
+      let spend: any = null;
+      for (const s of trip.spends || []) {
+        if (s.assignments?.some(a => a.id === selectedAssignmentId)) {
+          spend = s;
+          break;
+        }
+      }
+
+      if (!spend) {
+        throw new Error("Spend not found for assignment");
+      }
+
+      // Delete the assignment via API
+      const response = await fetch(`/api/spends/${spend.id}/assignments/${selectedAssignmentId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to remove assignment");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsEditAssignmentDialogOpen(false);
+    } catch (err) {
+      console.error("Error removing assignment:", err);
+      throw err;
+    }
+  };
+
   const handleSelfAssignSubmit = async (amount: number) => {
     if (!user || !trip || !selectedSpendId) return;
 
@@ -396,6 +526,54 @@ export default function TripDetailPage() {
       setIsSelfAssignDialogOpen(false);
     } catch (err) {
       console.error("Error assigning amount:", err);
+      throw err; // Re-throw so the dialog can handle it
+    }
+  };
+
+  const handleSplitRemainderSubmit = async (assignments: any[]) => {
+    if (!user || !trip || !selectedSpendId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Submit the new assignments
+      const response = await fetch(`/api/spends/${selectedSpendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: assignments.map(a => ({
+            userId: a.userId,
+            shareAmount: a.shareAmount,
+            normalizedShareAmount: a.normalizedShareAmount,
+            splitType: "EXACT" as const,
+          })),
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to split remainder");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsSplitRemainderDialogOpen(false);
+    } catch (err) {
+      console.error("Error splitting remainder:", err);
       throw err; // Re-throw so the dialog can handle it
     }
   };
@@ -1196,6 +1374,7 @@ export default function TripDetailPage() {
                     date: new Date(spend.date),
                   }))}
                   currentUserId={user?.uid}
+                  tripSpendingClosed={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
                   canUserFinalize={canUserFinalizeSpend}
                   onView={handleViewSpend}
                   onEdit={handleEditSpend}
@@ -1360,7 +1539,7 @@ export default function TripDetailPage() {
       {trip && selectedSpendId && (
         <ViewSpendDialog
           spend={trip.spends?.find((s) => s.id === selectedSpendId) || null}
-          trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency, spendStatus: trip.spendStatus }}
           currentUserId={user?.uid}
           isOpen={isViewSpendDialogOpen}
           onClose={() => {
@@ -1371,6 +1550,8 @@ export default function TripDetailPage() {
           onEdit={handleEditSpend}
           onAssign={handleAssignSpend}
           onSelfAssign={handleSelfAssignSpend}
+          onSplitRemainder={handleSplitRemainderSpend}
+          onEditAssignment={handleEditAssignment}
           onJoin={handleJoinSpend}
           onLeave={handleLeaveSpend}
           onFinalize={handleFinalizeSpend}
@@ -1452,6 +1633,74 @@ export default function TripDetailPage() {
               setIsSelfAssignDialogOpen(false);
             }}
             onAssign={handleSelfAssignSubmit}
+          />
+        );
+      })()}
+
+      {/* Split Remainder Dialog */}
+      {trip && selectedSpendId && user && (() => {
+        const selectedSpend = trip.spends?.find((s) => s.id === selectedSpendId);
+        const allParticipants = trip.participants.map(p => ({
+          id: p.user.id,
+          email: p.user.email,
+          displayName: p.user.displayName,
+        }));
+
+        return (
+          <SplitRemainderDialog
+            spend={
+              selectedSpend || {
+                id: selectedSpendId,
+                description: "",
+                amount: 0,
+                currency: trip.baseCurrency,
+                normalizedAmount: 0,
+                fxRate: 1,
+              }
+            }
+            trip={{ baseCurrency: trip.baseCurrency }}
+            currentUserId={user.uid}
+            existingAssignments={selectedSpend?.assignments || []}
+            allParticipants={allParticipants}
+            isOpen={isSplitRemainderDialogOpen}
+            onClose={() => {
+              setIsSplitRemainderDialogOpen(false);
+            }}
+            onApply={handleSplitRemainderSubmit}
+          />
+        );
+      })()}
+
+      {/* Edit Assignment Dialog */}
+      {trip && selectedAssignmentId && user && (() => {
+        // Find the assignment and its spend
+        let assignment: any = null;
+        let spend: any = null;
+
+        for (const s of trip.spends || []) {
+          const found = s.assignments?.find(a => a.id === selectedAssignmentId);
+          if (found) {
+            assignment = found;
+            spend = s;
+            break;
+          }
+        }
+
+        if (!assignment || !spend) return null;
+
+        return (
+          <EditAssignmentDialog
+            assignment={assignment}
+            spend={spend}
+            currentUserId={user.uid}
+            assignedPercentage={spend.assignedPercentage || 0}
+            isOpen={isEditAssignmentDialogOpen}
+            onClose={() => {
+              setIsEditAssignmentDialogOpen(false);
+              setSelectedAssignmentId(null);
+            }}
+            onUpdate={handleEditAssignmentSubmit}
+            onRemove={handleRemoveAssignment}
           />
         );
       })()}

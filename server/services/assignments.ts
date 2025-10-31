@@ -83,6 +83,7 @@ export async function createAssignments(
  */
 export async function updateAssignment(
   assignmentId: string,
+  currentUserId: string,
   data: {
     shareAmount?: number;
     normalizedShareAmount?: number;
@@ -106,6 +107,14 @@ export async function updateAssignment(
 
   if (!assignment) {
     throw new Error("Assignment not found");
+  }
+
+  // Check permission: user must be the spender or the assignment owner
+  const isSpender = assignment.spend.paidById === currentUserId;
+  const isAssignmentOwner = assignment.userId === currentUserId;
+
+  if (!isSpender && !isAssignmentOwner) {
+    throw new Error("You do not have permission to edit this assignment");
   }
 
   // Check if trip spending is closed
@@ -156,8 +165,9 @@ export async function updateAssignment(
  * Validates that the spend is not closed before deleting.
  *
  * @param assignmentId - ID of the assignment to delete
+ * @param currentUserId - ID of the user performing the deletion
  */
-export async function deleteAssignment(assignmentId: string) {
+export async function deleteAssignment(assignmentId: string, currentUserId: string) {
   // Get the assignment with its spend
   const assignment = await prisma.spendAssignment.findUnique({
     where: { id: assignmentId },
@@ -174,6 +184,14 @@ export async function deleteAssignment(assignmentId: string) {
 
   if (!assignment) {
     throw new Error("Assignment not found");
+  }
+
+  // Check permission: user must be the spender or the assignment owner
+  const isSpender = assignment.spend.paidById === currentUserId;
+  const isAssignmentOwner = assignment.userId === currentUserId;
+
+  if (!isSpender && !isAssignmentOwner) {
+    throw new Error("You do not have permission to remove this user from the spend");
   }
 
   // Check if trip spending is closed

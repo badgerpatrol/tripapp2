@@ -193,6 +193,7 @@ export interface SpendWithAssignments {
 export interface SpendListViewProps {
   spends: SpendWithAssignments[];
   currentUserId?: string;
+  tripSpendingClosed?: boolean;
   canUserFinalize?: (spend: SpendWithAssignments) => boolean;
   onView?: (spendId: string) => void;
   onEdit?: (spendId: string) => void;
@@ -216,6 +217,7 @@ export interface SpendListViewProps {
 export function SpendListView({
   spends,
   currentUserId,
+  tripSpendingClosed = false,
   canUserFinalize,
   onView,
   onEdit,
@@ -295,7 +297,7 @@ export function SpendListView({
       items.push({
         label: "Edit",
         onClick: () => onEdit(spendId),
-        disabled: spend.status === SpendStatus.CLOSED,
+        disabled: spend.status === SpendStatus.CLOSED || tripSpendingClosed,
       });
     }
 
@@ -307,14 +309,14 @@ export function SpendListView({
 
     if (isSpender) {
       // User is the spender - show full Assign functionality
-      if (onAssign) {
+      if (onAssign && !tripSpendingClosed) {
         items.push({
           label: "Assign",
           onClick: () => onAssign(spendId),
         });
       }
       // Also show self-assign for spender
-      if (onSelfAssign && spend.status !== SpendStatus.CLOSED) {
+      if (onSelfAssign && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
         items.push({
           label: "Assign My Share",
           onClick: () => onSelfAssign(spendId),
@@ -322,7 +324,7 @@ export function SpendListView({
       }
     } else if (!isAlreadyInvolved && currentUserId) {
       // User is not the spender and not involved - show Join
-      if (onJoin) {
+      if (onJoin && !tripSpendingClosed) {
         items.push({
           label: "Join",
           onClick: () => onJoin(spendId),
@@ -330,14 +332,14 @@ export function SpendListView({
       }
     } else if (isAlreadyInvolved) {
       // User is already involved - show self-assign option
-      if (onSelfAssign && spend.status !== SpendStatus.CLOSED) {
+      if (onSelfAssign && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
         items.push({
           label: "Assign My Share",
           onClick: () => onSelfAssign(spendId),
         });
       }
       // User is already involved (but not spender) - show Leave so they can remove themselves
-      if (onLeave) {
+      if (onLeave && !tripSpendingClosed) {
         items.push({
           label: "Leave",
           onClick: () => onLeave(spendId),

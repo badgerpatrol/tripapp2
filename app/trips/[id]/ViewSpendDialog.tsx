@@ -40,6 +40,7 @@ interface ViewSpendDialogProps {
   trip: {
     id: string;
     baseCurrency: string;
+    spendStatus?: SpendStatus;
   };
   currentUserId?: string;
   isOpen: boolean;
@@ -48,6 +49,8 @@ interface ViewSpendDialogProps {
   onEdit?: (spendId: string) => void;
   onAssign?: (spendId: string) => void;
   onSelfAssign?: (spendId: string) => void;
+  onSplitRemainder?: (spendId: string) => void;
+  onEditAssignment?: (assignmentId: string) => void;
   onJoin?: (spendId: string) => void;
   onLeave?: (spendId: string) => void;
   onFinalize?: (spendId: string) => void;
@@ -64,6 +67,8 @@ export default function ViewSpendDialog({
   onEdit,
   onAssign,
   onSelfAssign,
+  onSplitRemainder,
+  onEditAssignment,
   onJoin,
   onLeave,
   onFinalize,
@@ -88,12 +93,20 @@ export default function ViewSpendDialog({
   );
   const isAlreadyInvolved = currentUserId && spend.assignments?.some(a => a.userId === currentUserId);
 
+  // Calculate if there's a remainder to split
+  const totalAssigned = spend.assignments?.reduce((sum, a) => sum + (a.shareAmount || 0), 0) || 0;
+  const hasRemainder = spend.amount - totalAssigned > 0.01; // Small tolerance for floating point
+
+  // Check if trip spending is closed
+  const isTripSpendingClosed = (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED;
+
   // Determine which buttons to show
-  const showEdit = onEdit && spend.status !== SpendStatus.CLOSED;
-  const showAssign = onAssign && isSpender;
-  const showSelfAssign = onSelfAssign && isAlreadyInvolved && spend.status !== SpendStatus.CLOSED;
-  const showJoin = onJoin && !isAlreadyInvolved && currentUserId && !isSpender;
-  const showLeave = onLeave && isAlreadyInvolved && !isSpender;
+  const showEdit = onEdit && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
+  const showAssign = onAssign && isSpender && !isTripSpendingClosed;
+  const showSelfAssign = onSelfAssign && isAlreadyInvolved && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
+  const showSplitRemainder = onSplitRemainder && isSpender && hasRemainder && !isTripSpendingClosed;
+  const showJoin = onJoin && !isAlreadyInvolved && currentUserId && !isSpender && !isTripSpendingClosed;
+  const showLeave = onLeave && isAlreadyInvolved && !isSpender && !isTripSpendingClosed;
   const showFinalize = onFinalize && canUserFinalize && canUserFinalize(spend);
   const showDelete = onDelete;
 
@@ -253,38 +266,57 @@ export default function ViewSpendDialog({
                   People Involved ({spend.assignments.length})
                 </label>
                 <div className="space-y-2">
-                  {spend.assignments.map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                          {(assignment.user.displayName || assignment.user.email)[0].toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                          {assignment.user.displayName || assignment.user.email}
-                        </p>
-                        {assignment.user.displayName && (
-                          <p className="text-xs text-zinc-600 dark:text-zinc-400">{assignment.user.email}</p>
-                        )}
-                      </div>
-                      {assignment.shareAmount !== undefined && (
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                            {spend.currency} {assignment.shareAmount.toFixed(2)}
+                  {spend.assignments.map((assignment) => {
+                    // Determine if user can click on this assignment
+                    const isSpender = currentUserId && spend.paidBy.id === currentUserId;
+                    const isAssignmentOwner = currentUserId && assignment.userId === currentUserId;
+                    const canClickAssignment = onEditAssignment && (isSpender || isAssignmentOwner) && !isTripSpendingClosed;
+
+                    return (
+                      <div
+                        key={assignment.id}
+                        onClick={() => canClickAssignment && onEditAssignment(assignment.id)}
+                        className={`flex items-center gap-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 ${
+                          canClickAssignment
+                            ? "cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
+                            : ""
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                            {(assignment.user.displayName || assignment.user.email)[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                            {assignment.user.displayName || assignment.user.email}
                           </p>
-                          {assignment.shareAmount > 0 && (
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                              {((assignment.shareAmount / spend.amount) * 100).toFixed(1)}%
-                            </p>
+                          {assignment.user.displayName && (
+                            <p className="text-xs text-zinc-600 dark:text-zinc-400">{assignment.user.email}</p>
                           )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {assignment.shareAmount !== undefined && (
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                              {spend.currency} {assignment.shareAmount.toFixed(2)}
+                            </p>
+                            {assignment.shareAmount > 0 && (
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                {((assignment.shareAmount / spend.amount) * 100).toFixed(1)}%
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {canClickAssignment && (
+                          <div className="flex-shrink-0">
+                            <svg className="w-4 h-4 text-zinc-400 dark:text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -348,6 +380,21 @@ export default function ViewSpendDialog({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Assign My Share
+                </button>
+              )}
+
+              {showSplitRemainder && (
+                <button
+                  onClick={() => {
+                    // Keep view dialog open, just open split remainder on top
+                    onSplitRemainder(spend.id);
+                  }}
+                  className="tap-target px-4 py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  Split Remainder
                 </button>
               )}
             </div>

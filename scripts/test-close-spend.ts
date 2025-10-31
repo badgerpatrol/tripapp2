@@ -109,7 +109,7 @@ async function testCloseSpend() {
     // 7. Try to edit the assignment (should fail)
     console.log("7. Testing assignment edit lock...");
     try {
-      await updateAssignment(assignment.id, { shareAmount: 50 });
+      await updateAssignment(assignment.id, testUser.id, { shareAmount: 50 });
       console.log("ERROR: Should not be able to edit assignment for closed spend!\n");
     } catch (error) {
       if (error instanceof Error) {
