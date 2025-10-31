@@ -197,6 +197,7 @@ export interface SpendListViewProps {
   onView?: (spendId: string) => void;
   onEdit?: (spendId: string) => void;
   onAssign?: (spendId: string) => void;
+  onSelfAssign?: (spendId: string) => void;
   onJoin?: (spendId: string) => void;
   onLeave?: (spendId: string) => void;
   onFinalize?: (spendId: string) => void;
@@ -219,6 +220,7 @@ export function SpendListView({
   onView,
   onEdit,
   onAssign,
+  onSelfAssign,
   onJoin,
   onLeave,
   onFinalize,
@@ -311,6 +313,13 @@ export function SpendListView({
           onClick: () => onAssign(spendId),
         });
       }
+      // Also show self-assign for spender
+      if (onSelfAssign && spend.status !== SpendStatus.CLOSED) {
+        items.push({
+          label: "Assign My Share",
+          onClick: () => onSelfAssign(spendId),
+        });
+      }
     } else if (!isAlreadyInvolved && currentUserId) {
       // User is not the spender and not involved - show Join
       if (onJoin) {
@@ -320,6 +329,13 @@ export function SpendListView({
         });
       }
     } else if (isAlreadyInvolved) {
+      // User is already involved - show self-assign option
+      if (onSelfAssign && spend.status !== SpendStatus.CLOSED) {
+        items.push({
+          label: "Assign My Share",
+          onClick: () => onSelfAssign(spendId),
+        });
+      }
       // User is already involved (but not spender) - show Leave so they can remove themselves
       if (onLeave) {
         items.push({

@@ -10,6 +10,7 @@ import AddSpendDialog from "./AddSpendDialog";
 import EditSpendDialog from "./EditSpendDialog";
 import ViewSpendDialog from "./ViewSpendDialog";
 import AssignSpendDialog from "./AssignSpendDialog";
+import SelfAssignDialog from "./SelfAssignDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 
@@ -105,6 +106,7 @@ export default function TripDetailPage() {
   const [isViewSpendDialogOpen, setIsViewSpendDialogOpen] = useState(false);
   const [isEditSpendDialogOpen, setIsEditSpendDialogOpen] = useState(false);
   const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
+  const [isSelfAssignDialogOpen, setIsSelfAssignDialogOpen] = useState(false);
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
@@ -308,6 +310,92 @@ export default function TripDetailPage() {
   const handleAssignSpend = (spendId: string) => {
     setSelectedSpendId(spendId);
     setIsAssignSpendDialogOpen(true);
+  };
+
+  const handleSelfAssignSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsSelfAssignDialogOpen(true);
+  };
+
+  const handleSelfAssignSubmit = async (amount: number) => {
+    if (!user || !trip || !selectedSpendId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === selectedSpendId);
+
+      if (!spend) return;
+
+      // Calculate normalized amount (convert to base currency)
+      const normalizedAmount = amount * spend.fxRate;
+
+      // Get ALL assignments from the spend including shareAmount data
+      // We need to fetch the full spend data with assignment details
+      const spendResponse = await fetch(`/api/spends/${selectedSpendId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!spendResponse.ok) {
+        throw new Error("Failed to fetch spend details");
+      }
+
+      const spendData = await spendResponse.json();
+      const fullAssignments = spendData.spend?.assignments || [];
+
+      // Create new assignments array, preserving others and updating current user
+      const newAssignments = fullAssignments
+        .filter((a: any) => a.userId !== user.uid)
+        .map((a: any) => ({
+          userId: a.userId,
+          shareAmount: a.shareAmount,
+          normalizedShareAmount: a.normalizedShareAmount,
+          splitType: a.splitType,
+        }));
+
+      // Add/update current user's assignment
+      newAssignments.push({
+        userId: user.uid,
+        shareAmount: amount,
+        normalizedShareAmount: normalizedAmount,
+        splitType: "EXACT" as const,
+      });
+
+      const response = await fetch(`/api/spends/${selectedSpendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: newAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to assign amount");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsSelfAssignDialogOpen(false);
+    } catch (err) {
+      console.error("Error assigning amount:", err);
+      throw err; // Re-throw so the dialog can handle it
+    }
   };
 
   const handleJoinSpend = async (spendId: string) => {
@@ -1110,6 +1198,7 @@ export default function TripDetailPage() {
                   onView={handleViewSpend}
                   onEdit={handleEditSpend}
                   onAssign={handleAssignSpend}
+                  onSelfAssign={handleSelfAssignSpend}
                   onJoin={handleJoinSpend}
                   onLeave={handleLeaveSpend}
                   onFinalize={handleFinalizeSpend}
@@ -1279,6 +1368,7 @@ export default function TripDetailPage() {
           canUserFinalize={canUserFinalizeSpend}
           onEdit={handleEditSpend}
           onAssign={handleAssignSpend}
+          onSelfAssign={handleSelfAssignSpend}
           onJoin={handleJoinSpend}
           onLeave={handleLeaveSpend}
           onFinalize={handleFinalizeSpend}
@@ -1321,6 +1411,48 @@ export default function TripDetailPage() {
           onSuccess={handleAddSpendSuccess}
         />
       )}
+
+      {/* Self Assign Dialog */}
+      {trip && selectedSpendId && user && (() => {
+        const selectedSpend = trip.spends?.find((s) => s.id === selectedSpendId);
+        const userAssignment = trip.userAssignments?.find(
+          (a) => a.userId === user.uid &&
+          // We need to match this assignment to the spend, but userAssignments doesn't have spendId
+          // For now, we'll check if user is in the spend's assignments
+          selectedSpend?.assignments?.some(sa => sa.userId === user.uid && sa.id === a.id)
+        );
+
+        return (
+          <SelfAssignDialog
+            spend={
+              selectedSpend || {
+                id: selectedSpendId,
+                description: "",
+                amount: 0,
+                currency: trip.baseCurrency,
+                normalizedAmount: 0,
+              }
+            }
+            trip={{ baseCurrency: trip.baseCurrency }}
+            currentUserId={user.uid}
+            existingAssignment={
+              userAssignment
+                ? {
+                    id: userAssignment.id,
+                    shareAmount: userAssignment.shareAmount,
+                    normalizedShareAmount: userAssignment.normalizedShareAmount,
+                  }
+                : undefined
+            }
+            assignedPercentage={selectedSpend?.assignedPercentage || 0}
+            isOpen={isSelfAssignDialogOpen}
+            onClose={() => {
+              setIsSelfAssignDialogOpen(false);
+            }}
+            onAssign={handleSelfAssignSubmit}
+          />
+        );
+      })()}
     </div>
   );
 }
