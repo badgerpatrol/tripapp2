@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 
 type SplitMode = "equal" | "proportional";
+type SplitTarget = "zero-cost" | "all-users";
 
 interface Assignment {
   id: string;
@@ -53,6 +54,7 @@ export default function SplitRemainderDialog({
   currentUserId,
 }: SplitRemainderDialogProps) {
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
+  const [splitTarget, setSplitTarget] = useState<SplitTarget>("zero-cost");
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,14 +64,27 @@ export default function SplitRemainderDialog({
   const remainder = spend.amount - totalAssigned;
   const remainderPercentage = (remainder / spend.amount) * 100;
 
-  // Initialize selected users to all existing assignments on open (or empty if none)
+  // Auto-select users based on split target
   useEffect(() => {
     if (isOpen) {
-      const userIds = new Set(existingAssignments.map(a => a.userId));
+      let userIds: Set<string>;
+
+      if (splitTarget === "zero-cost") {
+        // Select only users with zero cost assigned
+        userIds = new Set(
+          existingAssignments
+            .filter(a => a.shareAmount === 0)
+            .map(a => a.userId)
+        );
+      } else {
+        // Select all users involved in the spend
+        userIds = new Set(existingAssignments.map(a => a.userId));
+      }
+
       setSelectedUserIds(userIds);
       setError(null);
     }
-  }, [isOpen, existingAssignments]);
+  }, [isOpen, existingAssignments, splitTarget]);
 
   if (!isOpen) return null;
 
@@ -329,43 +344,69 @@ export default function SplitRemainderDialog({
             </div>
           </div>
 
-          {/* Participant Selection */}
+          {/* Split Target Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-              Select Participants ({selectedUserIds.size} selected)
+              Split Among
             </label>
-            <div className="space-y-2 max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
-              {availableUsers.map(user => (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => toggleUser(user.id)}
-                  disabled={isSubmitting}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors disabled:opacity-50"
-                >
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                    selectedUserIds.has(user.id)
-                      ? "bg-blue-500 border-blue-500"
-                      : "border-zinc-300 dark:border-zinc-600"
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSplitTarget("zero-cost")}
+                disabled={isSubmitting}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  splitTarget === "zero-cost"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                    : "border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500"
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    splitTarget === "zero-cost"
+                      ? "border-blue-500"
+                      : "border-zinc-400"
                   }`}>
-                    {selectedUserIds.has(user.id) && (
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
+                    {splitTarget === "zero-cost" && (
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                      {user.user.displayName || user.user.email}
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Current: {spend.currency} {user.shareAmount.toFixed(2)} ({(user.shareAmount / spend.amount * 100).toFixed(1)}%)
-                    </p>
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">Unnassigned Users</span>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
+                  Only users with no assigned cost
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSplitTarget("all-users")}
+                disabled={isSubmitting}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  splitTarget === "all-users"
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                    : "border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500"
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    splitTarget === "all-users"
+                      ? "border-blue-500"
+                      : "border-zinc-400"
+                  }`}>
+                    {splitTarget === "all-users" && (
+                      <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    )}
                   </div>
-                </button>
-              ))}
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">All Users</span>
+                </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
+                  All users involved in this spend
+                </p>
+              </button>
             </div>
           </div>
+
+          
 
           {/* Preview */}
           <div className="mb-6">

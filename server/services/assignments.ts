@@ -280,10 +280,15 @@ export async function replaceAssignments(
         const existing = existingAssignmentsMap.get(assignment.userId);
 
         if (existing) {
-          // User already has an assignment - preserve their existing allocation
-          // Only update if they are newly added (shouldn't happen in this path)
-          return tx.spendAssignment.findUnique({
+          // User already has an assignment - update it with the new values
+          return tx.spendAssignment.update({
             where: { id: existing.id },
+            data: {
+              shareAmount: new Decimal(assignment.shareAmount),
+              normalizedShareAmount: new Decimal(assignment.normalizedShareAmount),
+              splitType: assignment.splitType,
+              splitValue: assignment.splitValue ? new Decimal(assignment.splitValue) : null,
+            },
             include: {
               user: {
                 select: {
