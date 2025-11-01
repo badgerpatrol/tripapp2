@@ -240,11 +240,6 @@ export async function replaceAssignments(
     throw new Error("Spend not found");
   }
 
-  // Prevent modifying assignments for closed spends
-  if (spend.status === SpendStatus.CLOSED) {
-    throw new Error("Cannot modify assignments for closed spend. Spend is locked.");
-  }
-
   // Build a map of existing assignments by userId
   const existingAssignmentsMap = new Map(
     spend.assignments.map((a) => [a.userId, a])
@@ -252,6 +247,19 @@ export async function replaceAssignments(
 
   // Build a set of new user IDs
   const newUserIds = new Set(assignments.map((a) => a.userId));
+
+  // Build a set of existing user IDs
+  const existingUserIds = new Set(spend.assignments.map((a) => a.userId));
+
+  // Check if the list of people involved has changed
+  const usersAdded = [...newUserIds].filter((id) => !existingUserIds.has(id));
+  const usersRemoved = [...existingUserIds].filter((id) => !newUserIds.has(id));
+  const peopleChanged = usersAdded.length > 0 || usersRemoved.length > 0;
+
+  // Prevent modifying the list of people involved for closed spends
+  if (spend.status === SpendStatus.CLOSED && peopleChanged) {
+    throw new Error("Cannot change the people involved in a closed spend. Spend is locked.");
+  }
 
   // Delete existing assignments and create new ones in a transaction
   const created = await prisma.$transaction(async (tx) => {

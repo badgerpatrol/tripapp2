@@ -337,7 +337,7 @@ export function SpendListView({
 
     if (isSpender) {
       // User is the spender - show full Assign functionality
-      if (onAssign && !tripSpendingClosed) {
+      if (onAssign && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
         items.push({
           label: "Add People",
           onClick: () => onAssign(spendId),
@@ -352,7 +352,7 @@ export function SpendListView({
       }
     } else if (!isAlreadyInvolved && currentUserId) {
       // User is not the spender and not involved - show Join
-      if (onJoin && !tripSpendingClosed) {
+      if (onJoin && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
         items.push({
           label: "Join",
           onClick: () => onJoin(spendId),
@@ -367,7 +367,7 @@ export function SpendListView({
         });
       }
       // User is already involved (but not spender) - show Leave so they can remove themselves
-      if (onLeave && !tripSpendingClosed) {
+      if (onLeave && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
         items.push({
           label: "Leave",
           onClick: () => onLeave(spendId),

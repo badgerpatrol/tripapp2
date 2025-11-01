@@ -106,11 +106,11 @@ export default function ViewSpendDialog({
 
   // Determine which buttons to show
   const showEdit = onEdit && canUserEdit && canUserEdit(spend) && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
-  const showAssign = onAssign && isSpender && !isTripSpendingClosed;
+  const showAssign = onAssign && isSpender && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showSelfAssign = onSelfAssign && isAlreadyInvolved && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showSplitRemainder = onSplitRemainder && isSpender && hasRemainder && !isTripSpendingClosed;
   const showJoin = onJoin && !isAlreadyInvolved && currentUserId && !isSpender && !isTripSpendingClosed;
-  const showLeave = onLeave && isAlreadyInvolved && !isSpender && !isTripSpendingClosed;
+  const showLeave = onLeave && isAlreadyInvolved && !isSpender && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showFinalize = onFinalize && canUserFinalize && canUserFinalize(spend);
   const showDelete = onDelete && canUserDelete && canUserDelete(spend);
 
