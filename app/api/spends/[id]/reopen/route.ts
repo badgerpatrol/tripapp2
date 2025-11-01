@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
 import { getSpendById } from "@/server/services/spends";
 import { reopenSpend } from "@/server/services/spends";
+import { prisma } from "@/lib/prisma";
 
 /**
  * POST /api/spends/[id]/reopen - Reopen a closed spend
  *
- * Authorization: User must be authenticated and a member of the trip
+ * Authorization: User must be either the spender (paidBy) or a trip organizer (OWNER/ADMIN)
  *
  * This endpoint allows reopening a closed spend, making it editable again.
  */
@@ -43,10 +44,30 @@ export async function POST(
     // 3. Authorize - verify user is a member of the trip
     await requireTripMember(auth.uid, existingSpend.tripId);
 
-    // 4. Reopen the spend
+    // 4. Additional authorization - verify user is either the spender or a trip organizer
+    const isSpender = existingSpend.paidBy.id === auth.uid;
+
+    // Check if user is a trip organizer (OWNER or ADMIN)
+    const tripMember = await prisma.tripMember.findFirst({
+      where: {
+        tripId: existingSpend.tripId,
+        userId: auth.uid,
+      },
+    });
+
+    const isOrganizer = tripMember && (tripMember.role === "OWNER" || tripMember.role === "ADMIN");
+
+    if (!isSpender && !isOrganizer) {
+      return NextResponse.json(
+        { error: "Only the spender or trip organizer can reopen this spend" },
+        { status: 403 }
+      );
+    }
+
+    // 5. Reopen the spend
     const spend = await reopenSpend(id, auth.uid);
 
-    // 5. Calculate assignment percentage
+    // 6. Calculate assignment percentage
     const totalAssigned = spend.assignments.reduce(
       (sum, assignment) => sum + Number(assignment.normalizedShareAmount),
       0
@@ -54,7 +75,7 @@ export async function POST(
     const spendAmount = Number(spend.normalizedAmount);
     const assignedPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
 
-    // 6. Return reopened spend
+    // 7. Return reopened spend
     return NextResponse.json(
       {
         success: true,

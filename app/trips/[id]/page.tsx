@@ -892,6 +892,19 @@ export default function TripDetailPage() {
     return isSpender || isOrganizer;
   };
 
+  // Check if current user can delete a specific spend
+  const canUserDeleteSpend = (spend: { paidBy: { id: string } }) => {
+    if (!user) return false;
+
+    // User can delete if they are:
+    // 1. The spender (person who paid for the spend)
+    // 2. The trip organizer (OWNER or ADMIN role)
+    const isSpender = spend.paidBy.id === user.uid;
+    const isOrganizer = canInvite;
+
+    return isSpender || isOrganizer;
+  };
+
   const handleToggleTripSpendStatus = async () => {
     if (!user || !trip) return;
 
@@ -1018,6 +1031,10 @@ export default function TripDetailPage() {
             </div>
           </div>
 
+          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+            Organized by {trip.organizer.displayName || trip.organizer.email}
+          </p>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -1047,19 +1064,7 @@ export default function TripDetailPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Currency</p>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {trip.baseCurrency}
-                </p>
-              </div>
-            </div>
+            
           </div>
         </div>
 
@@ -1251,49 +1256,7 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Timeline (if available) */}
-        {trip.timeline && trip.timeline.length > 0 && (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Timeline</h2>
-            <div className="space-y-3">
-              {trip.timeline.map((item) => (
-                <div
-                  key={item.id}
-                  className={`flex items-start gap-4 p-4 rounded-lg border ${
-                    item.isCompleted
-                      ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                      : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
-                  }`}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      item.isCompleted
-                        ? "bg-green-500 text-white"
-                        : "bg-zinc-300 dark:bg-zinc-600"
-                    }`}
-                  >
-                    {item.isCompleted && (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
-                    {item.description && (
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
-                    )}
-                    {item.date && (
-                      <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
-                        {formatDate(item.date)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        
 
         {/* Assign Tasks (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && user && (() => {
@@ -1376,6 +1339,8 @@ export default function TripDetailPage() {
                   currentUserId={user?.uid}
                   tripSpendingClosed={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
                   canUserFinalize={canUserFinalizeSpend}
+                  canUserDelete={canUserDeleteSpend}
+                  canUserEdit={canUserDeleteSpend}
                   onView={handleViewSpend}
                   onEdit={handleEditSpend}
                   onAssign={handleAssignSpend}
@@ -1395,33 +1360,6 @@ export default function TripDetailPage() {
                 <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Your Assignments (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && trip.userAssignments && trip.userAssignments.length > 0 && (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Your Assignments</h2>
-            <div className="space-y-3">
-              {trip.userAssignments.map((assignment) => (
-                <div
-                  key={assignment.id}
-                  className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
-                >
-                  <div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Share Amount</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
-                      Split Type: {assignment.splitType}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                      {trip.baseCurrency} {assignment.normalizedShareAmount.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
@@ -1501,6 +1439,50 @@ export default function TripDetailPage() {
             ))}
           </div>
         </div>
+
+        {/* Timeline (if available) */}
+        {trip.timeline && trip.timeline.length > 0 && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Timeline</h2>
+            <div className="space-y-3">
+              {trip.timeline.map((item) => (
+                <div
+                  key={item.id}
+                  className={`flex items-start gap-4 p-4 rounded-lg border ${
+                    item.isCompleted
+                      ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                      : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      item.isCompleted
+                        ? "bg-green-500 text-white"
+                        : "bg-zinc-300 dark:bg-zinc-600"
+                    }`}
+                  >
+                    {item.isCompleted && (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
+                    {item.description && (
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
+                    )}
+                    {item.date && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+                        {formatDate(item.date)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Trip Dialog */}
@@ -1547,6 +1529,8 @@ export default function TripDetailPage() {
             setSelectedSpendId(null);
           }}
           canUserFinalize={canUserFinalizeSpend}
+          canUserDelete={canUserDeleteSpend}
+          canUserEdit={canUserDeleteSpend}
           onEdit={handleEditSpend}
           onAssign={handleAssignSpend}
           onSelfAssign={handleSelfAssignSpend}

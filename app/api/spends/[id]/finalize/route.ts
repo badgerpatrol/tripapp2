@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
 import { getSpendById, closeSpend } from "@/server/services/spends";
 import { CloseSpendSchema } from "@/types/schemas";
+import { prisma } from "@/lib/prisma";
 
 /**
  * POST /api/spends/[id]/finalize - Close a spend
  *
- * Authorization: User must be authenticated and a member of the trip
+ * Authorization: User must be either the spender (paidBy) or a trip organizer (OWNER/ADMIN)
  *
  * Request body:
  * - force: boolean (optional, default: false) - Force close even if assignments don't equal 100%
@@ -44,7 +45,27 @@ export async function POST(
     // 3. Authorize - verify user is a member of the trip
     await requireTripMember(auth.uid, existingSpend.tripId);
 
-    // 4. Parse and validate request body
+    // 4. Additional authorization - verify user is either the spender or a trip organizer
+    const isSpender = existingSpend.paidBy.id === auth.uid;
+
+    // Check if user is a trip organizer (OWNER or ADMIN)
+    const tripMember = await prisma.tripMember.findFirst({
+      where: {
+        tripId: existingSpend.tripId,
+        userId: auth.uid,
+      },
+    });
+
+    const isOrganizer = tripMember && (tripMember.role === "OWNER" || tripMember.role === "ADMIN");
+
+    if (!isSpender && !isOrganizer) {
+      return NextResponse.json(
+        { error: "Only the spender or trip organizer can close this spend" },
+        { status: 403 }
+      );
+    }
+
+    // 5. Parse and validate request body
     const body = await request.json().catch(() => ({})); // Default to empty object if no body
     const validationResult = CloseSpendSchema.safeParse(body);
 
@@ -60,10 +81,10 @@ export async function POST(
 
     const { force = false } = validationResult.data;
 
-    // 5. Close the spend
+    // 6. Close the spend
     const spend = await closeSpend(id, auth.uid, force);
 
-    // 6. Calculate assignment percentage
+    // 7. Calculate assignment percentage
     const totalAssigned = spend.assignments.reduce(
       (sum, assignment) => sum + Number(assignment.normalizedShareAmount),
       0
@@ -71,7 +92,7 @@ export async function POST(
     const spendAmount = Number(spend.normalizedAmount);
     const assignedPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
 
-    // 7. Return closed spend
+    // 8. Return closed spend
     return NextResponse.json(
       {
         success: true,

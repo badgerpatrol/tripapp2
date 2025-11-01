@@ -46,6 +46,8 @@ interface ViewSpendDialogProps {
   isOpen: boolean;
   onClose: () => void;
   canUserFinalize?: (spend: Spend) => boolean;
+  canUserDelete?: (spend: Spend) => boolean;
+  canUserEdit?: (spend: Spend) => boolean;
   onEdit?: (spendId: string) => void;
   onAssign?: (spendId: string) => void;
   onSelfAssign?: (spendId: string) => void;
@@ -64,6 +66,8 @@ export default function ViewSpendDialog({
   isOpen,
   onClose,
   canUserFinalize,
+  canUserDelete,
+  canUserEdit,
   onEdit,
   onAssign,
   onSelfAssign,
@@ -101,14 +105,14 @@ export default function ViewSpendDialog({
   const isTripSpendingClosed = (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED;
 
   // Determine which buttons to show
-  const showEdit = onEdit && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
+  const showEdit = onEdit && canUserEdit && canUserEdit(spend) && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showAssign = onAssign && isSpender && !isTripSpendingClosed;
   const showSelfAssign = onSelfAssign && isAlreadyInvolved && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showSplitRemainder = onSplitRemainder && isSpender && hasRemainder && !isTripSpendingClosed;
   const showJoin = onJoin && !isAlreadyInvolved && currentUserId && !isSpender && !isTripSpendingClosed;
   const showLeave = onLeave && isAlreadyInvolved && !isSpender && !isTripSpendingClosed;
   const showFinalize = onFinalize && canUserFinalize && canUserFinalize(spend);
-  const showDelete = onDelete;
+  const showDelete = onDelete && canUserDelete && canUserDelete(spend);
 
   const handleClose = () => {
     onClose();
@@ -170,6 +174,29 @@ export default function ViewSpendDialog({
               {(spend.assignedPercentage || 0).toFixed(1)}% assigned
             </span>
           </div>
+
+          {/* You Owe (if current user is assigned) */}
+          {currentUserId && (() => {
+            const userAssignment = spend.assignments?.find(a => a.userId === currentUserId);
+            if (userAssignment && userAssignment.shareAmount !== undefined && userAssignment.shareAmount > 0) {
+              return (
+                <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">You owe</p>
+                      <p className="text-xs text-red-700 dark:text-red-500">
+                        {((userAssignment.shareAmount / spend.amount) * 100).toFixed(1)}% of total
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                      {spend.currency} {userAssignment.shareAmount.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* Details */}
           <div className="space-y-6">
@@ -276,32 +303,63 @@ export default function ViewSpendDialog({
                       <div
                         key={assignment.id}
                         onClick={() => canClickAssignment && onEditAssignment(assignment.id)}
-                        className={`flex items-center gap-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700 ${
+                        className={`flex items-center gap-3 p-3 rounded-lg border ${
+                          isAssignmentOwner
+                            ? "bg-red-50 dark:bg-red-950/20 border-red-300 dark:border-red-800 ring-2 ring-red-200 dark:ring-red-900/50"
+                            : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
+                        } ${
                           canClickAssignment
-                            ? "cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
+                            ? "cursor-pointer hover:bg-opacity-80 dark:hover:bg-opacity-80 transition-colors"
                             : ""
                         }`}
                       >
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isAssignmentOwner
+                            ? "bg-red-100 dark:bg-red-900/50"
+                            : "bg-blue-100 dark:bg-blue-900/30"
+                        }`}>
+                          <span className={`text-xs font-medium ${
+                            isAssignmentOwner
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-blue-700 dark:text-blue-300"
+                          }`}>
                             {(assignment.user.displayName || assignment.user.email)[0].toUpperCase()}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                          <p className={`text-sm font-medium ${
+                            isAssignmentOwner
+                              ? "text-red-900 dark:text-red-100"
+                              : "text-zinc-900 dark:text-zinc-100"
+                          }`}>
                             {assignment.user.displayName || assignment.user.email}
+                            {isAssignmentOwner && (
+                              <span className="ml-2 text-xs font-semibold text-red-600 dark:text-red-400">(You)</span>
+                            )}
                           </p>
                           {assignment.user.displayName && (
-                            <p className="text-xs text-zinc-600 dark:text-zinc-400">{assignment.user.email}</p>
+                            <p className={`text-xs ${
+                              isAssignmentOwner
+                                ? "text-red-700 dark:text-red-400"
+                                : "text-zinc-600 dark:text-zinc-400"
+                            }`}>{assignment.user.email}</p>
                           )}
                         </div>
                         {assignment.shareAmount !== undefined && (
                           <div className="text-right flex-shrink-0">
-                            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                            <p className={`text-sm font-semibold ${
+                              isAssignmentOwner
+                                ? "text-red-900 dark:text-red-100"
+                                : "text-zinc-900 dark:text-zinc-100"
+                            }`}>
                               {spend.currency} {assignment.shareAmount.toFixed(2)}
                             </p>
                             {assignment.shareAmount > 0 && (
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                              <p className={`text-xs ${
+                                isAssignmentOwner
+                                  ? "text-red-700 dark:text-red-500"
+                                  : "text-zinc-500 dark:text-zinc-400"
+                              }`}>
                                 {((assignment.shareAmount / spend.amount) * 100).toFixed(1)}%
                               </p>
                             )}
@@ -458,7 +516,7 @@ export default function ViewSpendDialog({
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Close
+                      Close Spend
                     </>
                   )}
                 </button>
@@ -487,7 +545,7 @@ export default function ViewSpendDialog({
               onClick={handleClose}
               className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
             >
-              Close
+              Done
             </button>
           </div>
         </div>

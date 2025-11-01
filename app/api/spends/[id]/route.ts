@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
 import { getSpendById, updateSpend, deleteSpend } from "@/server/services/spends";
 import { UpdateSpendSchema } from "@/types/schemas";
+import { prisma } from "@/lib/prisma";
 
 /**
  * GET /api/spends/[id] - Get a spend by ID
@@ -103,7 +104,7 @@ export async function GET(
 /**
  * PUT /api/spends/[id] - Update a spend
  *
- * Authorization: User must be authenticated and a member of the trip
+ * Authorization: User must be either the spender (paidBy) or a trip organizer (OWNER/ADMIN)
  *
  * Request body: UpdateSpendInput (all fields optional)
  */
@@ -140,7 +141,27 @@ export async function PUT(
     // 3. Authorize - verify user is a member of the trip
     await requireTripMember(auth.uid, existingSpend.tripId);
 
-    // 4. Parse and validate request body
+    // 4. Additional authorization - verify user is either the spender or a trip organizer
+    const isSpender = existingSpend.paidBy.id === auth.uid;
+
+    // Check if user is a trip organizer (OWNER or ADMIN)
+    const tripMember = await prisma.tripMember.findFirst({
+      where: {
+        tripId: existingSpend.tripId,
+        userId: auth.uid,
+      },
+    });
+
+    const isOrganizer = tripMember && (tripMember.role === "OWNER" || tripMember.role === "ADMIN");
+
+    if (!isSpender && !isOrganizer) {
+      return NextResponse.json(
+        { error: "Only the spender or trip organizer can edit this spend" },
+        { status: 403 }
+      );
+    }
+
+    // 5. Parse and validate request body
     const body = await request.json();
     const validationResult = UpdateSpendSchema.safeParse(body);
 
@@ -156,10 +177,10 @@ export async function PUT(
 
     const updateData = validationResult.data;
 
-    // 5. Update the spend
+    // 6. Update the spend
     const spend = await updateSpend(id, auth.uid, updateData);
 
-    // 6. Calculate assignment percentage
+    // 7. Calculate assignment percentage
     const totalAssigned = spend.assignments.reduce(
       (sum, assignment) => sum + Number(assignment.normalizedShareAmount),
       0
@@ -167,7 +188,7 @@ export async function PUT(
     const spendAmount = Number(spend.normalizedAmount);
     const assignedPercentage = spendAmount > 0 ? (totalAssigned / spendAmount) * 100 : 0;
 
-    // 7. Return updated spend
+    // 8. Return updated spend
     return NextResponse.json(
       {
         success: true,
@@ -227,7 +248,7 @@ export async function PUT(
 /**
  * DELETE /api/spends/[id] - Soft delete a spend
  *
- * Authorization: User must be authenticated and a member of the trip
+ * Authorization: User must be either the spender (paidBy) or a trip organizer (OWNER/ADMIN)
  */
 export async function DELETE(
   request: NextRequest,
@@ -262,10 +283,30 @@ export async function DELETE(
     // 3. Authorize - verify user is a member of the trip
     await requireTripMember(auth.uid, existingSpend.tripId);
 
-    // 4. Delete the spend
+    // 4. Additional authorization - verify user is either the spender or a trip organizer
+    const isSpender = existingSpend.paidBy.id === auth.uid;
+
+    // Check if user is a trip organizer (OWNER or ADMIN)
+    const tripMember = await prisma.tripMember.findFirst({
+      where: {
+        tripId: existingSpend.tripId,
+        userId: auth.uid,
+      },
+    });
+
+    const isOrganizer = tripMember && (tripMember.role === "OWNER" || tripMember.role === "ADMIN");
+
+    if (!isSpender && !isOrganizer) {
+      return NextResponse.json(
+        { error: "Only the spender or trip organizer can delete this spend" },
+        { status: 403 }
+      );
+    }
+
+    // 5. Delete the spend
     await deleteSpend(id, auth.uid);
 
-    // 5. Return success
+    // 6. Return success
     return NextResponse.json(
       {
         success: true,

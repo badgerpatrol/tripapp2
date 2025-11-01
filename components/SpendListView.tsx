@@ -107,6 +107,29 @@ function SpendCard({
         </div>
       </div>
 
+      {/* You Owe (if current user is assigned) */}
+      {currentUserId && (() => {
+        const userAssignment = spend.assignments?.find(a => a.userId === currentUserId);
+        if (userAssignment && userAssignment.shareAmount !== undefined && userAssignment.shareAmount > 0) {
+          return (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">You owe</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                    {((userAssignment.shareAmount / spend.amount) * 100).toFixed(1)}% of total
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  {spend.currency} {userAssignment.shareAmount.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
+
       {/* Involved Users Count */}
       {spend.assignments && spend.assignments.length > 0 && (
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -182,6 +205,8 @@ export interface SpendWithAssignments {
   assignments?: Array<{
     id: string;
     userId: string;
+    shareAmount?: number;
+    normalizedShareAmount?: number;
     user: {
       id: string;
       email: string;
@@ -195,6 +220,8 @@ export interface SpendListViewProps {
   currentUserId?: string;
   tripSpendingClosed?: boolean;
   canUserFinalize?: (spend: SpendWithAssignments) => boolean;
+  canUserDelete?: (spend: SpendWithAssignments) => boolean;
+  canUserEdit?: (spend: SpendWithAssignments) => boolean;
   onView?: (spendId: string) => void;
   onEdit?: (spendId: string) => void;
   onAssign?: (spendId: string) => void;
@@ -219,6 +246,8 @@ export function SpendListView({
   currentUserId,
   tripSpendingClosed = false,
   canUserFinalize,
+  canUserDelete,
+  canUserEdit,
   onView,
   onEdit,
   onAssign,
@@ -293,11 +322,10 @@ export function SpendListView({
   const getContextMenuItems = (spendId: string, spend: SpendWithAssignments): ContextMenuItem[] => {
     const items: ContextMenuItem[] = [];
 
-    if (onEdit) {
+    if (onEdit && canUserEdit && canUserEdit(spend) && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
       items.push({
         label: "Edit",
         onClick: () => onEdit(spendId),
-        disabled: spend.status === SpendStatus.CLOSED || tripSpendingClosed,
       });
     }
 
@@ -361,7 +389,7 @@ export function SpendListView({
       }
     }
 
-    if (onDelete) {
+    if (onDelete && canUserDelete && canUserDelete(spend)) {
       items.push({
         label: "Delete",
         onClick: () => onDelete(spendId),
