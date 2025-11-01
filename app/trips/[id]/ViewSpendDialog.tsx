@@ -125,8 +125,9 @@ export default function ViewSpendDialog({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-              Spend Details
+              {spend.description}
             </h2>
+            
             <button
               onClick={handleClose}
               className="tap-target text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -136,6 +137,12 @@ export default function ViewSpendDialog({
               </svg>
             </button>
           </div>
+          {/* Date */}
+            <div>
+              <p className="text-base text-zinc-900 dark:text-zinc-100 gap-2 mb-6">
+                {formatDate(spend.date)} by {spend.paidBy.displayName || spend.paidBy.email}
+              </p>
+            </div>
 
           {/* Status and Involvement Badges */}
           <div className="flex flex-wrap gap-2 mb-6">
@@ -146,7 +153,7 @@ export default function ViewSpendDialog({
                   : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
               }`}
             >
-              {spend.status === SpendStatus.OPEN ? "Open" : "Closed"}
+              {spend.status === SpendStatus.OPEN ? "Unlocked" : "Locked"}
             </span>
 
             {currentUserId && (
@@ -188,7 +195,7 @@ export default function ViewSpendDialog({
             return (
               <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                  Assignment Summary
+                  Summary
                 </h3>
                 <div className="space-y-2">
                   {showYouOwe && userAssignment && userAssignment.shareAmount !== undefined && (
@@ -260,17 +267,45 @@ export default function ViewSpendDialog({
             );
           })()}
 
+          {/* Amount Summary */}
+          <div className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Amount:
+                </span>
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {spend.currency} {spend.amount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Converted Amount:
+                </span>
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Exchange Rate:
+                </span>
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {spend.fxRate.toFixed(6)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Details */}
           <div className="space-y-6">
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                Description
-              </label>
-              <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                {spend.description}
-              </p>
-            </div>
 
             {/* Category */}
             {spend.category && (
@@ -284,69 +319,9 @@ export default function ViewSpendDialog({
               </div>
             )}
 
-            {/* Amount and Currency */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                  Amount
-                </label>
-                <p className="text-base text-zinc-900 dark:text-zinc-100">
-                  {spend.currency} {spend.amount.toFixed(2)}
-                </p>
-              </div>
+            
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                  Converted Amount
-                </label>
-                <p className="text-base text-zinc-900 dark:text-zinc-100">
-                  {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            {/* FX Rate and Date */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                  Exchange Rate
-                </label>
-                <p className="text-base text-zinc-900 dark:text-zinc-100">
-                  {spend.fxRate.toFixed(6)}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                  Date
-                </label>
-                <p className="text-base text-zinc-900 dark:text-zinc-100">
-                  {formatDate(spend.date)}
-                </p>
-              </div>
-            </div>
-
-            {/* Paid By */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                Paid by
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                    {(spend.paidBy.displayName || spend.paidBy.email)[0].toUpperCase()}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                    {spend.paidBy.displayName || spend.paidBy.email}
-                  </p>
-                  {spend.paidBy.displayName && (
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{spend.paidBy.email}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+            
 
             {/* Involved People */}
             {spend.assignments && spend.assignments.length > 0 && (
