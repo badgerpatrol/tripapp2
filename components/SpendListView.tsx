@@ -339,7 +339,7 @@ export function SpendListView({
       // User is the spender - show full Assign functionality
       if (onAssign && !tripSpendingClosed) {
         items.push({
-          label: "Assign",
+          label: "Add People",
           onClick: () => onAssign(spendId),
         });
       }

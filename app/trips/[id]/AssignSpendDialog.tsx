@@ -135,10 +135,10 @@ export default function AssignSpendDialog({
         {/* Header */}
         <div className="p-6 border-b border-zinc-200 dark:border-zinc-700">
           <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-            Tag Involved Users
+            Who was this for?
           </h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Select which users are involved in: <span className="font-medium">{spend.description}</span>
+            Select who was involved in: <span className="font-medium">{spend.description}</span>
           </p>
           <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-2">
             Amount: {spend.currency} {spend.amount.toFixed(2)}
@@ -155,9 +155,7 @@ export default function AssignSpendDialog({
             )}
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                Select involved users:
-              </label>
+        
 
               {participants.map((participant) => {
                 const isSelected = selectedUserIds.has(participant.user.id);
