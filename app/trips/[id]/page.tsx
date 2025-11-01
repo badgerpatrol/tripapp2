@@ -13,6 +13,7 @@ import AssignSpendDialog from "./AssignSpendDialog";
 import SelfAssignDialog from "./SelfAssignDialog";
 import SplitRemainderDialog from "./SplitRemainderDialog";
 import EditAssignmentDialog from "./EditAssignmentDialog";
+import BalancesDialog from "./BalancesDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 
@@ -113,6 +114,7 @@ export default function TripDetailPage() {
   const [isSelfAssignDialogOpen, setIsSelfAssignDialogOpen] = useState(false);
   const [isSplitRemainderDialogOpen, setIsSplitRemainderDialogOpen] = useState(false);
   const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
+  const [isBalancesDialogOpen, setIsBalancesDialogOpen] = useState(false);
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
@@ -1221,7 +1223,15 @@ export default function TripDetailPage() {
         {/* Balance Summary (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Your Balance</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Your Balance</h2>
+              <button
+                onClick={() => setIsBalancesDialogOpen(true)}
+                className="tap-target bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                View Settlement Plan
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Total Trip Spend */}
               {trip.totalSpent !== undefined && (
@@ -1688,6 +1698,14 @@ export default function TripDetailPage() {
           />
         );
       })()}
+
+      {/* Balances Dialog */}
+      <BalancesDialog
+        tripId={trip.id}
+        baseCurrency={trip.baseCurrency}
+        isOpen={isBalancesDialogOpen}
+        onClose={() => setIsBalancesDialogOpen(false)}
+      />
     </div>
   );
 }

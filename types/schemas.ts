@@ -273,6 +273,38 @@ export const GetSpendsQuerySchema = z.object({
 });
 
 // ============================================================================
+// Settlement & Balance Schemas
+// ============================================================================
+
+export const PersonBalanceSchema = z.object({
+  userId: z.string(),
+  userName: z.string(),
+  userEmail: z.string(),
+  userPhotoURL: z.string().nullable(),
+  totalPaid: z.number(),
+  totalOwed: z.number(),
+  netBalance: z.number(), // Positive = owed money, Negative = owes money
+});
+
+export const SettlementTransferSchema = z.object({
+  fromUserId: z.string(),
+  fromUserName: z.string(),
+  toUserId: z.string(),
+  toUserName: z.string(),
+  amount: z.number(),
+  oldestDebtDate: z.coerce.date().nullable(),
+});
+
+export const TripBalanceSummarySchema = z.object({
+  tripId: z.string(),
+  baseCurrency: z.string(),
+  totalSpent: z.number(),
+  balances: z.array(PersonBalanceSchema),
+  settlements: z.array(SettlementTransferSchema),
+  calculatedAt: z.coerce.date(),
+});
+
+// ============================================================================
 // Type exports
 // ============================================================================
 
@@ -301,3 +333,6 @@ export type CreateSpendResponse = z.infer<typeof CreateSpendResponseSchema>;
 export type UpdateSpendInput = z.infer<typeof UpdateSpendSchema>;
 export type CloseSpendInput = z.infer<typeof CloseSpendSchema>;
 export type GetSpendsQuery = z.infer<typeof GetSpendsQuerySchema>;
+export type PersonBalance = z.infer<typeof PersonBalanceSchema>;
+export type SettlementTransfer = z.infer<typeof SettlementTransferSchema>;
+export type TripBalanceSummary = z.infer<typeof TripBalanceSummarySchema>;
