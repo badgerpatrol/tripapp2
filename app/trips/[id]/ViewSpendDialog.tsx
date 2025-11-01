@@ -127,22 +127,54 @@ export default function ViewSpendDialog({
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {spend.description}
             </h2>
-            
-            <button
-              onClick={handleClose}
-              className="tap-target text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+
+            <div className="flex items-center gap-2">
+              {/* Lock/Unlock Toggle Icon */}
+              {showFinalize && (
+                <button
+                  onClick={() => onFinalize(spend.id)}
+                  className={`p-2 rounded-lg transition-all hover:scale-110 ${
+                    spend.status === SpendStatus.CLOSED
+                      ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                      : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400"
+                  }`}
+                  title={spend.status === SpendStatus.CLOSED ? "Unlock spend" : "Lock spend"}
+                >
+                  {spend.status === SpendStatus.CLOSED ? (
+                    // Locked icon
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  ) : (
+                    // Unlocked icon
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </button>
+              )}
+
+              <button
+                onClick={handleClose}
+                className="tap-target text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
           {/* Date */}
             <div>
-              <p className="text-base text-zinc-900 dark:text-zinc-100 gap-2 mb-6">
+              <p className="text-base text-zinc-900 dark:text-zinc-100 ">
                 {formatDate(spend.date)} by {spend.paidBy.displayName || spend.paidBy.email}
               </p>
+              <p className="text-base text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap gap-2 mb-6">
+                  {spend.notes}
+              </p>
+              
             </div>
+            
 
           {/* Status and Involvement Badges */}
           <div className="flex flex-wrap gap-2 mb-6">
@@ -416,52 +448,12 @@ export default function ViewSpendDialog({
               </div>
             )}
 
-            {/* Notes */}
-            {spend.notes && (
-              <div>
-                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
-                  Notes
-                </label>
-                <p className="text-base text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap">
-                  {spend.notes}
-                </p>
-              </div>
-            )}
+            
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-6 mt-6 border-t border-zinc-200 dark:border-zinc-700">
             {/* Primary Actions Row */}
-            {showFinalize && (
-                <button
-                  onClick={() => {
-                    // Keep dialog open - just perform the action
-                    onFinalize(spend.id);
-                  }}
-                  className={`tap-target px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                    spend.status === SpendStatus.CLOSED
-                      ? "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400"
-                      : "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                  }`}
-                >
-                  {spend.status === SpendStatus.CLOSED ? (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                      </svg>
-                      Unlock spend
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Lock Spend
-                    </>
-                  )}
-                </button>
-              )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {showEdit && (
                 <button
