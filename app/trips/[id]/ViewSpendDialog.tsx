@@ -297,7 +297,7 @@ export default function ViewSpendDialog({
                     // Determine if user can click on this assignment
                     const isSpender = currentUserId && spend.paidBy.id === currentUserId;
                     const isAssignmentOwner = currentUserId && assignment.userId === currentUserId;
-                    const canClickAssignment = onEditAssignment && (isSpender || isAssignmentOwner) && !isTripSpendingClosed;
+                    const canClickAssignment = onEditAssignment && (isSpender || isAssignmentOwner) && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
 
                     return (
                       <div
