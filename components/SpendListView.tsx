@@ -57,7 +57,36 @@ function SpendCard({
           )}
         </div>
         <div className="flex flex-col items-end gap-2">
-          {getStatusBadge(spend.status)}
+          <div className="flex items-center gap-2">
+            {getStatusBadge(spend.status)}
+            {/* Lock/Unlock Toggle Icon */}
+            {onFinalize && canUserFinalize && canUserFinalize(spend) && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFinalize(spend.id);
+                }}
+                className={`p-1.5 rounded-lg transition-all hover:scale-110 ${
+                  spend.status === SpendStatus.CLOSED
+                    ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                    : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400"
+                }`}
+                title={spend.status === SpendStatus.CLOSED ? "Unlock spend" : "Lock spend"}
+              >
+                {spend.status === SpendStatus.CLOSED ? (
+                  // Locked icon
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                ) : (
+                  // Unlocked icon
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </button>
+            )}
+          </div>
           {currentUserId && (
             <span
               className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -144,40 +173,6 @@ function SpendCard({
               {' '}{spend.assignments.length === 1 ? 'person' : 'people'} involved
             </span>
           </div>
-        </div>
-      )}
-
-      {/* Close/Open Toggle Button */}
-      {onFinalize && canUserFinalize && canUserFinalize(spend) && (
-        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFinalize(spend.id);
-            }}
-            className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-              spend.status === SpendStatus.CLOSED
-                ? "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400"
-                : "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-            }`}
-          >
-            {spend.status === SpendStatus.CLOSED ? (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                </svg>
-                Unlock Spend
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Lock Spend
-              </>
-            )}
-          </button>
         </div>
       )}
     </div>
@@ -282,12 +277,13 @@ export function SpendListView({
   const getStatusBadge = (status: SpendStatus) => {
     const statusConfig = {
       [SpendStatus.OPEN]: {
-        label: "Open",
-        className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+        label: "Unlocked",
+        className: "bg-zinc-100 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-400",
       },
       [SpendStatus.CLOSED]: {
-        label: "Closed",
+        label: "Locked",
         className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+
       },
     };
 
