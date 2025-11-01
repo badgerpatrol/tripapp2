@@ -88,7 +88,7 @@ export default function AssignSpendDialog({
       const idToken = await user.getIdToken();
 
       // Create assignments with shareAmount = 0 for newly involved users
-      // This creates the "task" for them to assign their costs
+      // For existing users, the backend will preserve their existing allocations
       const assignments = Array.from(selectedUserIds).map((userId) => ({
         userId,
         shareAmount: 0,

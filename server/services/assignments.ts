@@ -212,6 +212,7 @@ export async function deleteAssignment(assignmentId: string, currentUserId: stri
 /**
  * Replaces all assignments for a spend.
  * Validates that the spend is not closed before replacing assignments.
+ * Preserves existing allocations for users who remain in the spend.
  *
  * @param spendId - ID of the spend
  * @param assignments - New assignments to create
@@ -227,9 +228,12 @@ export async function replaceAssignments(
     splitValue?: number;
   }>
 ) {
-  // Get the spend to check status
+  // Get the spend to check status and existing assignments
   const spend = await prisma.spend.findUnique({
     where: { id: spendId, deletedAt: null },
+    include: {
+      assignments: true,
+    },
   });
 
   if (!spend) {
@@ -241,40 +245,76 @@ export async function replaceAssignments(
     throw new Error("Cannot modify assignments for closed spend. Spend is locked.");
   }
 
+  // Build a map of existing assignments by userId
+  const existingAssignmentsMap = new Map(
+    spend.assignments.map((a) => [a.userId, a])
+  );
+
+  // Build a set of new user IDs
+  const newUserIds = new Set(assignments.map((a) => a.userId));
+
   // Delete existing assignments and create new ones in a transaction
   const created = await prisma.$transaction(async (tx) => {
-    // Delete all existing assignments
-    await tx.spendAssignment.deleteMany({
-      where: { spendId },
-    });
+    // Delete assignments for users who are no longer in the spend
+    const userIdsToDelete = spend.assignments
+      .filter((a) => !newUserIds.has(a.userId))
+      .map((a) => a.id);
 
-    // Create new assignments
-    const newAssignments = await Promise.all(
-      assignments.map((assignment) =>
-        tx.spendAssignment.create({
-          data: {
-            spendId,
-            userId: assignment.userId,
-            shareAmount: new Decimal(assignment.shareAmount),
-            normalizedShareAmount: new Decimal(assignment.normalizedShareAmount),
-            splitType: assignment.splitType,
-            splitValue: assignment.splitValue ? new Decimal(assignment.splitValue) : null,
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                email: true,
-                displayName: true,
-                photoURL: true,
+    if (userIdsToDelete.length > 0) {
+      await tx.spendAssignment.deleteMany({
+        where: { id: { in: userIdsToDelete } },
+      });
+    }
+
+    // Process assignments: update existing or create new
+    const processedAssignments = await Promise.all(
+      assignments.map(async (assignment) => {
+        const existing = existingAssignmentsMap.get(assignment.userId);
+
+        if (existing) {
+          // User already has an assignment - preserve their existing allocation
+          // Only update if they are newly added (shouldn't happen in this path)
+          return tx.spendAssignment.findUnique({
+            where: { id: existing.id },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  displayName: true,
+                  photoURL: true,
+                },
               },
             },
-          },
-        })
-      )
+          });
+        } else {
+          // User is newly added - create assignment with provided values (typically 0)
+          return tx.spendAssignment.create({
+            data: {
+              spendId,
+              userId: assignment.userId,
+              shareAmount: new Decimal(assignment.shareAmount),
+              normalizedShareAmount: new Decimal(assignment.normalizedShareAmount),
+              splitType: assignment.splitType,
+              splitValue: assignment.splitValue ? new Decimal(assignment.splitValue) : null,
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  displayName: true,
+                  photoURL: true,
+                },
+              },
+            },
+          });
+        }
+      })
     );
 
-    return newAssignments;
+    // Filter out any null results (shouldn't happen but for type safety)
+    return processedAssignments.filter((a) => a !== null);
   });
 
   return created;
