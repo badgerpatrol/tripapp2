@@ -147,6 +147,10 @@ export default function EditAssignmentDialog({
 
   const totalAfterChange = assignedPercentage - ((assignment.shareAmount || 0) / spend.amount * 100) + currentPercentage;
 
+  // Calculate amounts
+  const totalAssignedAmount = (totalAfterChange / 100) * spend.amount;
+  const remainingUnassignedAmount= spend.amount-totalAssignedAmount
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl max-w-md w-full">
@@ -254,7 +258,7 @@ export default function EditAssignmentDialog({
                 <div className="space-y-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      New percentage:
+                      % of total:
                     </span>
                     <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                       {currentPercentage.toFixed(1)}%
@@ -262,29 +266,49 @@ export default function EditAssignmentDialog({
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      Total assigned after change:
+                      Total assigned:
                     </span>
-                    <span className={`text-sm font-semibold ${
-                      totalAfterChange > 100
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-zinc-900 dark:text-zinc-100"
-                    }`}>
-                      {totalAfterChange.toFixed(1)}%
-                    </span>
+                    <div className="text-right">
+                      <span className={`text-sm font-semibold ${
+                        totalAfterChange > 100
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-zinc-900 dark:text-zinc-100"
+                      }`}>
+                        {spend.currency} {totalAssignedAmount.toFixed(2)}
+                      </span>
+                      <span className={`text-xs ml-1 ${
+                        totalAfterChange > 100
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-zinc-600 dark:text-zinc-400"
+                      }`}>
+                        ({totalAfterChange.toFixed(1)}%)
+                      </span>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-800">
                     <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                       Remaining unassigned:
                     </span>
-                    <span className={`text-sm font-bold ${
-                      remainingPercentage < 0
-                        ? "text-red-600 dark:text-red-400"
-                        : remainingPercentage < 0.1
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-yellow-600 dark:text-yellow-400"
-                    }`}>
-                      {remainingPercentage.toFixed(1)}%
-                    </span>
+                    <div className="text-right">
+                      <span className={`text-sm font-bold ${
+                        remainingPercentage < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : remainingPercentage < 0.1
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-yellow-600 dark:text-yellow-400"
+                      }`}>
+                        {spend.currency} {remainingUnassignedAmount.toFixed(2)}
+                      </span>
+                      <span className={`text-xs ml-1 ${
+                        remainingPercentage < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : remainingPercentage < 0.1
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-yellow-600 dark:text-yellow-400"
+                      }`}>
+                        ({remainingPercentage.toFixed(1)}%)
+                      </span>
+                    </div>
                   </div>
                 </div>
 

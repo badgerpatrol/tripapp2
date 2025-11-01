@@ -108,11 +108,11 @@ export default function ViewSpendDialog({
   const showEdit = onEdit && canUserEdit && canUserEdit(spend) && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showAssign = onAssign && isSpender && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showSelfAssign = onSelfAssign && isAlreadyInvolved && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
-  const showSplitRemainder = onSplitRemainder && isSpender && hasRemainder && !isTripSpendingClosed;
+  const showSplitRemainder = onSplitRemainder && isSpender && hasRemainder && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showJoin = onJoin && !isAlreadyInvolved && currentUserId && !isSpender && !isTripSpendingClosed;
   const showLeave = onLeave && isAlreadyInvolved && !isSpender && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showFinalize = onFinalize && canUserFinalize && canUserFinalize(spend);
-  const showDelete = onDelete && canUserDelete && canUserDelete(spend);
+  const showDelete = onDelete && canUserDelete && canUserDelete(spend) && spend.status !== SpendStatus.CLOSED;
 
   const handleClose = () => {
     onClose();
@@ -175,27 +175,89 @@ export default function ViewSpendDialog({
             </span>
           </div>
 
-          {/* You Owe (if current user is assigned) */}
-          {currentUserId && (() => {
-            const userAssignment = spend.assignments?.find(a => a.userId === currentUserId);
-            if (userAssignment && userAssignment.shareAmount !== undefined && userAssignment.shareAmount > 0) {
-              return (
-                <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-1">You owe</p>
-                      <p className="text-xs text-red-700 dark:text-red-500">
-                        {((userAssignment.shareAmount / spend.amount) * 100).toFixed(1)}% of total
-                      </p>
+          {/* Assignment Summary */}
+          {(() => {
+            const assignedPercentage = spend.assignedPercentage || 0;
+            const assignedAmount = (assignedPercentage / 100) * spend.amount;
+            const unassignedPercentage = 100 - assignedPercentage;
+            const unassignedAmount = (unassignedPercentage / 100) * spend.amount;
+
+            const userAssignment = currentUserId && spend.assignments?.find(a => a.userId === currentUserId);
+            const showYouOwe = userAssignment && userAssignment.shareAmount !== undefined && userAssignment.shareAmount > 0;
+
+            return (
+              <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                  Assignment Summary
+                </h3>
+                <div className="space-y-2">
+                  {showYouOwe && userAssignment && userAssignment.shareAmount !== undefined && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                          You owe:
+                        </span>
+                        <div className="text-right">
+                          <span className="text-sm font-bold text-red-700 dark:text-red-300">
+                            {spend.currency} {userAssignment.shareAmount.toFixed(2)}
+                          </span>
+                          <span className="text-xs ml-1 text-red-700 dark:text-red-500">
+                            ({((userAssignment.shareAmount / spend.amount) * 100).toFixed(1)}%)
+                          </span>
+                        </div>
+                      </div>
+                      <div className="border-t border-blue-200 dark:border-blue-800"></div>
+                    </>
+                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Total assigned:
+                    </span>
+                    <div className="text-right">
+                      <span className={`text-sm font-semibold ${
+                        assignedPercentage > 100
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-zinc-900 dark:text-zinc-100"
+                      }`}>
+                        {spend.currency} {assignedAmount.toFixed(2)}
+                      </span>
+                      <span className={`text-xs ml-1 ${
+                        assignedPercentage > 100
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-zinc-600 dark:text-zinc-400"
+                      }`}>
+                        ({assignedPercentage.toFixed(1)}%)
+                      </span>
                     </div>
-                    <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                      {spend.currency} {userAssignment.shareAmount.toFixed(2)}
-                    </p>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-800">
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Remaining unassigned:
+                    </span>
+                    <div className="text-right">
+                      <span className={`text-sm font-bold ${
+                        unassignedPercentage < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : unassignedPercentage < 0.1
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-yellow-600 dark:text-yellow-400"
+                      }`}>
+                        {spend.currency} {unassignedAmount.toFixed(2)}
+                      </span>
+                      <span className={`text-xs ml-1 ${
+                        unassignedPercentage < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : unassignedPercentage < 0.1
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-yellow-600 dark:text-yellow-400"
+                      }`}>
+                        ({unassignedPercentage.toFixed(1)}%)
+                      </span>
+                    </div>
                   </div>
                 </div>
-              );
-            }
-            return null;
+              </div>
+            );
           })()}
 
           {/* Details */}
@@ -395,6 +457,36 @@ export default function ViewSpendDialog({
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-6 mt-6 border-t border-zinc-200 dark:border-zinc-700">
             {/* Primary Actions Row */}
+            {showFinalize && (
+                <button
+                  onClick={() => {
+                    // Keep dialog open - just perform the action
+                    onFinalize(spend.id);
+                  }}
+                  className={`tap-target px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                    spend.status === SpendStatus.CLOSED
+                      ? "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400"
+                      : "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                  }`}
+                >
+                  {spend.status === SpendStatus.CLOSED ? (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                      </svg>
+                      Unlock spend
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Lock Spend
+                    </>
+                  )}
+                </button>
+              )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {showEdit && (
                 <button
@@ -490,39 +582,6 @@ export default function ViewSpendDialog({
                   Leave
                 </button>
               )}
-
-              {showFinalize && (
-                <button
-                  onClick={() => {
-                    // Close view dialog before performing action
-                    handleClose();
-                    onFinalize(spend.id);
-                  }}
-                  className={`tap-target px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                    spend.status === SpendStatus.CLOSED
-                      ? "bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400"
-                      : "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                  }`}
-                >
-                  {spend.status === SpendStatus.CLOSED ? (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                      </svg>
-                      Reopen
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Close Spend
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-
             {/* Delete Button (if available) */}
             {showDelete && (
               <button
@@ -539,6 +598,10 @@ export default function ViewSpendDialog({
                 Delete
               </button>
             )}
+              
+            </div>
+
+            
 
             {/* Close Button */}
             <button
