@@ -1302,18 +1302,20 @@ export default function TripDetailPage() {
                   </p>
                 </div>
               </div>
-              <button
-                /*onClick={() => setIsEditDialogOpen(true)}*/
-                className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/70 text-red-700 dark:text-red-300"
-                    : "bg-yellow-100 dark:bg-yellow-900/50 hover:bg-yellow-200 dark:hover:bg-yellow-900/70 text-yellow-700 dark:text-yellow-300"
-                }`}
-              >
-                Change Response
-              </button>
+              {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
+                <button
+                  /*onClick={() => setIsEditDialogOpen(true)}*/
+                  className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/70 text-red-700 dark:text-red-300"
+                      : "bg-yellow-100 dark:bg-yellow-900/50 hover:bg-yellow-200 dark:hover:bg-yellow-900/70 text-yellow-700 dark:text-yellow-300"
+                  }`}
+                >
+                  Change Response
+                </button>
+              )}
             </div>
 
             {/* Quick change buttons */}

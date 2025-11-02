@@ -439,8 +439,8 @@ export default function BalancesDialog({
                           </div>
                         )}
 
-                        {/* Record Payment Button */}
-                        {settlement.remainingAmount > 0.01 && (
+                        {/* Record Payment Button THRESHOLD */}
+                        {settlement.remainingAmount > 0 && (
                           <button
                             onClick={() => handleRecordPayment(settlement)}
                             className="w-full mt-2 px-4 py-2 bg-white dark:bg-zinc-800 border-2 border-current rounded-lg font-medium hover:bg-opacity-90 transition-colors"
