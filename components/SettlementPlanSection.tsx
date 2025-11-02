@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { PersonBalance } from "@/types/schemas";
 import RecordPaymentDialog from "@/app/trips/[id]/RecordPaymentDialog";
+import EditPaymentDialog from "@/app/trips/[id]/EditPaymentDialog";
 
 interface SettlementPlanSectionProps {
   tripId: string;
@@ -67,6 +68,8 @@ export default function SettlementPlanSection({
   const [error, setError] = useState<string | null>(null);
   const [selectedSettlement, setSelectedSettlement] = useState<PersistedSettlement | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<any | null>(null);
+  const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -149,18 +152,48 @@ export default function SettlementPlanSection({
     fetchData();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "PENDING":
-        return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800";
-      case "PARTIALLY_PAID":
-        return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
-      case "PAID":
-        return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
-      case "VERIFIED":
-        return "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800";
-      default:
-        return "text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/20 border-zinc-200 dark:border-zinc-800";
+  const handleEditPayment = (payment: any, settlement: PersistedSettlement) => {
+    setEditingPayment(payment);
+    setSelectedSettlement(settlement);
+    setShowEditPaymentDialog(true);
+  };
+
+  const handleEditPaymentSuccess = () => {
+    setShowEditPaymentDialog(false);
+    setEditingPayment(null);
+    setSelectedSettlement(null);
+    // Refetch data to update the UI
+    fetchData();
+  };
+
+  const handleDeletePayment = async (paymentId: string, settlementId: string) => {
+    if (!user) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this payment? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/settlements/${settlementId}/payments/${paymentId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to delete payment");
+      }
+
+      // Refetch data to update the UI
+      fetchData();
+    } catch (err) {
+      console.error("Error deleting payment:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete payment");
     }
   };
 
@@ -170,7 +203,7 @@ export default function SettlementPlanSection({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Settlement Plan</h2>
-          <span className="px-3 py-1 text-sm font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+          <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
             Spending Closed
           </span>
         </div>
@@ -246,14 +279,18 @@ export default function SettlementPlanSection({
                       ps.toUserId === settlement.toUserId
                   );
 
+                  // Determine the color based on payment status
+                  const isFullyPaid = persistedSettlement && persistedSettlement.remainingAmount <= 0.01;
+                  const cardColor = persistedSettlement
+                    ? isFullyPaid
+                      ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                      : "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                    : "bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800";
+
                   return (
                     <div
                       key={`${settlement.fromUserId}-${settlement.toUserId}-${index}`}
-                      className={
-                        persistedSettlement
-                          ? `border rounded-lg p-4 ${getStatusColor(persistedSettlement.status)}`
-                          : "bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg p-4"
-                      }
+                      className={`border rounded-lg p-4 ${cardColor}`}
                     >
                       {/* Settlement Header */}
                       <div className="flex items-center justify-between mb-2">
@@ -269,7 +306,7 @@ export default function SettlementPlanSection({
                         <div className="flex items-center gap-2">
                           {persistedSettlement && (
                             <span className="px-2 py-1 rounded-full text-xs font-semibold border">
-                              {persistedSettlement.status}
+                              {persistedSettlement.remainingAmount > 0 ? "Partially Paid" : "Paid"}
                             </span>
                           )}
                           <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
@@ -309,26 +346,52 @@ export default function SettlementPlanSection({
                               <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
                                 Payment History ({persistedSettlement.payments.length})
                               </p>
-                              <div className="space-y-1">
+                              <div className="space-y-3">
                                 {persistedSettlement.payments.map((payment) => (
                                   <div
                                     key={payment.id}
-                                    className="text-xs text-zinc-700 dark:text-zinc-300 flex justify-between"
+                                    className="text-sm text-zinc-700 dark:text-zinc-300 rounded-lg border border-zinc-200 dark:border-zinc-600 overflow-hidden"
                                   >
-                                    <span>
-                                      {formatCurrency(payment.amount)} on{" "}
-                                      {new Date(payment.paidAt).toLocaleDateString()}
-                                      {payment.paymentMethod && ` via ${payment.paymentMethod}`}
-                                    </span>
-                                    <span>by {payment.recordedByName}</span>
+                                    <div className="p-3">
+                                      <div className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+                                        {formatCurrency(payment.amount)}
+                                      </div>
+                                      <div className="text-xs text-zinc-600 dark:text-zinc-400">
+                                        {new Date(payment.paidAt).toLocaleDateString()}
+                                        {payment.paymentMethod && ` • ${payment.paymentMethod}`}
+                                      </div>
+                                      <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                        Recorded by {payment.recordedByName}
+                                      </div>
+                                    </div>
+                                    <div className="flex border-t border-zinc-200 dark:border-zinc-600">
+                                      <button
+                                        onClick={() => handleEditPayment(payment, persistedSettlement)}
+                                        className="tap-target flex-1 flex items-center justify-center gap-2 py-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium transition-colors"
+                                      >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeletePayment(payment.id, persistedSettlement.id)}
+                                        className="tap-target flex-1 flex items-center justify-center gap-2 py-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium border-l border-zinc-200 dark:border-zinc-600 transition-colors"
+                                      >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
 
-                          {/* Record Payment Button */}
-                          {persistedSettlement.remainingAmount > 0.01 && (
+                          {/* Record Payment Button THRESHOLD */}
+                          {persistedSettlement.remainingAmount > 0 && (
                             <button
                               onClick={() => handleRecordPayment(persistedSettlement)}
                               className="w-full mt-3 px-4 py-2 bg-white dark:bg-zinc-800 border-2 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 rounded-lg font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
@@ -436,6 +499,16 @@ export default function SettlementPlanSection({
         isOpen={showPaymentDialog}
         onClose={() => setShowPaymentDialog(false)}
         onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Edit Payment Dialog */}
+      <EditPaymentDialog
+        payment={editingPayment}
+        settlement={selectedSettlement}
+        baseCurrency={baseCurrency}
+        isOpen={showEditPaymentDialog}
+        onClose={() => setShowEditPaymentDialog(false)}
+        onSuccess={handleEditPaymentSuccess}
       />
     </div>
   );

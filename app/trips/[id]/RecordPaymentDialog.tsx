@@ -59,9 +59,9 @@ export default function RecordPaymentDialog({
         throw new Error("Amount must be a positive number");
       }
 
-      // Check if amount exceeds remaining
+      // Check if amount exceeds remaining (with small tolerance for floating point precision)
       const remainingAmount = settlement.remainingAmount ?? settlement.amount;
-      if (amount > remainingAmount + 0.01) {
+      if (amount > remainingAmount + 0.001) {
         throw new Error(`Payment amount cannot exceed remaining amount of ${formatCurrency(remainingAmount)}`);
       }
 
@@ -202,7 +202,7 @@ export default function RecordPaymentDialog({
                   id="amount"
                   step="0.01"
                   min="0.01"
-                  max={remainingAmount}
+                  max={Math.ceil(remainingAmount * 100) / 100}
                   value={formData.amount}
                   onChange={(e) =>
                     setFormData({ ...formData, amount: e.target.value })
