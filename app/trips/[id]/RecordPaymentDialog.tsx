@@ -247,49 +247,7 @@ export default function RecordPaymentDialog({
               />
             </div>
 
-            {/* Payment Method */}
-            <div>
-              <label
-                htmlFor="paymentMethod"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-              >
-                Payment Method
-              </label>
-              <input
-                type="text"
-                id="paymentMethod"
-                value={formData.paymentMethod}
-                onChange={(e) =>
-                  setFormData({ ...formData, paymentMethod: e.target.value })
-                }
-                disabled={isSubmitting}
-                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                placeholder="e.g., Cash, Venmo, Bank Transfer"
-                maxLength={100}
-              />
-            </div>
-
-            {/* Payment Reference */}
-            <div>
-              <label
-                htmlFor="paymentReference"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-              >
-                Reference / Transaction ID
-              </label>
-              <input
-                type="text"
-                id="paymentReference"
-                value={formData.paymentReference}
-                onChange={(e) =>
-                  setFormData({ ...formData, paymentReference: e.target.value })
-                }
-                disabled={isSubmitting}
-                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-                placeholder="e.g., Transaction ID, Check number"
-                maxLength={200}
-              />
-            </div>
+            
 
             {/* Notes */}
             <div>

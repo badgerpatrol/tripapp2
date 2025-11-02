@@ -16,6 +16,7 @@ import EditAssignmentDialog from "./EditAssignmentDialog";
 import BalancesDialog from "./BalancesDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
+import SettlementPlanSection from "@/components/SettlementPlanSection";
 
 interface TripDetail {
   id: string;
@@ -96,6 +97,7 @@ interface TripDetail {
   totalSpent?: number;
   userOwes?: number;
   userIsOwed?: number;
+  totalUnassigned?: number;
 }
 
 export default function TripDetailPage() {
@@ -118,6 +120,9 @@ export default function TripDetailPage() {
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+
+  // Toggle state for showing spends when spending is closed
+  const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
 
   // Spend filtering and sorting state
   const [statusFilter, setStatusFilter] = useState<SpendStatus | "all">("all");
@@ -146,7 +151,22 @@ export default function TripDetailPage() {
 
         const data = await response.json();
         console.log("Trip data received:", data);
-        setTrip(data.trip);
+
+        // Calculate total unassigned spend
+        const tripData = data.trip;
+        if (tripData.spends && tripData.spends.length > 0) {
+          const totalUnassigned = tripData.spends.reduce((sum: number, spend: any) => {
+            const assignedPercentage = spend.assignedPercentage || 0;
+            const unassignedPercentage = 100 - assignedPercentage;
+            const unassignedAmount = (spend.normalizedAmount * unassignedPercentage) / 100;
+            return sum + unassignedAmount;
+          }, 0);
+          tripData.totalUnassigned = totalUnassigned;
+        } else {
+          tripData.totalUnassigned = 0;
+        }
+
+        setTrip(tripData);
       } catch (err) {
         console.error("Error fetching trip:", err);
         setError(err instanceof Error ? err.message : "Failed to load trip. Please try again.");
@@ -196,6 +216,24 @@ export default function TripDetailPage() {
       year: "numeric",
     });
   };
+
+  // Helper function to calculate unassigned spend
+  const calculateUnassignedSpend = (tripData: TripDetail): number => {
+    if (!tripData.spends || tripData.spends.length === 0) {
+      return 0;
+    }
+    return tripData.spends.reduce((sum, spend) => {
+      const assignedPercentage = spend.assignedPercentage || 0;
+      const unassignedPercentage = 100 - assignedPercentage;
+      const unassignedAmount = (spend.normalizedAmount * unassignedPercentage) / 100;
+      return sum + unassignedAmount;
+    }, 0);
+  };
+
+  // Calculate unassigned spend if not already calculated
+  if (trip && trip.totalUnassigned === undefined) {
+    trip.totalUnassigned = calculateUnassignedSpend(trip);
+  }
 
   const handleEditSuccess = () => {
     // Refetch the trip data after successful edit
@@ -1241,18 +1279,10 @@ export default function TripDetailPage() {
         )}
 
         {/* Balance Summary (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined) && (
+        {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined || trip.totalUnassigned !== undefined) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Your Balance</h2>
-              <button
-                onClick={() => setIsBalancesDialogOpen(true)}
-                className="tap-target bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                View Settlement Plan
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Trip Spend */}
               {trip.totalSpent !== undefined && (
                 <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
@@ -1282,6 +1312,16 @@ export default function TripDetailPage() {
                   </p>
                 </div>
               )}
+
+              {/* Unassigned Spend */}
+              {trip.totalUnassigned !== undefined && (
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-1">Unassigned Spend</p>
+                  <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                    {trip.baseCurrency} {trip.totalUnassigned.toFixed(2)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1308,89 +1348,109 @@ export default function TripDetailPage() {
           return null;
         })()}
 
-        {/* Spends (for accepted members) */}
+        {/* Spends or Settlement Plan (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
-                {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
-                  <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
-                    Spending Closed
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsAddSpendDialogOpen(true)}
-                  disabled={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
-                  className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium transition-colors"
-                >
-                  Add Spend
-                </button>
-                {canInvite && (
-                  <button
-                    onClick={() => handleToggleTripSpendStatus()}
-                    className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
-                      (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
-                        ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                        : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
-                    }`}
-                  >
-                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen Spending" : "Close Spending"}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Spending Status Notice */}
-            
-
-            {trip.spends && trip.spends.length > 0 ? (
-              <>
-                {/* Filters */}
-                <div className="mb-4">
-                  <SpendFilters
-                    statusFilter={statusFilter}
-                    onStatusFilterChange={setStatusFilter}
-                    sortBy={sortBy}
-                    onSortByChange={setSortBy}
-                    sortOrder={sortOrder}
-                    onSortOrderChange={setSortOrder}
-                  />
+          <>
+            {/* Show Settlement Plan when spending is closed and not toggled to show spends */}
+            {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && !showSpendsWhenClosed ? (
+              <SettlementPlanSection
+                tripId={trip.id}
+                baseCurrency={trip.baseCurrency}
+                onToggleSpends={() => setShowSpendsWhenClosed(true)}
+                onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
+                canReopenSpending={canInvite}
+              />
+            ) : (
+              /* Show Spends section when spending is open OR when toggled to show spends */
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
+                      <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                        Spending Closed
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Show hide spends button when spending is closed and spends are visible */}
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
+                      <button
+                        onClick={() => setShowSpendsWhenClosed(false)}
+                        className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors"
+                      >
+                        Hide Spends
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsAddSpendDialogOpen(true)}
+                      disabled={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
+                      className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium transition-colors"
+                    >
+                      Add Spend
+                    </button>
+                    {canInvite && (
+                      <button
+                        onClick={() => handleToggleTripSpendStatus()}
+                        className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                          (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
+                            ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                            : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
+                        }`}
+                      >
+                        {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen Spending" : "Close Spending"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Spend List */}
-                <SpendListView
-                  spends={getFilteredAndSortedSpends().map((spend) => ({
-                    ...spend,
-                    date: new Date(spend.date),
-                  }))}
-                  currentUserId={user?.uid}
-                  tripSpendingClosed={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
-                  canUserFinalize={canUserFinalizeSpend}
-                  canUserDelete={canUserDeleteSpend}
-                  canUserEdit={canUserDeleteSpend}
-                  onView={handleViewSpend}
-                  onEdit={handleEditSpend}
-                  onAssign={handleAssignSpend}
-                  onSelfAssign={handleSelfAssignSpend}
-                  onJoin={handleJoinSpend}
-                  onLeave={handleLeaveSpend}
-                  onFinalize={handleFinalizeSpend}
-                  onDelete={handleDeleteSpend}
-                />
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
+                {trip.spends && trip.spends.length > 0 ? (
+                  <>
+                    {/* Filters */}
+                    <div className="mb-4">
+                      <SpendFilters
+                        statusFilter={statusFilter}
+                        onStatusFilterChange={setStatusFilter}
+                        sortBy={sortBy}
+                        onSortByChange={setSortBy}
+                        sortOrder={sortOrder}
+                        onSortOrderChange={setSortOrder}
+                      />
+                    </div>
+
+                    {/* Spend List */}
+                    <SpendListView
+                      spends={getFilteredAndSortedSpends().map((spend) => ({
+                        ...spend,
+                        date: new Date(spend.date),
+                      }))}
+                      currentUserId={user?.uid}
+                      tripSpendingClosed={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
+                      canUserFinalize={canUserFinalizeSpend}
+                      canUserDelete={canUserDeleteSpend}
+                      canUserEdit={canUserDeleteSpend}
+                      onView={handleViewSpend}
+                      onEdit={handleEditSpend}
+                      onAssign={handleAssignSpend}
+                      onSelfAssign={handleSelfAssignSpend}
+                      onJoin={handleJoinSpend}
+                      onLeave={handleLeaveSpend}
+                      onFinalize={handleFinalizeSpend}
+                      onDelete={handleDeleteSpend}
+                    />
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Members */}
