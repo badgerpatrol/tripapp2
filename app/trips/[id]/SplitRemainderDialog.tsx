@@ -132,14 +132,29 @@ export default function SplitRemainderDialog({
       // Equal split: divide remainder equally among selected users
       const splitAmount = remainder / selectedUserIds.size;
 
+      // Convert selected users to array to ensure consistent ordering
+      const selectedUsersArray = Array.from(selectedUsers);
+      let remainingAmount = remainder;
+
       // Create assignments for all selected users with their updated amounts
-      const selectedAssignments = selectedUsers.map(u => ({
-        id: existingAssignmentMap.get(u.id)?.id || u.id,
-        userId: u.id,
-        user: u.user,
-        shareAmount: u.shareAmount + splitAmount,
-        normalizedShareAmount: (u.shareAmount + splitAmount) * spend.fxRate,
-      }));
+      // For all but the last user, use the calculated split amount
+      // For the last user, assign the exact remaining amount to avoid rounding errors
+      const selectedAssignments = selectedUsersArray.map((u, index) => {
+        const isLastUser = index === selectedUsersArray.length - 1;
+        const amountToAdd = isLastUser ? remainingAmount : splitAmount;
+
+        if (!isLastUser) {
+          remainingAmount -= splitAmount;
+        }
+
+        return {
+          id: existingAssignmentMap.get(u.id)?.id || u.id,
+          userId: u.id,
+          user: u.user,
+          shareAmount: u.shareAmount + amountToAdd,
+          normalizedShareAmount: (u.shareAmount + amountToAdd) * spend.fxRate,
+        };
+      });
 
       // Keep unselected assignments unchanged
       const unselectedAssignments = unselectedUsers.map(u => ({
@@ -158,13 +173,29 @@ export default function SplitRemainderDialog({
       if (totalSelectedShare === 0) {
         // If no one has any share yet, fall back to equal split
         const splitAmount = remainder / selectedUserIds.size;
-        const selectedAssignments = selectedUsers.map(u => ({
-          id: existingAssignmentMap.get(u.id)?.id || u.id,
-          userId: u.id,
-          user: u.user,
-          shareAmount: splitAmount,
-          normalizedShareAmount: splitAmount * spend.fxRate,
-        }));
+
+        // Convert selected users to array to ensure consistent ordering
+        const selectedUsersArray = Array.from(selectedUsers);
+        let remainingAmount = remainder;
+
+        // For all but the last user, use the calculated split amount
+        // For the last user, assign the exact remaining amount to avoid rounding errors
+        const selectedAssignments = selectedUsersArray.map((u, index) => {
+          const isLastUser = index === selectedUsersArray.length - 1;
+          const amountToAssign = isLastUser ? remainingAmount : splitAmount;
+
+          if (!isLastUser) {
+            remainingAmount -= splitAmount;
+          }
+
+          return {
+            id: existingAssignmentMap.get(u.id)?.id || u.id,
+            userId: u.id,
+            user: u.user,
+            shareAmount: amountToAssign,
+            normalizedShareAmount: amountToAssign * spend.fxRate,
+          };
+        });
 
         const unselectedAssignments = unselectedUsers.map(u => ({
           id: existingAssignmentMap.get(u.id)!.id,
@@ -178,9 +209,25 @@ export default function SplitRemainderDialog({
       }
 
       // Proportional distribution
-      const selectedAssignments = selectedUsers.map(u => {
-        const proportion = u.shareAmount / totalSelectedShare;
-        const additionalAmount = remainder * proportion;
+      // For all but the last user, calculate proportional amount
+      // For the last user, assign exact remaining to avoid rounding errors
+      const selectedUsersArray = Array.from(selectedUsers);
+      let remainingAmount = remainder;
+
+      const selectedAssignments = selectedUsersArray.map((u, index) => {
+        const isLastUser = index === selectedUsersArray.length - 1;
+        let additionalAmount: number;
+
+        if (isLastUser) {
+          // Last user gets the exact remaining amount
+          additionalAmount = remainingAmount;
+        } else {
+          // Calculate proportional amount for this user
+          const proportion = u.shareAmount / totalSelectedShare;
+          additionalAmount = remainder * proportion;
+          remainingAmount -= additionalAmount;
+        }
+
         return {
           id: existingAssignmentMap.get(u.id)?.id || u.id,
           userId: u.id,
