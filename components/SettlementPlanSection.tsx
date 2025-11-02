@@ -280,7 +280,7 @@ export default function SettlementPlanSection({
                   );
 
                   // Determine the color based on payment status
-                  const isFullyPaid = persistedSettlement && persistedSettlement.remainingAmount <= 0.01;
+                  const isFullyPaid = persistedSettlement && persistedSettlement.remainingAmount <= 0;
                   const cardColor = persistedSettlement
                     ? isFullyPaid
                       ? "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
