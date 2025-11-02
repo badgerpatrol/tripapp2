@@ -1702,8 +1702,10 @@ export default function TripDetailPage() {
                       {item.description && (
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
                       )}
+                    </div>
+                    <div className="flex items-center gap-2">
                       {isEditing ? (
-                        <div className="mt-2 flex items-center gap-2">
+                        <>
                           <input
                             type="date"
                             value={editingTimelineDate}
@@ -1725,11 +1727,11 @@ export default function TripDetailPage() {
                           >
                             Cancel
                           </button>
-                        </div>
+                        </>
                       ) : (
-                        <div className="flex items-center gap-2 mt-1">
+                        <>
                           {item.date && (
-                            <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                            <p className="text-base font-medium text-zinc-700 dark:text-zinc-300">
                               {formatDate(item.date)}
                             </p>
                           )}
@@ -1739,7 +1741,7 @@ export default function TripDetailPage() {
                                 setEditingTimelineItemId(item.id);
                                 setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
                               }}
-                              className="tap-target ml-2 p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                              className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
                               title="Edit milestone date"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1747,7 +1749,7 @@ export default function TripDetailPage() {
                               </svg>
                             </button>
                           )}
-                        </div>
+                        </>
                       )}
                     </div>
                   </div>
