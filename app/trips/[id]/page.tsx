@@ -121,6 +121,8 @@ export default function TripDetailPage() {
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
+  const [editingTimelineDate, setEditingTimelineDate] = useState<string>("");
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -1046,7 +1048,7 @@ export default function TripDetailPage() {
 
     console.log("Current RSVP status:", currentStatus, "isClosing:", isClosing);
 
-    
+
 
     try {
       const idToken = await user.getIdToken();
@@ -1087,6 +1089,37 @@ export default function TripDetailPage() {
     } catch (err) {
       console.error("Error toggling RSVP status:", err);
       alert(`Failed to toggle RSVP status: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  const handleEditTimelineDate = async (itemId: string, newDate: string | null) => {
+    if (!user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/timeline/${itemId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          date: newDate ? new Date(newDate).toISOString() : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to update milestone date");
+      }
+
+      // Success - refresh the trip data
+      handleEditSuccess();
+      setEditingTimelineItemId(null);
+      setEditingTimelineDate("");
+    } catch (err) {
+      console.error("Error updating timeline date:", err);
+      alert(err instanceof Error ? err.message : "Failed to update milestone date");
     }
   };
 
@@ -1638,41 +1671,88 @@ export default function TripDetailPage() {
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Timeline</h2>
             <div className="space-y-3">
-              {trip.timeline.map((item) => (
-                <div
-                  key={item.id}
-                  className={`flex items-start gap-4 p-4 rounded-lg border ${
-                    item.isCompleted
-                      ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
-                      : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
-                  }`}
-                >
+              {trip.timeline.map((item) => {
+                const isEditing = editingTimelineItemId === item.id;
+                const canEdit = canInvite && item.title !== "Trip Created";
+
+                return (
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    key={item.id}
+                    className={`flex items-start gap-4 p-4 rounded-lg border ${
                       item.isCompleted
-                        ? "bg-green-500 text-white"
-                        : "bg-zinc-300 dark:bg-zinc-600"
+                        ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                        : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
                     }`}
                   >
-                    {item.isCompleted && (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        item.isCompleted
+                          ? "bg-green-500 text-white"
+                          : "bg-zinc-300 dark:bg-zinc-600"
+                      }`}
+                    >
+                      {item.isCompleted && (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
+                      {item.description && (
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
+                      )}
+                      {isEditing ? (
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            type="date"
+                            value={editingTimelineDate}
+                            onChange={(e) => setEditingTimelineDate(e.target.value)}
+                            className="px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                          />
+                          <button
+                            onClick={() => handleEditTimelineDate(item.id, editingTimelineDate)}
+                            className="tap-target px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingTimelineItemId(null);
+                              setEditingTimelineDate("");
+                            }}
+                            className="tap-target px-3 py-1.5 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-1">
+                          {item.date && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                              {formatDate(item.date)}
+                            </p>
+                          )}
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setEditingTimelineItemId(item.id);
+                                setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
+                              }}
+                              className="tap-target ml-2 p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                              title="Edit milestone date"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
-                    {item.description && (
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
-                    )}
-                    {item.date && (
-                      <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
-                        {formatDate(item.date)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

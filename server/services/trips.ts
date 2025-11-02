@@ -758,3 +758,116 @@ export async function checkAndAutoCloseRsvp(tripId: string) {
     ]);
   }
 }
+
+/**
+ * Updates a timeline item's date and triggers milestone checks
+ * Only OWNER and ADMIN can update timeline items
+ */
+export async function updateTimelineItemDate(
+  tripId: string,
+  itemId: string,
+  userId: string,
+  newDate: Date | null
+) {
+  // Verify user is a member of the trip
+  const membership = await prisma.tripMember.findFirst({
+    where: {
+      tripId,
+      userId,
+      deletedAt: null,
+    },
+  });
+
+  if (!membership) {
+    throw new Error("You are not a member of this trip");
+  }
+
+  // Only OWNER and ADMIN can edit timeline items
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    throw new Error("Only trip organizers can edit timeline items");
+  }
+
+  // Get the timeline item to verify it belongs to this trip
+  const timelineItem = await prisma.timelineItem.findFirst({
+    where: {
+      id: itemId,
+      tripId,
+      deletedAt: null,
+    },
+  });
+
+  if (!timelineItem) {
+    throw new Error("Timeline item not found");
+  }
+
+  // Determine if we need to reset the completion status
+  const now = new Date();
+  const isFutureDate = newDate && newDate > now;
+  const wasCompleted = timelineItem.isCompleted;
+
+  // Prepare update data
+  const updateData: any = {
+    date: newDate,
+  };
+
+  // If milestone was completed but new date is in the future, reset completion status
+  if (wasCompleted && isFutureDate) {
+    updateData.isCompleted = false;
+    updateData.completedAt = null;
+    console.log(`[updateTimelineItemDate] Resetting completion status for ${timelineItem.title} - moved to future date`);
+  }
+
+  // Update the timeline item
+  const updatedItem = await prisma.timelineItem.update({
+    where: { id: itemId },
+    data: updateData,
+  });
+
+  // After updating the date, trigger milestone checks based on the milestone type
+  // This ensures that if a deadline is changed to a past date, it triggers immediately
+  await triggerMilestoneChecks(tripId, timelineItem.title);
+
+  return updatedItem;
+}
+
+/**
+ * Triggers milestone checks after a timeline item date is updated
+ * This allows the system to automatically take actions if a deadline has passed
+ */
+async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
+  console.log(`[triggerMilestoneChecks] Checking milestone: ${milestoneTitle} for trip ${tripId}`);
+
+  switch (milestoneTitle) {
+    case "RSVP Deadline":
+      await checkAndAutoCloseRsvp(tripId);
+      break;
+
+    case "Spending Window Closes":
+      // TODO: Implement checkAndAutoCloseSpending(tripId) when spending auto-close is needed
+      console.log(`[triggerMilestoneChecks] Spending Window Closes check - placeholder for future implementation`);
+      break;
+
+    case "Settlement Deadline":
+      // TODO: Implement checkSettlementDeadline(tripId) to send reminders or mark overdue
+      console.log(`[triggerMilestoneChecks] Settlement Deadline check - placeholder for future implementation`);
+      break;
+
+    case "Spending Window Opens":
+      // TODO: Implement checkAndAutoOpenSpending(tripId) if auto-opening is needed
+      console.log(`[triggerMilestoneChecks] Spending Window Opens check - placeholder for future implementation`);
+      break;
+
+    case "Trip Starts":
+      // TODO: Implement checkTripStart(tripId) for any start-of-trip actions
+      console.log(`[triggerMilestoneChecks] Trip Starts check - placeholder for future implementation`);
+      break;
+
+    case "Trip Ends":
+      // TODO: Implement checkTripEnd(tripId) for any end-of-trip actions
+      console.log(`[triggerMilestoneChecks] Trip Ends check - placeholder for future implementation`);
+      break;
+
+    default:
+      console.log(`[triggerMilestoneChecks] No automatic action defined for milestone: ${milestoneTitle}`);
+  }
+}
