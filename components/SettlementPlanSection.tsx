@@ -306,7 +306,13 @@ export default function SettlementPlanSection({
                         <div className="flex items-center gap-2">
                           {persistedSettlement && (
                             <span className="px-2 py-1 rounded-full text-xs font-semibold border">
-                              {persistedSettlement.remainingAmount > 0 ? "Partially Paid" : "Paid"}
+                              {
+                                persistedSettlement.remainingAmount === persistedSettlement.amount
+                                  ? "Unpaid"
+                                  : persistedSettlement.remainingAmount > 0
+                                  ? "Partially Paid"
+                                  : "Paid"
+                              }
                             </span>
                           )}
                           <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">

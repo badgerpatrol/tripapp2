@@ -1046,13 +1046,7 @@ export default function TripDetailPage() {
 
     console.log("Current RSVP status:", currentStatus, "isClosing:", isClosing);
 
-    const confirmed = window.confirm(
-      isClosing
-        ? "Are you sure you want to close RSVP? Members will no longer be able to change their RSVP status."
-        : "Are you sure you want to reopen RSVP? Members will be able to change their responses again."
-    );
-
-    if (!confirmed) return;
+    
 
     try {
       const idToken = await user.getIdToken();
@@ -1162,9 +1156,8 @@ export default function TripDetailPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Dates</p>
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {formatDate(trip.startDate)}
+                  {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
                 </p>
               </div>
             </div>
@@ -1176,9 +1169,12 @@ export default function TripDetailPage() {
                 </svg>
               </div>
               <div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Members</p>
                 <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {trip.participants.length} people
+                  {trip.participants.length === 0
+                    ? "no-one"
+                    : trip.participants.length === 1
+                    ? "1 person"
+                    : `${trip.participants.length} people`}
                 </p>
               </div>
             </div>
@@ -1347,9 +1343,9 @@ export default function TripDetailPage() {
               </div>
             ) : (
               <div className="mt-4 pt-4 border-t border-current/20">
-                <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                  <p className="text-xs text-red-700 dark:text-red-300 font-medium">
-                    RSVP is closed. Contact the organizer to change your response.
+                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+                    RSVP is closed. Contact the organizer if you need to change your response.
                   </p>
                 </div>
               </div>
