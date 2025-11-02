@@ -4,6 +4,7 @@ import {
   getTripOverviewForInvitee,
   getTripOverviewForMember,
   updateTrip,
+  checkAndAutoCloseRsvp,
 } from "@/server/services/trips";
 import { RsvpStatus } from "@/lib/generated/prisma";
 import { UpdateTripSchema } from "@/types/schemas";
@@ -36,7 +37,10 @@ export async function GET(
 
     const { id: tripId } = await params;
 
-    // 2. Get trip with basic info to check membership
+    // 2. Check and auto-close RSVP if deadline has passed
+    await checkAndAutoCloseRsvp(tripId);
+
+    // 3. Get trip with basic info to check membership
     const basicOverview = await getTripOverviewForInvitee(tripId, auth.uid);
 
     if (!basicOverview) {
@@ -46,7 +50,7 @@ export async function GET(
       );
     }
 
-    // 3. Check if user is a member
+    // 4. Check if user is a member
     if (!basicOverview.userRole) {
       // User is not a member at all
       return NextResponse.json(
@@ -55,7 +59,7 @@ export async function GET(
       );
     }
 
-    // 4. Return data based on RSVP status
+    // 5. Return data based on RSVP status
     if (basicOverview.userRsvpStatus === RsvpStatus.ACCEPTED) {
       // Accepted members get full overview
       const fullOverview = await getTripOverviewForMember(tripId, auth.uid);

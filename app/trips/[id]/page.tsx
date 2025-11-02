@@ -27,6 +27,7 @@ interface TripDetail {
   endDate: string | null;
   status: string;
   spendStatus: SpendStatus;
+  rsvpStatus: string;
   createdAt: string;
   organizer: {
     id: string;
@@ -1037,6 +1038,64 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleToggleRsvpStatus = async () => {
+    if (!user || !trip) return;
+
+    const currentStatus = trip.rsvpStatus || "OPEN";
+    const isClosing = currentStatus === "OPEN";
+
+    console.log("Current RSVP status:", currentStatus, "isClosing:", isClosing);
+
+    const confirmed = window.confirm(
+      isClosing
+        ? "Are you sure you want to close RSVP? Members will no longer be able to change their RSVP status."
+        : "Are you sure you want to reopen RSVP? Members will be able to change their responses again."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      console.log("Sending request to toggle RSVP status");
+
+      const response = await fetch(`/api/trips/${tripId}/rsvp-status`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}), // Send empty body to trigger toggle behavior
+      });
+
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      if (data.success) {
+        console.log("Success! New status:", data.trip?.rsvpStatus);
+
+        // Refetch trip data
+        const tripResponse = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (tripResponse.ok) {
+          const tripData = await tripResponse.json();
+          console.log("Refreshed trip data:", tripData.trip?.rsvpStatus);
+          setTrip(tripData.trip);
+        } else {
+          alert("Failed to refresh trip data after status change");
+        }
+      } else {
+        alert(`Failed to ${isClosing ? "close" : "open"} RSVP: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error toggling RSVP status:", err);
+      alert(`Failed to toggle RSVP status: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -1143,40 +1202,50 @@ export default function TripDetailPage() {
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400">
                   {trip.organizer.displayName || trip.organizer.email} has invited you to join this trip.
-                  Please respond to let them know if you can make it.
+                  {trip.rsvpStatus === "CLOSED"
+                    ? " However, RSVP has been closed by the organizer."
+                    : " Please respond to let them know if you can make it."}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => handleRsvpResponse("ACCEPTED")}
-                className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Accept
-              </button>
-              <button
-                onClick={() => handleRsvpResponse("MAYBE")}
-                className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Maybe
-              </button>
-              <button
-                onClick={() => handleRsvpResponse("DECLINED")}
-                className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Decline
-              </button>
-            </div>
+            {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => handleRsvpResponse("ACCEPTED")}
+                  className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("MAYBE")}
+                  className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Maybe
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("DECLINED")}
+                  className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Decline
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                  RSVP is closed. Please contact the trip organizer if you need to respond.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1238,7 +1307,7 @@ export default function TripDetailPage() {
                 </div>
               </div>
               <button
-                onClick={() => setIsEditDialogOpen(true)}
+                /*onClick={() => setIsEditDialogOpen(true)}*/
                 className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
                   trip.userRsvpStatus === "ACCEPTED"
                     ? "bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300"
@@ -1252,29 +1321,39 @@ export default function TripDetailPage() {
             </div>
 
             {/* Quick change buttons */}
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-current/20">
-              <button
-                onClick={() => handleRsvpResponse("ACCEPTED")}
-                disabled={trip.userRsvpStatus === "ACCEPTED"}
-                className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => handleRsvpResponse("MAYBE")}
-                disabled={trip.userRsvpStatus === "MAYBE"}
-                className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-              >
-                Maybe
-              </button>
-              <button
-                onClick={() => handleRsvpResponse("DECLINED")}
-                disabled={trip.userRsvpStatus === "DECLINED"}
-                className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-              >
-                Decline
-              </button>
-            </div>
+            {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-current/20">
+                <button
+                  onClick={() => handleRsvpResponse("ACCEPTED")}
+                  disabled={trip.userRsvpStatus === "ACCEPTED"}
+                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("MAYBE")}
+                  disabled={trip.userRsvpStatus === "MAYBE"}
+                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                >
+                  Maybe
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("DECLINED")}
+                  disabled={trip.userRsvpStatus === "DECLINED"}
+                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                >
+                  Decline
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 pt-4 border-t border-current/20">
+                <div className="p-3 rounded-lg bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                  <p className="text-xs text-red-700 dark:text-red-300 font-medium">
+                    RSVP is closed. Contact the organizer to change your response.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1461,17 +1540,38 @@ export default function TripDetailPage() {
         {/* Members */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
+              {trip.rsvpStatus === "CLOSED" && (
+                <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                  RSVP Closed
+                </span>
+              )}
+            </div>
             {canInvite && (
-              <button
-                onClick={() => setIsInviteDialogOpen(true)}
-                className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                Invite Users
-              </button>
+              <div className="flex items-center gap-2">
+                {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
+                  <button
+                    onClick={() => setIsInviteDialogOpen(true)}
+                    className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    Invite Users
+                  </button>
+                )}
+                <button
+                  onClick={handleToggleRsvpStatus}
+                  className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                    trip.rsvpStatus === "CLOSED"
+                      ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                      : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
+                  }`}
+                >
+                  {trip.rsvpStatus === "CLOSED" ? "Reopen RSVP" : "Close RSVP"}
+                </button>
+              </div>
             )}
           </div>
           <div className="space-y-3">

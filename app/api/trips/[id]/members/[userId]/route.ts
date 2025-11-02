@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
 import { removeTripMember, updateRsvpStatus } from "@/server/services/invitations";
-import { TripMemberRole, RsvpStatus } from "@/lib/generated/prisma";
+import { TripMemberRole, RsvpStatus, RsvpWindowStatus } from "@/lib/generated/prisma";
 import { UpdateRsvpSchema } from "@/types/schemas";
 import { prisma } from "@/lib/prisma";
 
@@ -56,7 +56,50 @@ export async function PATCH(
     // 4. Convert string to RsvpStatus enum
     const status = RsvpStatus[rsvpStatus as keyof typeof RsvpStatus];
 
-    // 5. Check RSVP deadline
+    // 5. Check if RSVP window is open on the trip
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId, deletedAt: null },
+      select: {
+        rsvpStatus: true,
+      },
+    });
+
+    if (!trip) {
+      return NextResponse.json(
+        { error: "Trip not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if RSVP is closed at the trip level
+    if (trip.rsvpStatus === "CLOSED") {
+      // Check if user is an organizer who can bypass the closed RSVP
+      const membership = await prisma.tripMember.findUnique({
+        where: {
+          tripId_userId: {
+            tripId,
+            userId,
+          },
+        },
+        select: {
+          role: true,
+        },
+      });
+
+      const canBypassClosed = membership && (
+        membership.role === TripMemberRole.OWNER ||
+        membership.role === TripMemberRole.ADMIN
+      );
+
+      if (!canBypassClosed) {
+        return NextResponse.json(
+          { error: "RSVP is closed. Please contact the trip organizer to reopen responses." },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 6. Check RSVP deadline
     const rsvpDeadline = await prisma.timelineItem.findFirst({
       where: {
         tripId,
@@ -106,7 +149,7 @@ export async function PATCH(
       }
     }
 
-    // 6. Update RSVP status
+    // 7. Update RSVP status
     const updatedMember = await updateRsvpStatus(tripId, userId, status);
 
     return NextResponse.json(

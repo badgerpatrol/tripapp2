@@ -496,6 +496,7 @@ export async function getTripOverviewForInvitee(
     endDate: trip.endDate,
     status: trip.status,
     spendStatus: trip.spendStatus,
+    rsvpStatus: trip.rsvpStatus,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,
     participants: trip.members.map((m) => ({
@@ -617,6 +618,7 @@ export async function getTripOverviewForMember(
     endDate: trip.endDate,
     status: trip.status,
     spendStatus: trip.spendStatus,
+    rsvpStatus: trip.rsvpStatus,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,
     participants: trip.members.map((m) => ({
@@ -679,4 +681,80 @@ export async function getTripOverviewForMember(
     userOwes,
     userIsOwed,
   };
+}
+
+/**
+ * Checks if RSVP deadline has passed and automatically closes RSVP if needed.
+ * Should be called when fetching trip data.
+ *
+ * Uses milestone completion tracking:
+ * - Only triggers if the milestone is NOT completed (isCompleted = false)
+ * - Marks the milestone as completed when closing RSVP
+ * - This allows organizers to manually reopen RSVP without it auto-closing again
+ */
+export async function checkAndAutoCloseRsvp(tripId: string) {
+  const trip = await prisma.trip.findUnique({
+    where: { id: tripId, deletedAt: null },
+    include: {
+      timelineItems: {
+        where: {
+          title: "RSVP Deadline",
+          deletedAt: null,
+        },
+      },
+    },
+  });
+
+  console.log(`[checkAndAutoCloseRsvp] Trip ${tripId}: rsvpStatus = ${trip?.rsvpStatus}`);
+
+  if (!trip) {
+    console.log(`[checkAndAutoCloseRsvp] Trip not found`);
+    return;
+  }
+
+  // Only check if RSVP is currently open
+  if (trip.rsvpStatus !== "OPEN") {
+    console.log(`[checkAndAutoCloseRsvp] RSVP not OPEN (${trip.rsvpStatus}), skipping`);
+    return;
+  }
+
+  // Find the RSVP deadline timeline item
+  const rsvpDeadline = trip.timelineItems[0];
+
+  if (!rsvpDeadline?.date) {
+    console.log(`[checkAndAutoCloseRsvp] No RSVP deadline found`);
+    return;
+  }
+
+  console.log(`[checkAndAutoCloseRsvp] RSVP deadline: ${rsvpDeadline.date}, isCompleted: ${rsvpDeadline.isCompleted}`);
+
+  // If milestone is already completed, don't trigger again
+  if (rsvpDeadline.isCompleted) {
+    console.log(`[checkAndAutoCloseRsvp] Milestone already completed, skipping auto-close`);
+    return;
+  }
+
+  const deadlineDate = new Date(rsvpDeadline.date);
+  const now = new Date();
+
+  // If deadline has passed and milestone is not completed, close RSVP and mark milestone complete
+  if (deadlineDate < now) {
+    await prisma.$transaction([
+      // Close RSVP
+      prisma.trip.update({
+        where: { id: tripId },
+        data: {
+          rsvpStatus: "CLOSED",
+        },
+      }),
+      // Mark milestone as completed
+      prisma.timelineItem.update({
+        where: { id: rsvpDeadline.id },
+        data: {
+          isCompleted: true,
+          completedAt: now,
+        },
+      }),
+    ]);
+  }
 }

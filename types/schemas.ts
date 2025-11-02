@@ -167,6 +167,7 @@ export const TripOverviewInviteeSchema = z.object({
   startDate: z.coerce.date().nullable(),
   endDate: z.coerce.date().nullable(),
   status: z.string(),
+  rsvpStatus: z.string(),
   createdAt: z.coerce.date(),
   organizer: UserSummarySchema,
   participants: z.array(TripMemberSummarySchema),

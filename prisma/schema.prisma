@@ -60,6 +60,11 @@ enum SpendStatus {
   CLOSED
 }
 
+enum RsvpWindowStatus {
+  OPEN
+  CLOSED
+}
+
 enum SettlementStatus {
   PENDING
   PARTIALLY_PAID
@@ -178,6 +183,7 @@ model Trip {
   endDate      DateTime?
   status       TripStatus  @default(PLANNING)
   spendStatus  SpendStatus @default(OPEN) // Controls whether any spend can be added/edited on this trip
+  rsvpStatus   RsvpWindowStatus @default(OPEN) // Controls whether RSVPs can be changed
   createdById  String
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
