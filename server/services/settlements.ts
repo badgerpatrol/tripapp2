@@ -4,6 +4,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { logEvent } from "@/server/eventLog";
+import { EventType, SettlementStatus } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Types
@@ -376,4 +378,122 @@ export async function persistSettlementPlan(
 
   // TODO: Send notifications to users about settlements
   // TODO: Log event
+}
+
+// ============================================================================
+// Payment Recording
+// ============================================================================
+
+/**
+ * Records a payment towards a settlement
+ * Updates settlement status based on total payments
+ *
+ * @param settlementId - ID of the settlement
+ * @param amount - Payment amount (in trip base currency)
+ * @param paidAt - Date the payment was made
+ * @param recordedById - User ID of who is recording the payment
+ * @param paymentMethod - Optional payment method (e.g., "Cash", "Venmo", "Bank Transfer")
+ * @param paymentReference - Optional reference (e.g., transaction ID)
+ * @param notes - Optional notes about the payment
+ */
+export async function recordPayment(
+  settlementId: string,
+  amount: number,
+  paidAt: Date,
+  recordedById: string,
+  paymentMethod?: string,
+  paymentReference?: string,
+  notes?: string
+) {
+  // Use transaction to ensure atomicity
+  return await prisma.$transaction(async (tx) => {
+    // Get settlement with all payments
+    const settlement = await tx.settlement.findUnique({
+      where: { id: settlementId },
+      include: {
+        payments: true,
+        trip: {
+          select: {
+            id: true,
+            baseCurrency: true,
+          },
+        },
+      },
+    });
+
+    if (!settlement) {
+      throw new Error("Settlement not found");
+    }
+
+    // Calculate total already paid
+    const totalPaid = settlement.payments.reduce(
+      (sum, payment) => sum + Number(payment.amount),
+      0
+    );
+
+    // Calculate new total after this payment
+    const newTotalPaid = totalPaid + amount;
+    const settlementAmount = Number(settlement.amount);
+
+    // Determine new status
+    let newStatus: SettlementStatus;
+    if (newTotalPaid >= settlementAmount - 0.01) {
+      // Fully paid (with small tolerance for floating point)
+      newStatus = SettlementStatus.PAID;
+    } else if (totalPaid > 0.01) {
+      // Already had some payments
+      newStatus = SettlementStatus.PARTIALLY_PAID;
+    } else {
+      // First payment
+      newStatus = SettlementStatus.PARTIALLY_PAID;
+    }
+
+    // Create payment record
+    const payment = await tx.payment.create({
+      data: {
+        settlementId,
+        amount,
+        paidAt,
+        paymentMethod: paymentMethod || null,
+        paymentReference: paymentReference || null,
+        notes: notes || null,
+        recordedById,
+      },
+    });
+
+    // Update settlement status
+    const updatedSettlement = await tx.settlement.update({
+      where: { id: settlementId },
+      data: { status: newStatus },
+    });
+
+    // Log event
+    await logEvent(
+      "Payment",
+      payment.id,
+      EventType.PAYMENT_RECORDED,
+      recordedById,
+      {
+        settlementId,
+        amount,
+        paidAt: paidAt.toISOString(),
+        paymentMethod,
+        paymentReference,
+        newTotalPaid,
+        remainingAmount: settlementAmount - newTotalPaid,
+        settlementStatus: newStatus,
+      }
+    );
+
+    return {
+      payment,
+      settlement: {
+        id: updatedSettlement.id,
+        status: updatedSettlement.status,
+        amount: Number(updatedSettlement.amount),
+        totalPaid: newTotalPaid,
+        remainingAmount: settlementAmount - newTotalPaid,
+      },
+    };
+  });
 }

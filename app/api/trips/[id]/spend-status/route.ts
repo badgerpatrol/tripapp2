@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
 import { prisma } from "@/lib/prisma";
 import { SpendStatus, TripMemberRole } from "@/lib/generated/prisma";
+import { calculateTripBalances } from "@/server/services/settlements";
 
 /**
  * POST /api/trips/[id]/spend-status
@@ -58,6 +59,7 @@ export async function POST(
     // Parse request body for optional action parameter
     const body = await req.json().catch(() => ({}));
     const action = body.action; // 'close' or 'open', optional
+    const confirmClearSettlements = body.confirmClearSettlements; // true if user confirmed clearing settlements
 
     // Determine new status
     let newStatus: SpendStatus;
@@ -70,10 +72,80 @@ export async function POST(
       newStatus = trip.spendStatus === SpendStatus.OPEN ? SpendStatus.CLOSED : SpendStatus.OPEN;
     }
 
-    // Update trip spend status
-    const updatedTrip = await prisma.trip.update({
-      where: { id: tripId },
-      data: { spendStatus: newStatus },
+    // Check if reopening when settlements exist
+    if (newStatus === SpendStatus.OPEN && trip.spendStatus === SpendStatus.CLOSED) {
+      const existingSettlements = await prisma.settlement.findMany({
+        where: {
+          tripId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (existingSettlements.length > 0 && !confirmClearSettlements) {
+        // Return warning to frontend
+        return NextResponse.json({
+          success: false,
+          requiresConfirmation: true,
+          settlementCount: existingSettlements.length,
+          message: `This trip has ${existingSettlements.length} active settlement${existingSettlements.length === 1 ? '' : 's'} with payment tracking. Reopening spending will delete all settlements and payment records. Are you sure?`,
+        }, { status: 200 });
+      }
+    }
+
+    // If closing, calculate settlement plan first (outside transaction)
+    let settlementPlan = null;
+    if (newStatus === SpendStatus.CLOSED && trip.spendStatus === SpendStatus.OPEN) {
+      const balanceSummary = await calculateTripBalances(tripId);
+      settlementPlan = balanceSummary.settlements;
+    }
+
+    // Update trip spend status and handle settlements
+    const updatedTrip = await prisma.$transaction(async (tx) => {
+      // If closing, create settlement plan
+      if (newStatus === SpendStatus.CLOSED && trip.spendStatus === SpendStatus.OPEN && settlementPlan) {
+        // Delete any existing settlements first to avoid duplicates
+        await tx.settlement.deleteMany({
+          where: {
+            tripId,
+            deletedAt: null,
+          },
+        });
+
+        // Create new settlement records from calculated plan
+        const settlementRecords = settlementPlan.map((settlement) => ({
+          tripId,
+          fromUserId: settlement.fromUserId,
+          toUserId: settlement.toUserId,
+          amount: settlement.amount,
+          status: "PENDING" as const,
+          notes: settlement.oldestDebtDate
+            ? `Debt since ${settlement.oldestDebtDate.toLocaleDateString()}`
+            : null,
+        }));
+
+        if (settlementRecords.length > 0) {
+          await tx.settlement.createMany({
+            data: settlementRecords,
+          });
+        }
+      }
+
+      // If reopening, delete all settlements and payments
+      if (newStatus === SpendStatus.OPEN && trip.spendStatus === SpendStatus.CLOSED) {
+        await tx.settlement.deleteMany({
+          where: {
+            tripId,
+            deletedAt: null,
+          },
+        });
+      }
+
+      // Update trip status
+      return await tx.trip.update({
+        where: { id: tripId },
+        data: { spendStatus: newStatus },
+      });
     });
 
     return NextResponse.json({
@@ -82,9 +154,7 @@ export async function POST(
         id: updatedTrip.id,
         spendStatus: updatedTrip.spendStatus,
       },
-      message: newStatus === SpendStatus.CLOSED
-        ? "Trip spending is now closed. No one can add or edit spends."
-        : "Trip spending is now open. Members can add and edit spends.",
+      
     });
   } catch (error) {
     console.error("Error toggling trip spend status:", error);

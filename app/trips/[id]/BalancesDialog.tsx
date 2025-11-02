@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { PersonBalance, SettlementTransfer } from "@/types/schemas";
+import RecordPaymentDialog from "./RecordPaymentDialog";
 
 interface BalancesDialogProps {
   tripId: string;
@@ -27,6 +28,30 @@ interface BalanceData {
   calculatedAt: string;
 }
 
+interface PersistedSettlement {
+  id: string;
+  tripId: string;
+  fromUserId: string;
+  fromUserName: string;
+  toUserId: string;
+  toUserName: string;
+  amount: number;
+  status: string;
+  totalPaid: number;
+  remainingAmount: number;
+  createdAt: string;
+  payments: Array<{
+    id: string;
+    amount: number;
+    paidAt: string;
+    paymentMethod: string | null;
+    paymentReference: string | null;
+    notes: string | null;
+    recordedByName: string;
+    createdAt: string;
+  }>;
+}
+
 export default function BalancesDialog({
   tripId,
   baseCurrency,
@@ -35,11 +60,14 @@ export default function BalancesDialog({
 }: BalancesDialogProps) {
   const { user } = useAuth();
   const [balanceData, setBalanceData] = useState<BalanceData | null>(null);
+  const [persistedSettlements, setPersistedSettlements] = useState<PersistedSettlement[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSettlement, setSelectedSettlement] = useState<PersistedSettlement | null>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   useEffect(() => {
-    const fetchBalances = async () => {
+    const fetchData = async () => {
       if (!isOpen || !user) return;
 
       setLoading(true);
@@ -47,28 +75,39 @@ export default function BalancesDialog({
 
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch(`/api/trips/${tripId}/balances`, {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        // Fetch calculated balances and persisted settlements in parallel
+        const [balancesResponse, settlementsResponse] = await Promise.all([
+          fetch(`/api/trips/${tripId}/balances`, {
+            headers: { Authorization: `Bearer ${idToken}` },
+          }),
+          fetch(`/api/trips/${tripId}/settlements`, {
+            headers: { Authorization: `Bearer ${idToken}` },
+          }),
+        ]);
+
+        if (!balancesResponse.ok) {
+          const errorData = await balancesResponse.json().catch(() => ({ error: "Unknown error" }));
           throw new Error(errorData.error || "Failed to fetch balances");
         }
 
-        const data = await response.json();
-        setBalanceData(data.balances);
+        const balancesData = await balancesResponse.json();
+        setBalanceData(balancesData.balances);
+
+        // Persisted settlements are optional (may not exist yet)
+        if (settlementsResponse.ok) {
+          const settlementsData = await settlementsResponse.json();
+          setPersistedSettlements(settlementsData.settlements || []);
+        }
       } catch (err) {
-        console.error("Error fetching balances:", err);
+        console.error("Error fetching data:", err);
         setError(err instanceof Error ? err.message : "Failed to load balances");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBalances();
+    fetchData();
   }, [isOpen, user, tripId]);
 
   if (!isOpen) return null;
@@ -96,6 +135,60 @@ export default function BalancesDialog({
     if (!dateString) return "";
     const date = new Date(dateString);
     return `Debt since ${formatDate(dateString)} (${date.toLocaleDateString()})`;
+  };
+
+  const handleRecordPayment = (settlement: PersistedSettlement) => {
+    setSelectedSettlement(settlement);
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentDialog(false);
+    setSelectedSettlement(null);
+    // Refetch data to update the UI
+    if (user) {
+      const fetchData = async () => {
+        try {
+          const idToken = await user.getIdToken();
+          const [balancesResponse, settlementsResponse] = await Promise.all([
+            fetch(`/api/trips/${tripId}/balances`, {
+              headers: { Authorization: `Bearer ${idToken}` },
+            }),
+            fetch(`/api/trips/${tripId}/settlements`, {
+              headers: { Authorization: `Bearer ${idToken}` },
+            }),
+          ]);
+
+          if (balancesResponse.ok) {
+            const balancesData = await balancesResponse.json();
+            setBalanceData(balancesData.balances);
+          }
+
+          if (settlementsResponse.ok) {
+            const settlementsData = await settlementsResponse.json();
+            setPersistedSettlements(settlementsData.settlements || []);
+          }
+        } catch (err) {
+          console.error("Error refreshing data:", err);
+        }
+      };
+      fetchData();
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800";
+      case "PARTIALLY_PAID":
+        return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
+      case "PAID":
+        return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800";
+      case "VERIFIED":
+        return "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800";
+      default:
+        return "text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/20 border-zinc-200 dark:border-zinc-800";
+    }
   };
 
   return (
@@ -148,6 +241,55 @@ export default function BalancesDialog({
                 <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-2">
                   Calculated {formatDate(balanceData.calculatedAt)}
                 </p>
+              </div>
+              {/* Settlement Plan */}
+              <div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                  Settlement Plan
+                </h3>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                  {balanceData.settlements.length > 0 &&
+                    ` ${balanceData.settlements.length} ${
+                      balanceData.settlements.length === 1 ? "transfer" : "transfers"
+                    } needed`}
+                </p>
+
+                {balanceData.settlements.length === 0 ? (
+                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center">
+                    <p className="text-green-600 dark:text-green-400 font-medium">
+                      All balanced! No settlements needed.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {balanceData.settlements.map((settlement, index) => (
+                      <div
+                        key={`${settlement.fromUserId}-${settlement.toUserId}-${index}`}
+                        className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg p-4"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                              {settlement.fromUserName}
+                            </span>
+                            <span className="text-zinc-500 dark:text-zinc-400">→</span>
+                            <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                              {settlement.toUserName}
+                            </span>
+                          </div>
+                          <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                            {formatCurrency(settlement.amount)}
+                          </span>
+                        </div>
+                        {settlement.oldestDebtDate && (
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {getDebtAge(settlement.oldestDebtDate)}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Per-Person Balances */}
@@ -225,56 +367,92 @@ export default function BalancesDialog({
                 </div>
               </div>
 
-              {/* Settlement Plan */}
-              <div>
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-                  Settlement Plan
-                </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                  Minimal number of transfers to settle all debts
-                  {balanceData.settlements.length > 0 &&
-                    ` (${balanceData.settlements.length} ${
-                      balanceData.settlements.length === 1 ? "transfer" : "transfers"
-                    })`}
-                </p>
+              {/* Persisted Settlements (Payments) */}
+              {persistedSettlements.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                    Payment Tracking
+                  </h3>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                    Record and track payments towards settlements
+                  </p>
 
-                {balanceData.settlements.length === 0 ? (
-                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center">
-                    <p className="text-green-600 dark:text-green-400 font-medium">
-                      All balanced! No settlements needed.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {balanceData.settlements.map((settlement, index) => (
+                  <div className="space-y-4">
+                    {persistedSettlements.map((settlement) => (
                       <div
-                        key={`${settlement.fromUserId}-${settlement.toUserId}-${index}`}
-                        className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg p-4"
+                        key={settlement.id}
+                        className={`border rounded-lg p-4 ${getStatusColor(settlement.status)}`}
                       >
-                        <div className="flex items-center justify-between mb-2">
+                        {/* Settlement Header */}
+                        <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                            <span className="font-semibold">
                               {settlement.fromUserName}
                             </span>
                             <span className="text-zinc-500 dark:text-zinc-400">→</span>
-                            <span className="text-zinc-700 dark:text-zinc-300 font-medium">
+                            <span className="font-semibold">
                               {settlement.toUserName}
                             </span>
                           </div>
-                          <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
-                            {formatCurrency(settlement.amount)}
+                          <span className="px-3 py-1 rounded-full text-xs font-medium border">
+                            {settlement.status}
                           </span>
                         </div>
-                        {settlement.oldestDebtDate && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {getDebtAge(settlement.oldestDebtDate)}
-                          </p>
+
+                        {/* Amount Details */}
+                        <div className="grid grid-cols-3 gap-4 mb-3">
+                          <div>
+                            <p className="text-xs opacity-70">Total</p>
+                            <p className="font-bold">{formatCurrency(settlement.amount)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs opacity-70">Paid</p>
+                            <p className="font-bold">{formatCurrency(settlement.totalPaid)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs opacity-70">Remaining</p>
+                            <p className="font-bold">{formatCurrency(settlement.remainingAmount)}</p>
+                          </div>
+                        </div>
+
+                        {/* Payment History */}
+                        {settlement.payments.length > 0 && (
+                          <div className="mb-3 pt-3 border-t border-current opacity-20">
+                            <p className="text-xs font-medium mb-2 opacity-100">
+                              Payment History ({settlement.payments.length})
+                            </p>
+                            <div className="space-y-2">
+                              {settlement.payments.map((payment) => (
+                                <div
+                                  key={payment.id}
+                                  className="text-xs opacity-70 flex justify-between"
+                                >
+                                  <span>
+                                    {formatCurrency(payment.amount)} on{" "}
+                                    {new Date(payment.paidAt).toLocaleDateString()}
+                                    {payment.paymentMethod && ` via ${payment.paymentMethod}`}
+                                  </span>
+                                  <span>by {payment.recordedByName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Record Payment Button */}
+                        {settlement.remainingAmount > 0.01 && (
+                          <button
+                            onClick={() => handleRecordPayment(settlement)}
+                            className="w-full mt-2 px-4 py-2 bg-white dark:bg-zinc-800 border-2 border-current rounded-lg font-medium hover:bg-opacity-90 transition-colors"
+                          >
+                            Record Payment
+                          </button>
                         )}
                       </div>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -289,6 +467,15 @@ export default function BalancesDialog({
           </button>
         </div>
       </div>
+
+      {/* Record Payment Dialog */}
+      <RecordPaymentDialog
+        settlement={selectedSettlement}
+        baseCurrency={baseCurrency}
+        isOpen={showPaymentDialog}
+        onClose={() => setShowPaymentDialog(false)}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }

@@ -907,16 +907,14 @@ export default function TripDetailPage() {
     return isSpender || isOrganizer;
   };
 
-  const handleToggleTripSpendStatus = async () => {
+  const handleToggleTripSpendStatus = async (confirmClearSettlements = false) => {
     if (!user || !trip) return;
 
     // Default to OPEN if spendStatus is undefined (for backwards compatibility)
     const currentStatus = trip.spendStatus || SpendStatus.OPEN;
     const isClosing = currentStatus === SpendStatus.OPEN;
 
-    console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus });
-
-    
+    console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus, confirmClearSettlements });
 
     try {
       const idToken = await user.getIdToken();
@@ -926,9 +924,27 @@ export default function TripDetailPage() {
           Authorization: `Bearer ${idToken}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          confirmClearSettlements,
+        }),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      // Check if confirmation is required
+      if (data.requiresConfirmation && !confirmClearSettlements) {
+        const confirmed = window.confirm(
+          `⚠️ WARNING: ${data.message}\n\nThis action cannot be undone. All payment records will be permanently deleted.`
+        );
+
+        if (confirmed) {
+          // Retry with confirmation
+          await handleToggleTripSpendStatus(true);
+        }
+        return;
+      }
+
+      if (data.success) {
         // Refetch trip data
         const tripResponse = await fetch(`/api/trips/${tripId}`, {
           headers: {
@@ -937,14 +953,18 @@ export default function TripDetailPage() {
         });
 
         if (tripResponse.ok) {
-          const data = await tripResponse.json();
-          setTrip(data.trip);
+          const tripData = await tripResponse.json();
+          setTrip(tripData.trip);
+
+          // Show success message
+          if (data.message) {
+            alert(data.message);
+          }
         } else {
           alert("Failed to refresh trip data after status change");
         }
       } else {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        alert(`Failed to ${isClosing ? "close" : "open"} spending: ${errorData.error}`);
+        alert(`Failed to ${isClosing ? "close" : "open"} spending: ${data.error || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Error toggling trip spend status:", err);
@@ -1310,7 +1330,7 @@ export default function TripDetailPage() {
                 </button>
                 {canInvite && (
                   <button
-                    onClick={handleToggleTripSpendStatus}
+                    onClick={() => handleToggleTripSpendStatus()}
                     className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
                       (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
                         ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
