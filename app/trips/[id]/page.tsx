@@ -1373,22 +1373,27 @@ export default function TripDetailPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* Show hide spends button when spending is closed and spends are visible */}
+                    {/* Show View Settlement button when spending is closed and spends are visible */}
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
                       <button
                         onClick={() => setShowSpendsWhenClosed(false)}
-                        className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors"
+                        className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-2"
                       >
-                        Hide Spends
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        View Settlement
                       </button>
                     )}
-                    <button
-                      onClick={() => setIsAddSpendDialogOpen(true)}
-                      disabled={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
-                      className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium transition-colors"
-                    >
-                      Add Spend
-                    </button>
+                    {/* Only show Add Spend button when spending is open */}
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
+                      <button
+                        onClick={() => setIsAddSpendDialogOpen(true)}
+                        className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                      >
+                        Add Spend
+                      </button>
+                    )}
                     {canInvite && (
                       <button
                         onClick={() => handleToggleTripSpendStatus()}
