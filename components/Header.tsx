@@ -28,36 +28,37 @@ export default function Header({ showBackButton = false }: HeaderProps) {
 
   return (
     <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm">
-      
-      <div className="max-w-7xl mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
+
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3">
+        <div className="flex justify-between items-center gap-2">
           {/* Left side */}
-          <div className="flex items-center gap-4 flex-1">
-              <a href="/trips" className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+          <div className="flex items-center">
+              <a href="/trips" className="text-base sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">
                 TripPlanner
               </a>
           </div>
 
           {/* Center - Back to Trips button */}
           {showBackButton && (
-            <div className="flex-1 flex justify-center">
+            <div className="flex justify-center">
               <a
                 href="/trips"
-                className="tap-target px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors inline-flex items-center gap-2"
+                className="tap-target px-3 py-1.5 sm:px-6 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors inline-flex items-center text-sm sm:text-base"
               >
-                Back to Trips
+                <span className="hidden sm:inline">Back to Trips</span>
+                <span className="sm:hidden">Back</span>
               </a>
             </div>
           )}
 
           {/* Right side */}
-          <div className="flex items-center gap-4 flex-1 justify-end">
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="hidden md:inline text-sm text-zinc-600 dark:text-zinc-400">
               {user.email}
             </span>
             <button
               onClick={handleSignOut}
-              className="tap-target px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg transition-colors text-sm font-medium"
+              className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-lg transition-colors text-sm font-medium"
             >
               Logout
             </button>
