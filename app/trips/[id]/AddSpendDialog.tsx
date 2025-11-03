@@ -195,7 +195,7 @@ export default function AddSpendDialog({
                   }
                   required
                   maxLength={3}
-                  placeholder="USD"
+                  placeholder="GBP"
                   className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
