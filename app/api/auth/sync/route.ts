@@ -10,12 +10,18 @@ import { EventType } from '@/lib/generated/prisma';
  * Called automatically after Firebase authentication.
  */
 export async function POST(request: NextRequest) {
+  console.log('[AUTH SYNC] Starting user sync...');
+
   try {
     // 1. Authenticate user
     const authHeader = request.headers.get('authorization');
+    console.log('[AUTH SYNC] Auth header present:', !!authHeader);
+
     const auth = await getAuthTokenFromHeader(authHeader);
+    console.log('[AUTH SYNC] Auth decoded:', auth ? { uid: auth.uid, email: auth.email } : 'null');
 
     if (!auth) {
+      console.error('[AUTH SYNC] No auth token');
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -25,6 +31,7 @@ export async function POST(request: NextRequest) {
     const { uid, email } = auth;
 
     if (!email) {
+      console.error('[AUTH SYNC] No email provided');
       return NextResponse.json(
         { success: false, error: 'Email is required for authentication' },
         { status: 400 }
@@ -32,9 +39,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Check if user already exists
+    console.log('[AUTH SYNC] Checking if user exists:', uid);
     const existingUser = await prisma.user.findUnique({
       where: { id: uid },
     });
+    console.log('[AUTH SYNC] Existing user found:', !!existingUser);
 
     let user;
     let isNewUser = false;
@@ -56,6 +65,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Create new user
+      console.log('[AUTH SYNC] Creating new user:', { uid, email });
       isNewUser = true;
       user = await prisma.user.create({
         data: {
@@ -69,6 +79,7 @@ export async function POST(request: NextRequest) {
           defaultCurrency: 'GBP',
         },
       });
+      console.log('[AUTH SYNC] User created successfully');
 
       // Log sign up event
       await logEvent('User', uid, EventType.USER_CREATED, uid, {
@@ -76,6 +87,8 @@ export async function POST(request: NextRequest) {
         method: 'email/password',
       });
     }
+
+    console.log('[AUTH SYNC] Sync complete:', { uid, email, isNewUser });
 
     // 3. Return user profile
     return NextResponse.json(
