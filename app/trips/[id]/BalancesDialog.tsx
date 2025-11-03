@@ -348,16 +348,16 @@ export default function BalancesDialog({
                             </p>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-600">
+                        <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-600">
                           <div>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400">Paid</p>
-                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 break-all">
                               {formatCurrency(balance.totalPaid)}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-zinc-500 dark:text-zinc-400">Owes</p>
-                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 break-all">
                               {formatCurrency(balance.totalOwed)}
                             </p>
                           </div>
@@ -400,18 +400,18 @@ export default function BalancesDialog({
                         </div>
 
                         {/* Amount Details */}
-                        <div className="grid grid-cols-3 gap-4 mb-3">
+                        <div className="grid grid-cols-3 gap-2 mb-3">
                           <div>
                             <p className="text-xs opacity-70">Total</p>
-                            <p className="font-bold">{formatCurrency(settlement.amount)}</p>
+                            <p className="text-sm font-bold break-all">{formatCurrency(settlement.amount)}</p>
                           </div>
                           <div>
                             <p className="text-xs opacity-70">Paid</p>
-                            <p className="font-bold">{formatCurrency(settlement.totalPaid)}</p>
+                            <p className="text-sm font-bold break-all">{formatCurrency(settlement.totalPaid)}</p>
                           </div>
                           <div>
                             <p className="text-xs opacity-70">Remaining</p>
-                            <p className="font-bold">{formatCurrency(settlement.remainingAmount)}</p>
+                            <p className="text-sm font-bold break-all">{formatCurrency(settlement.remainingAmount)}</p>
                           </div>
                         </div>
 

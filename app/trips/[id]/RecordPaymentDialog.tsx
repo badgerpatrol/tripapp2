@@ -149,30 +149,30 @@ export default function RecordPaymentDialog({
               <span className="font-semibold">{settlement.fromUserName}</span> owes{" "}
               <span className="font-semibold">{settlement.toUserName}</span>
             </p>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <p className="text-blue-700 dark:text-blue-300">Total Amount:</p>
-                <p className="font-semibold text-blue-900 dark:text-blue-100">
+                <p className="text-blue-700 dark:text-blue-300 text-xs">Total Amount:</p>
+                <p className="font-semibold text-blue-900 dark:text-blue-100 break-all">
                   {formatCurrency(settlement.amount)}
                 </p>
               </div>
               {totalPaid > 0 && (
                 <div>
-                  <p className="text-blue-700 dark:text-blue-300">Already Paid:</p>
-                  <p className="font-semibold text-blue-900 dark:text-blue-100">
+                  <p className="text-blue-700 dark:text-blue-300 text-xs">Already Paid:</p>
+                  <p className="font-semibold text-blue-900 dark:text-blue-100 break-all">
                     {formatCurrency(totalPaid)}
                   </p>
                 </div>
               )}
               <div>
-                <p className="text-blue-700 dark:text-blue-300">Remaining:</p>
-                <p className="font-semibold text-blue-900 dark:text-blue-100">
+                <p className="text-blue-700 dark:text-blue-300 text-xs">Remaining:</p>
+                <p className="font-semibold text-blue-900 dark:text-blue-100 break-all">
                   {formatCurrency(remainingAmount)}
                 </p>
               </div>
               <div>
-                <p className="text-blue-700 dark:text-blue-300">Status:</p>
-                <p className="font-semibold text-blue-900 dark:text-blue-100">
+                <p className="text-blue-700 dark:text-blue-300 text-xs">Status:</p>
+                <p className="font-semibold text-blue-900 dark:text-blue-100 truncate">
                   {settlement.status}
                 </p>
               </div>
@@ -196,7 +196,7 @@ export default function RecordPaymentDialog({
               >
                 Payment Amount ({baseCurrency}) *
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="number"
                   id="amount"
@@ -216,7 +216,7 @@ export default function RecordPaymentDialog({
                   type="button"
                   onClick={handlePayFull}
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                 >
                   Pay Full
                 </button>
