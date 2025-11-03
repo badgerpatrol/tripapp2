@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { SpendStatus } from "@/lib/generated/prisma";
+import Header from "@/components/Header";
 import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
 import AddSpendDialog from "./AddSpendDialog";
@@ -1161,20 +1162,10 @@ export default function TripDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <a
-            href="/trips"
-            className="tap-target text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium mb-4 inline-flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Trips
-          </a>
-        </div>
+    <>
+      <Header showBackButton={true} />
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
+        <div className="max-w-6xl mx-auto">
 
         {/* Trip Header */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
@@ -1819,6 +1810,7 @@ export default function TripDetailPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Edit Trip Dialog */}
@@ -2033,6 +2025,6 @@ export default function TripDetailPage() {
         isOpen={isBalancesDialogOpen}
         onClose={() => setIsBalancesDialogOpen(false)}
       />
-    </div>
+    </>
   );
 }

@@ -374,12 +374,12 @@ export function SpendListView({
     if (onFinalize && canUserFinalize && canUserFinalize(spend)) {
       if (spend.status === SpendStatus.CLOSED) {
         items.push({
-          label: "Reopen",
+          label: "Unlock",
           onClick: () => onFinalize(spendId),
         });
       } else {
         items.push({
-          label: "Close",
+          label: "Lock",
           onClick: () => onFinalize(spendId),
         });
       }
