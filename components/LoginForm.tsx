@@ -1,8 +1,40 @@
 'use client';
 
 import { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthError } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
+import { SignUpSchema, SignInSchema } from '@/types/schemas';
+import { authenticateWithPasskey } from '@/lib/passkey/client';
+
+/**
+ * Maps Firebase Auth error codes to user-friendly messages.
+ */
+export function getAuthErrorMessage(error: AuthError): string {
+  switch (error.code) {
+    case 'auth/email-already-in-use':
+      return 'An account with this email already exists. Please sign in instead.';
+    case 'auth/invalid-email':
+      return 'Invalid email address.';
+    case 'auth/operation-not-allowed':
+      return 'Email/password sign-in is not enabled. Please contact support.';
+    case 'auth/weak-password':
+      return 'Password is too weak. Please use at least 6 characters.';
+    case 'auth/user-disabled':
+      return 'This account has been disabled. Please contact support.';
+    case 'auth/user-not-found':
+      return 'No account found with this email. Please sign up first.';
+    case 'auth/wrong-password':
+      return 'Incorrect password. Please try again.';
+    case 'auth/too-many-requests':
+      return 'Too many failed attempts. Please try again later.';
+    case 'auth/network-request-failed':
+      return 'Network error. Please check your connection and try again.';
+    case 'auth/invalid-credential':
+      return 'Invalid credentials. Please check your email and password.';
+    default:
+      return error.message || 'Authentication failed. Please try again.';
+  }
+}
 
 export default function LoginForm() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -17,14 +49,48 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
+      // Validate input with Zod
+      const schema = isSignUp ? SignUpSchema : SignInSchema;
+      const validation = schema.safeParse({ email, password });
+
+      if (!validation.success) {
+        const firstError = validation.error.issues[0];
+        setError(firstError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Attempt authentication with Firebase
       if (isSignUp) {
         await createUserWithEmailAndPassword(auth, email, password);
+        // Database sync happens automatically in AuthContext after auth state change
       } else {
         await signInWithEmailAndPassword(auth, email, password);
+        // Database sync happens automatically in AuthContext after auth state change
       }
-      // Redirect will happen via auth state change
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+
+      // Success - redirect will happen via auth state change in AuthContext
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(getAuthErrorMessage(authError));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasskeySignIn = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await authenticateWithPasskey(email || undefined);
+
+      if (!result.success) {
+        setError(result.error || 'Passkey authentication failed');
+      }
+      // Success - redirect will happen via auth state change in AuthContext
+    } catch (err) {
+      setError('An error occurred during passkey authentication');
     } finally {
       setLoading(false);
     }
@@ -85,6 +151,25 @@ export default function LoginForm() {
               {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
             </button>
           </form>
+
+          {!isSignUp && (
+            <>
+              <div className="mt-6 flex items-center gap-3">
+                <div className="flex-1 h-px bg-zinc-300 dark:bg-zinc-700" />
+                <span className="text-sm text-zinc-500 dark:text-zinc-400">or</span>
+                <div className="flex-1 h-px bg-zinc-300 dark:bg-zinc-700" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handlePasskeySignIn}
+                disabled={loading}
+                className="tap-target mt-4 w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold py-3 rounded-lg transition-colors border border-zinc-300 dark:border-zinc-600"
+              >
+                Sign in with Passkey
+              </button>
+            </>
+          )}
 
           <div className="mt-6 text-center">
             <button

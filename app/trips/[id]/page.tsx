@@ -1,0 +1,2030 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { SpendStatus } from "@/lib/generated/prisma";
+import Header from "@/components/Header";
+import EditTripDialog from "./EditTripDialog";
+import InviteUsersDialog from "./InviteUsersDialog";
+import AddSpendDialog from "./AddSpendDialog";
+import EditSpendDialog from "./EditSpendDialog";
+import ViewSpendDialog from "./ViewSpendDialog";
+import AssignSpendDialog from "./AssignSpendDialog";
+import SelfAssignDialog from "./SelfAssignDialog";
+import SplitRemainderDialog from "./SplitRemainderDialog";
+import EditAssignmentDialog from "./EditAssignmentDialog";
+import BalancesDialog from "./BalancesDialog";
+import { SpendListView } from "@/components/SpendListView";
+import { SpendFilters } from "@/components/SpendFilters";
+import SettlementPlanSection from "@/components/SettlementPlanSection";
+
+interface TripDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  baseCurrency: string;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+  spendStatus: SpendStatus;
+  rsvpStatus: string;
+  createdAt: string;
+  organizer: {
+    id: string;
+    email: string;
+    displayName: string | null;
+  };
+  participants: Array<{
+    id: string;
+    role: string;
+    rsvpStatus: string;
+    joinedAt: string;
+    user: {
+      id: string;
+      email: string;
+      displayName: string | null;
+    };
+  }>;
+  userRole: string | null;
+  userRsvpStatus: string | null;
+  timeline?: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    date: string | null;
+    isCompleted: boolean;
+    completedAt: string | null;
+    order: number;
+  }>;
+  spends?: Array<{
+    id: string;
+    description: string;
+    amount: number;
+    currency: string;
+    fxRate: number;
+    normalizedAmount: number;
+    date: string;
+    status: SpendStatus;
+    notes: string | null;
+    paidBy: {
+      id: string;
+      email: string;
+      displayName: string | null;
+    };
+    category: {
+      id: string;
+      name: string;
+    } | null;
+    assignedPercentage?: number;
+    assignments?: Array<{
+      id: string;
+      userId: string;
+      shareAmount: number;
+      normalizedShareAmount: number;
+      user: {
+        id: string;
+        email: string;
+        displayName: string | null;
+      };
+    }>;
+  }>;
+  userAssignments?: Array<{
+    id: string;
+    userId: string;
+    shareAmount: number;
+    normalizedShareAmount: number;
+    splitType: string;
+  }>;
+  totalSpent?: number;
+  userOwes?: number;
+  userIsOwed?: number;
+  totalUnassigned?: number;
+}
+
+export default function TripDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const { user, loading: authLoading } = useAuth();
+  const [trip, setTrip] = useState<TripDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isAddSpendDialogOpen, setIsAddSpendDialogOpen] = useState(false);
+  const [isViewSpendDialogOpen, setIsViewSpendDialogOpen] = useState(false);
+  const [isEditSpendDialogOpen, setIsEditSpendDialogOpen] = useState(false);
+  const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
+  const [isSelfAssignDialogOpen, setIsSelfAssignDialogOpen] = useState(false);
+  const [isSplitRemainderDialogOpen, setIsSplitRemainderDialogOpen] = useState(false);
+  const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
+  const [isBalancesDialogOpen, setIsBalancesDialogOpen] = useState(false);
+  const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
+  const [editingTimelineDate, setEditingTimelineDate] = useState<string>("");
+
+  // Toggle state for showing spends when spending is closed
+  const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
+
+  // Spend filtering and sorting state
+  const [statusFilter, setStatusFilter] = useState<SpendStatus | "all">("all");
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "description">("description");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Member filtering state - default to 'ACCEPTED' when RSVP is closed, 'all' when open
+  const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
+
+  const tripId = params.id as string;
+
+  // Set default filter based on trip RSVP status
+  useEffect(() => {
+    if (trip) {
+      if (trip.rsvpStatus === "CLOSED") {
+        setMemberRsvpFilter("ACCEPTED");
+      } else {
+        setMemberRsvpFilter("all");
+      }
+    }
+  }, [trip?.rsvpStatus]);
+
+  useEffect(() => {
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+          console.error("API Error:", response.status, errorData);
+          throw new Error(errorData.error || `Failed to fetch trip (${response.status})`);
+        }
+
+        const data = await response.json();
+        console.log("Trip data received:", data);
+
+        // Calculate total unassigned spend
+        const tripData = data.trip;
+        if (tripData.spends && tripData.spends.length > 0) {
+          const totalUnassigned = tripData.spends.reduce((sum: number, spend: any) => {
+            const assignedPercentage = spend.assignedPercentage || 0;
+            const unassignedPercentage = 100 - assignedPercentage;
+            const unassignedAmount = (spend.normalizedAmount * unassignedPercentage) / 100;
+            return sum + unassignedAmount;
+          }, 0);
+          tripData.totalUnassigned = totalUnassigned;
+        } else {
+          tripData.totalUnassigned = 0;
+        }
+
+        setTrip(tripData);
+      } catch (err) {
+        console.error("Error fetching trip:", err);
+        setError(err instanceof Error ? err.message : "Failed to load trip. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!authLoading && user) {
+      fetchTrip();
+    } else if (!authLoading && !user) {
+      router.push("/");
+    }
+  }, [user, authLoading, tripId, router]);
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+        <div className="text-zinc-600 dark:text-zinc-400">Loading trip...</div>
+      </div>
+    );
+  }
+
+  if (error || !trip) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400 mb-4">{error || "Trip not found"}</p>
+          <a
+            href="/trips"
+            className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
+            Back to Trips
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Not set";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  // Helper function to calculate unassigned spend
+  const calculateUnassignedSpend = (tripData: TripDetail): number => {
+    if (!tripData.spends || tripData.spends.length === 0) {
+      return 0;
+    }
+    return tripData.spends.reduce((sum, spend) => {
+      const assignedPercentage = spend.assignedPercentage || 0;
+      const unassignedPercentage = 100 - assignedPercentage;
+      const unassignedAmount = (spend.normalizedAmount * unassignedPercentage) / 100;
+      return sum + unassignedAmount;
+    }, 0);
+  };
+
+  // Calculate unassigned spend if not already calculated
+  if (trip && trip.totalUnassigned === undefined) {
+    trip.totalUnassigned = calculateUnassignedSpend(trip);
+  }
+
+  const handleEditSuccess = () => {
+    // Refetch the trip data after successful edit
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
+  const handleInviteSuccess = () => {
+    // Refetch the trip data after successful invitations
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
+  const handleAddSpendSuccess = () => {
+    // Refetch the trip data after successful spend creation
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
+  // Filter and sort spends
+  const getFilteredAndSortedSpends = () => {
+    if (!trip?.spends) return [];
+
+    let filteredSpends = [...trip.spends];
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filteredSpends = filteredSpends.filter((spend) => spend.status === statusFilter);
+    }
+
+    // Apply sorting
+    filteredSpends.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case "date":
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case "amount":
+          comparison = a.normalizedAmount - b.normalizedAmount;
+          break;
+        case "description":
+          comparison = a.description.localeCompare(b.description);
+          break;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return filteredSpends;
+  };
+
+  // Spend action handlers
+  const handleViewSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsViewSpendDialogOpen(true);
+  };
+
+  const handleEditSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsEditSpendDialogOpen(true);
+  };
+
+  const handleAssignSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsAssignSpendDialogOpen(true);
+  };
+
+  const handleSelfAssignSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsSelfAssignDialogOpen(true);
+  };
+
+  const handleSplitRemainderSpend = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsSplitRemainderDialogOpen(true);
+  };
+
+  const handleEditAssignment = (assignmentId: string) => {
+    setSelectedAssignmentId(assignmentId);
+    setIsEditAssignmentDialogOpen(true);
+  };
+
+  const handleEditAssignmentSubmit = async (amount: number) => {
+    if (!user || !trip || !selectedAssignmentId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Find the assignment and its spend
+      let assignment: any = null;
+      let spend: any = null;
+
+      for (const s of trip.spends || []) {
+        const found = s.assignments?.find(a => a.id === selectedAssignmentId);
+        if (found) {
+          assignment = found;
+          spend = s;
+          break;
+        }
+      }
+
+      if (!assignment || !spend) {
+        throw new Error("Assignment not found");
+      }
+
+      // Calculate normalized amount
+      const normalizedAmount = amount * spend.fxRate;
+
+      // Update the assignment via API
+      const response = await fetch(`/api/spends/${spend.id}/assignments/${selectedAssignmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          shareAmount: amount,
+          normalizedShareAmount: normalizedAmount,
+          splitType: "EXACT",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update assignment");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsEditAssignmentDialogOpen(false);
+    } catch (err) {
+      console.error("Error updating assignment:", err);
+      throw err;
+    }
+  };
+
+  const handleRemoveAssignment = async () => {
+    if (!user || !trip || !selectedAssignmentId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Find the assignment's spend
+      let spend: any = null;
+      for (const s of trip.spends || []) {
+        if (s.assignments?.some(a => a.id === selectedAssignmentId)) {
+          spend = s;
+          break;
+        }
+      }
+
+      if (!spend) {
+        throw new Error("Spend not found for assignment");
+      }
+
+      // Delete the assignment via API
+      const response = await fetch(`/api/spends/${spend.id}/assignments/${selectedAssignmentId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to remove assignment");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsEditAssignmentDialogOpen(false);
+    } catch (err) {
+      console.error("Error removing assignment:", err);
+      throw err;
+    }
+  };
+
+  const handleSelfAssignSubmit = async (amount: number) => {
+    if (!user || !trip || !selectedSpendId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === selectedSpendId);
+
+      if (!spend) return;
+
+      // Calculate normalized amount (convert to base currency)
+      const normalizedAmount = amount * spend.fxRate;
+
+      // Get ALL assignments from the spend including shareAmount data
+      // We need to fetch the full spend data with assignment details
+      const spendResponse = await fetch(`/api/spends/${selectedSpendId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!spendResponse.ok) {
+        throw new Error("Failed to fetch spend details");
+      }
+
+      const spendData = await spendResponse.json();
+      const fullAssignments = spendData.spend?.assignments || [];
+
+      // Create new assignments array, preserving others and updating current user
+      const newAssignments = fullAssignments
+        .filter((a: any) => a.userId !== user.uid)
+        .map((a: any) => ({
+          userId: a.userId,
+          shareAmount: a.shareAmount,
+          normalizedShareAmount: a.normalizedShareAmount,
+          splitType: a.splitType,
+        }));
+
+      // Add/update current user's assignment
+      newAssignments.push({
+        userId: user.uid,
+        shareAmount: amount,
+        normalizedShareAmount: normalizedAmount,
+        splitType: "EXACT" as const,
+      });
+
+      const response = await fetch(`/api/spends/${selectedSpendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: newAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to assign amount");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsSelfAssignDialogOpen(false);
+    } catch (err) {
+      console.error("Error assigning amount:", err);
+      throw err; // Re-throw so the dialog can handle it
+    }
+  };
+
+  const handleSplitRemainderSubmit = async (assignments: any[]) => {
+    if (!user || !trip || !selectedSpendId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Submit the new assignments
+      const response = await fetch(`/api/spends/${selectedSpendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: assignments.map(a => ({
+            userId: a.userId,
+            shareAmount: a.shareAmount,
+            normalizedShareAmount: a.normalizedShareAmount,
+            splitType: "EXACT" as const,
+          })),
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to split remainder");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsSplitRemainderDialogOpen(false);
+    } catch (err) {
+      console.error("Error splitting remainder:", err);
+      throw err; // Re-throw so the dialog can handle it
+    }
+  };
+
+  const handleJoinSpend = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === spendId);
+
+      if (!spend) return;
+
+      // Get existing assignments
+      const existingAssignments = spend.assignments || [];
+
+      // Check if user is already involved
+      if (existingAssignments.some(a => a.userId === user.uid)) {
+        alert("You are already involved in this spend");
+        return;
+      }
+
+      // Add current user to the assignments
+      const newAssignments = [
+        ...existingAssignments.map(a => ({
+          userId: a.userId,
+          shareAmount: 0,
+          normalizedShareAmount: 0,
+          splitType: "EQUAL" as const,
+        })),
+        {
+          userId: user.uid,
+          shareAmount: 0,
+          normalizedShareAmount: 0,
+          splitType: "EQUAL" as const,
+        }
+      ];
+
+      const response = await fetch(`/api/spends/${spendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: newAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to join spend");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+    } catch (err) {
+      console.error("Error joining spend:", err);
+      alert(err instanceof Error ? err.message : "Failed to join spend");
+    }
+  };
+
+  const handleLeaveSpend = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === spendId);
+
+      if (!spend) return;
+
+      // Get existing assignments
+      const existingAssignments = spend.assignments || [];
+
+      // Check if user is the spender
+      if (spend.paidBy.id === user.uid) {
+        alert("You cannot leave a spend you created. Delete it instead.");
+        return;
+      }
+
+      // Check if user is involved
+      if (!existingAssignments.some(a => a.userId === user.uid)) {
+        alert("You are not involved in this spend");
+        return;
+      }
+
+      // Remove current user from the assignments
+      const newAssignments = existingAssignments
+        .filter(a => a.userId !== user.uid)
+        .map(a => ({
+          userId: a.userId,
+          shareAmount: 0,
+          normalizedShareAmount: 0,
+          splitType: "EQUAL" as const,
+        }));
+
+      const response = await fetch(`/api/spends/${spendId}/assignments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          assignments: newAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to leave spend");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+    } catch (err) {
+      console.error("Error leaving spend:", err);
+      alert(err instanceof Error ? err.message : "Failed to leave spend");
+    }
+  };
+
+  const handleFinalizeSpend = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const spend = trip.spends?.find((s) => s.id === spendId);
+
+      if (!spend) return;
+
+      // If already closed, reopen it using the reopen endpoint
+      if (spend.status === "CLOSED") {
+        
+        const response = await fetch(`/api/spends/${spendId}/reopen`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          // Refetch trip data
+          const tripResponse = await fetch(`/api/trips/${tripId}`, {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          if (tripResponse.ok) {
+            const data = await tripResponse.json();
+            setTrip(data.trip);
+          }
+        } else {
+          alert("Failed to reopen spend");
+        }
+      } else {
+        // Check if assignments are 100% before closing
+        const assignedPercentage = spend.assignedPercentage || 0;
+        const isFullyAssigned = Math.abs(assignedPercentage - 100) < 0.1;
+
+        if (!isFullyAssigned) {
+          const shouldForce = confirm(
+            `This spend is only ${assignedPercentage.toFixed(1)}% assigned. ` +
+            `Close anyway?`
+          );
+          if (!shouldForce) return;
+        } 
+
+        // Close the spend
+        const response = await fetch(`/api/spends/${spendId}/finalize`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ force: !isFullyAssigned }),
+        });
+
+        if (response.ok) {
+          // Refetch trip data
+          const tripResponse = await fetch(`/api/trips/${tripId}`, {
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
+
+          if (tripResponse.ok) {
+            const data = await tripResponse.json();
+            setTrip(data.trip);
+          }
+        } else {
+          const errorData = await response.json();
+          alert(`Failed to close spend: ${errorData.error}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error closing/reopening spend:", err);
+      alert("Failed to close/reopen spend");
+    }
+  };
+
+  const handleDeleteSpend = async (spendId: string) => {
+    if (!user) return;
+
+    const confirmed = window.confirm("Are you sure you want to delete this spend?");
+    if (!confirmed) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/spends/${spendId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.ok) {
+        // Refetch trip data
+        const tripResponse = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (tripResponse.ok) {
+          const data = await tripResponse.json();
+          setTrip(data.trip);
+        }
+      } else {
+        alert("Failed to delete spend");
+      }
+    } catch (err) {
+      console.error("Error deleting spend:", err);
+      alert("Failed to delete spend");
+    }
+  };
+
+  const handleRemoveMember = async (userId: string, userName: string) => {
+    if (!user) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to remove ${userName} from this trip?`
+    );
+
+    if (!confirmed) return;
+
+    setRemovingUserId(userId);
+    setError(null);
+
+    try {
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`/api/trips/${tripId}/members/${userId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error || `Failed to remove member (${response.status})`
+        );
+      }
+
+      // Success - refresh the trip data
+      handleInviteSuccess();
+    } catch (err) {
+      console.error("Error removing member:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to remove member. Please try again."
+      );
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
+
+  const isOwner = trip?.userRole === "OWNER";
+  const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
+
+  // Get filtered participants based on RSVP status
+  const getFilteredParticipants = () => {
+    if (!trip?.participants) return [];
+
+    // Filter by selected RSVP status
+    if (memberRsvpFilter !== "all") {
+      return trip.participants.filter((p) => p.rsvpStatus === memberRsvpFilter);
+    }
+
+    return trip.participants;
+  };
+
+  // Check if current user can finalize (close/reopen) a specific spend
+  const canUserFinalizeSpend = (spend: { paidBy: { id: string } }) => {
+    if (!user) return false;
+
+    // User can finalize if they are:
+    // 1. The spender (person who paid for the spend)
+    // 2. The trip organizer (OWNER or ADMIN role)
+    const isSpender = spend.paidBy.id === user.uid;
+    const isOrganizer = canInvite;
+
+    return isSpender || isOrganizer;
+  };
+
+  // Check if current user can delete a specific spend
+  const canUserDeleteSpend = (spend: { paidBy: { id: string } }) => {
+    if (!user) return false;
+
+    // User can delete if they are:
+    // 1. The spender (person who paid for the spend)
+    // 2. The trip organizer (OWNER or ADMIN role)
+    const isSpender = spend.paidBy.id === user.uid;
+    const isOrganizer = canInvite;
+
+    return isSpender || isOrganizer;
+  };
+
+  const handleToggleTripSpendStatus = async (confirmClearSettlements = false) => {
+    if (!user || !trip) return;
+
+    // Default to OPEN if spendStatus is undefined (for backwards compatibility)
+    const currentStatus = trip.spendStatus || SpendStatus.OPEN;
+    const isClosing = currentStatus === SpendStatus.OPEN;
+
+    // Check if trying to close with unassigned spend
+    if (isClosing && (trip.totalUnassigned || 0) > 0.01) {
+      const unassignedAmount = trip.totalUnassigned || 0;
+      window.alert(
+        `⚠️ WARNING: You have ${trip.baseCurrency} ${unassignedAmount.toFixed(2)} in unassigned spend.\n\n` +
+        `Spend cannot be closed until all expenses are fully assigned to trip members.\n\n` +
+        `Please assign all remaining spend before closing.`
+      );
+      return; // Don't proceed with closing
+    }
+
+    console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus, confirmClearSettlements });
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/spend-status`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          confirmClearSettlements,
+        }),
+      });
+
+      const data = await response.json();
+
+      // Check if confirmation is required
+      if (data.requiresConfirmation && !confirmClearSettlements) {
+        const confirmed = window.confirm(
+          `⚠️ WARNING: ${data.message}\n\nThis action cannot be undone. All payment records will be permanently deleted.`
+        );
+
+        if (confirmed) {
+          // Retry with confirmation
+          await handleToggleTripSpendStatus(true);
+        }
+        return;
+      }
+
+      if (data.success) {
+        // Refetch trip data
+        const tripResponse = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (tripResponse.ok) {
+          const tripData = await tripResponse.json();
+          setTrip(tripData.trip);
+
+          // Show success message
+          if (data.message) {
+            alert(data.message);
+          }
+        } else {
+          alert("Failed to refresh trip data after status change");
+        }
+      } else {
+        alert(`Failed to ${isClosing ? "close" : "open"} spending: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error toggling trip spend status:", err);
+      alert(`Failed to toggle spending status: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  const handleRsvpResponse = async (status: "ACCEPTED" | "DECLINED" | "MAYBE") => {
+    if (!user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/members/${user.uid}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ rsvpStatus: status }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || `Failed to update RSVP (${response.status})`);
+      }
+
+      // Success - refresh the trip data
+      handleEditSuccess();
+    } catch (err) {
+      console.error("Error updating RSVP:", err);
+      setError(err instanceof Error ? err.message : "Failed to update RSVP. Please try again.");
+    }
+  };
+
+  const handleToggleRsvpStatus = async () => {
+    if (!user || !trip) return;
+
+    const currentStatus = trip.rsvpStatus || "OPEN";
+    const isClosing = currentStatus === "OPEN";
+
+    console.log("Current RSVP status:", currentStatus, "isClosing:", isClosing);
+
+
+
+    try {
+      const idToken = await user.getIdToken();
+      console.log("Sending request to toggle RSVP status");
+
+      const response = await fetch(`/api/trips/${tripId}/rsvp-status`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}), // Send empty body to trigger toggle behavior
+      });
+
+      const data = await response.json();
+      console.log("API Response:", data);
+
+      if (data.success) {
+        console.log("Success! New status:", data.trip?.rsvpStatus);
+
+        // Refetch trip data
+        const tripResponse = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (tripResponse.ok) {
+          const tripData = await tripResponse.json();
+          console.log("Refreshed trip data:", tripData.trip?.rsvpStatus);
+          setTrip(tripData.trip);
+        } else {
+          alert("Failed to refresh trip data after status change");
+        }
+      } else {
+        alert(`Failed to ${isClosing ? "close" : "open"} RSVP: ${data.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error toggling RSVP status:", err);
+      alert(`Failed to toggle RSVP status: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+  };
+
+  const handleEditTimelineDate = async (itemId: string, newDate: string | null) => {
+    if (!user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/timeline/${itemId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          date: newDate ? new Date(newDate).toISOString() : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to update milestone date");
+      }
+
+      // Success - refresh the trip data
+      handleEditSuccess();
+      setEditingTimelineItemId(null);
+      setEditingTimelineDate("");
+    } catch (err) {
+      console.error("Error updating timeline date:", err);
+      alert(err instanceof Error ? err.message : "Failed to update milestone date");
+    }
+  };
+
+  return (
+    <>
+      <Header showBackButton={true} />
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
+        <div className="max-w-6xl mx-auto">
+
+        {/* Trip Header */}
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+                {trip.name}
+              </h1>
+              {trip.description && (
+                <p className="text-zinc-600 dark:text-zinc-400">{trip.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              
+              {isOwner && (
+                <button
+                  onClick={() => setIsEditDialogOpen(true)}
+                  className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              )}
+              <span
+                className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  trip.status === "PLANNING"
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                    : trip.status === "ACTIVE"
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                    : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                {trip.status}
+              </span>
+            </div>
+          </div>
+
+          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+            Organized by {trip.organizer.displayName || trip.organizer.email}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                  {trip.participants.length === 0
+                    ? "no-one"
+                    : trip.participants.length === 1
+                    ? "1 person"
+                    : `${trip.participants.length} people`}
+                </p>
+              </div>
+            </div>
+
+            
+          </div>
+        </div>
+
+        {/* RSVP Response Card (for invitees) */}
+        {trip.userRsvpStatus === "PENDING" && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 md:p-8 mb-6">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+                  You've been invited to {trip.name}!
+                </h2>
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  {trip.organizer.displayName || trip.organizer.email} has invited you to join this trip.
+                  {trip.rsvpStatus === "CLOSED"
+                    ? " However, RSVP has been closed by the organizer."
+                    : " Please respond to let them know if you can make it."}
+                </p>
+              </div>
+            </div>
+
+            {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={() => handleRsvpResponse("ACCEPTED")}
+                  className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("MAYBE")}
+                  className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Maybe
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("DECLINED")}
+                  className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Decline
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                  RSVP is closed. Please contact the trip organizer if you need to respond.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Current RSVP Status (for users who have responded) */}
+        {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
+          <div className={`rounded-xl shadow-sm border p-6 md:p-8 mb-6 ${
+            trip.userRsvpStatus === "ACCEPTED"
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+              : trip.userRsvpStatus === "DECLINED"
+              ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+              : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "bg-green-100 dark:bg-green-900/50"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "bg-red-100 dark:bg-red-900/50"
+                    : "bg-yellow-100 dark:bg-yellow-900/50"
+                }`}>
+                  <svg className={`w-6 h-6 ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "text-green-600 dark:text-green-400"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-yellow-600 dark:text-yellow-400"
+                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {trip.userRsvpStatus === "ACCEPTED" ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    ) : trip.userRsvpStatus === "DECLINED" ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    )}
+                  </svg>
+                </div>
+                <div>
+                  <h3 className={`text-lg font-bold mb-1 ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "text-green-900 dark:text-green-100"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "text-red-900 dark:text-red-100"
+                      : "text-yellow-900 dark:text-yellow-100"
+                  }`}>
+                    You {trip.userRsvpStatus === "ACCEPTED" ? "accepted" : trip.userRsvpStatus === "DECLINED" ? "declined" : "might attend"} this invitation
+                  </h3>
+                  <p className={`text-sm ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "text-green-700 dark:text-green-300"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "text-red-700 dark:text-red-300"
+                      : "text-yellow-700 dark:text-yellow-300"
+                  }`}>
+                    {trip.userRsvpStatus === "ACCEPTED" && "Of course you're in!"}
+                    {trip.userRsvpStatus === "DECLINED" && "Shunning it."}
+                    {trip.userRsvpStatus === "MAYBE" && "Faffing at the moment but will make your mind up later."}
+                  </p>
+                </div>
+              </div>
+              {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
+                <button
+                  /*onClick={() => setIsEditDialogOpen(true)}*/
+                  className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                    trip.userRsvpStatus === "ACCEPTED"
+                      ? "bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300"
+                      : trip.userRsvpStatus === "DECLINED"
+                      ? "bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/70 text-red-700 dark:text-red-300"
+                      : "bg-yellow-100 dark:bg-yellow-900/50 hover:bg-yellow-200 dark:hover:bg-yellow-900/70 text-yellow-700 dark:text-yellow-300"
+                  }`}
+                >
+                  Change Response
+                </button>
+              )}
+            </div>
+
+            {/* Quick change buttons */}
+            {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-current/20">
+                <button
+                  onClick={() => handleRsvpResponse("ACCEPTED")}
+                  disabled={trip.userRsvpStatus === "ACCEPTED"}
+                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("MAYBE")}
+                  disabled={trip.userRsvpStatus === "MAYBE"}
+                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                >
+                  Maybe
+                </button>
+                <button
+                  onClick={() => handleRsvpResponse("DECLINED")}
+                  disabled={trip.userRsvpStatus === "DECLINED"}
+                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                >
+                  Decline
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 pt-4 border-t border-current/20">
+                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+                    RSVP is closed. Contact the organizer if you need to change your response.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Balance Summary (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined || trip.totalUnassigned !== undefined) && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Trip Spend */}
+              {trip.totalSpent !== undefined && (
+                <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Total Trip Spend</p>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {trip.baseCurrency} {trip.totalSpent.toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {/* You Owe */}
+              {trip.userOwes !== undefined && (
+                <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800">
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium mb-1">You Owe</p>
+                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                    {trip.baseCurrency} {trip.userOwes.toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {/* You Are Owed */}
+              {trip.userIsOwed !== undefined && (
+                <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">You Are Owed</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    {trip.baseCurrency} {trip.userIsOwed.toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {/* Unassigned Spend */}
+              {trip.totalUnassigned !== undefined && (
+                <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-1">Unassigned Spend</p>
+                  <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                    {trip.baseCurrency} {trip.totalUnassigned.toFixed(2)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        
+
+        {/* Assign Tasks (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && user && (() => {
+          // Find all spends where the current user is involved but has shareAmount = 0 (pending assignment)
+          const pendingAssignments = trip.spends
+            ?.filter((spend) => {
+              const userAssignment = spend.assignments?.find((a) => a.userId === user.uid);
+              return userAssignment !== undefined; // User is tagged as involved
+            })
+            .map((spend) => {
+              const userAssignment = spend.assignments?.find((a) => a.userId === user.uid);
+              return {
+                spend,
+                assignment: userAssignment,
+              };
+            }) || [];
+
+          // TODO: Implement pending assignments display
+          return null;
+        })()}
+
+        {/* Spends or Settlement Plan (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && (
+          <>
+            {/* Show Settlement Plan when spending is closed and not toggled to show spends */}
+            {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && !showSpendsWhenClosed ? (
+              <SettlementPlanSection
+                tripId={trip.id}
+                baseCurrency={trip.baseCurrency}
+                tripRsvpStatus={trip.rsvpStatus}
+                participants={trip.participants}
+                onToggleSpends={() => setShowSpendsWhenClosed(true)}
+                onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
+                canReopenSpending={canInvite}
+              />
+            ) : (
+              /* Show Spends section when spending is open OR when toggled to show spends */
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
+                      <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                        Spending Closed
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Show View Settlement button when spending is closed and spends are visible */}
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
+                      <button
+                        onClick={() => setShowSpendsWhenClosed(false)}
+                        className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        View Settlement
+                      </button>
+                    )}
+                    {/* Only show Add Spend button when spending is open */}
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
+                      <button
+                        onClick={() => setIsAddSpendDialogOpen(true)}
+                        className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                      >
+                        Add Spend
+                      </button>
+                    )}
+                    {canInvite && (
+                      <button
+                        onClick={() => handleToggleTripSpendStatus()}
+                        className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                          (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
+                            ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                            : (trip.totalUnassigned || 0) > 0.00
+                            ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400"
+                            : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                        }`}
+                      >
+                        {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen Spending" : "Close Spending"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {trip.spends && trip.spends.length > 0 ? (
+                  <>
+                    {/* Filters */}
+                    <div className="mb-4">
+                      <SpendFilters
+                        statusFilter={statusFilter}
+                        onStatusFilterChange={setStatusFilter}
+                        sortBy={sortBy}
+                        onSortByChange={setSortBy}
+                        sortOrder={sortOrder}
+                        onSortOrderChange={setSortOrder}
+                      />
+                    </div>
+
+                    {/* Spend List */}
+                    <SpendListView
+                      spends={getFilteredAndSortedSpends().map((spend) => ({
+                        ...spend,
+                        date: new Date(spend.date),
+                      }))}
+                      currentUserId={user?.uid}
+                      tripSpendingClosed={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
+                      canUserFinalize={canUserFinalizeSpend}
+                      canUserDelete={canUserDeleteSpend}
+                      canUserEdit={canUserDeleteSpend}
+                      onView={handleViewSpend}
+                      onEdit={handleEditSpend}
+                      onAssign={handleAssignSpend}
+                      onSelfAssign={handleSelfAssignSpend}
+                      onJoin={handleJoinSpend}
+                      onLeave={handleLeaveSpend}
+                      onFinalize={handleFinalizeSpend}
+                      onDelete={handleDeleteSpend}
+                    />
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Members */}
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
+              {trip.rsvpStatus === "CLOSED" && (
+                <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                  RSVP Closed
+                </span>
+              )}
+            </div>
+            {canInvite && (
+              <div className="flex items-center gap-2">
+                {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
+                  <button
+                    onClick={() => setIsInviteDialogOpen(true)}
+                    className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    Invite Users
+                  </button>
+                )}
+                <button
+                  onClick={handleToggleRsvpStatus}
+                  className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                    trip.rsvpStatus === "CLOSED"
+                      ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                      : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
+                  }`}
+                >
+                  {trip.rsvpStatus === "CLOSED" ? "Reopen RSVP" : "Close RSVP"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* RSVP Filter Dropdown */}
+          <div className="mb-4">
+            <label htmlFor="member-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              Filter by RSVP Status
+            </label>
+            <select
+              id="member-filter"
+              value={memberRsvpFilter}
+              onChange={(e) => setMemberRsvpFilter(e.target.value as typeof memberRsvpFilter)}
+              className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            >
+              <option value="all">All Members</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="PENDING">Pending</option>
+              <option value="MAYBE">Maybe</option>
+              <option value="DECLINED">Declined</option>
+            </select>
+          </div>
+
+          <div className="space-y-3">
+            {getFilteredParticipants().map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      {(member.user.displayName || member.user.email)[0].toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                      {member.user.displayName || member.user.email}
+                    </p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{member.user.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {member.role === "OWNER" && (
+                    <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                      {member.role}
+                    </span>
+                  )}
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded ${
+                      member.rsvpStatus === "ACCEPTED"
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                        : member.rsvpStatus === "DECLINED"
+                        ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                        : member.rsvpStatus === "MAYBE"
+                        ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
+                        : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+                    }`}
+                  >
+                    {member.rsvpStatus}
+                  </span>
+                  {member.role !== "OWNER" && canInvite && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member.user.id, member.user.displayName || member.user.email)}
+                      disabled={removingUserId === member.user.id}
+                      className="ml-1 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Remove member"
+                    >
+                      {removingUserId === member.user.id ? (
+                        <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Timeline (if available) */}
+        {trip.timeline && trip.timeline.length > 0 && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">Timeline</h2>
+            <div className="space-y-3">
+              {trip.timeline.map((item) => {
+                const isEditing = editingTimelineItemId === item.id;
+                const canEdit = canInvite && item.title !== "Trip Created";
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-start gap-4 p-4 rounded-lg border ${
+                      item.isCompleted
+                        ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                        : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        item.isCompleted
+                          ? "bg-green-500 text-white"
+                          : "bg-zinc-300 dark:bg-zinc-600"
+                      }`}
+                    >
+                      {item.isCompleted && (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
+                      {item.description && (
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isEditing ? (
+                        <>
+                          <input
+                            type="date"
+                            value={editingTimelineDate}
+                            onChange={(e) => setEditingTimelineDate(e.target.value)}
+                            className="px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                          />
+                          <button
+                            onClick={() => handleEditTimelineDate(item.id, editingTimelineDate)}
+                            className="tap-target px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingTimelineItemId(null);
+                              setEditingTimelineDate("");
+                            }}
+                            className="tap-target px-3 py-1.5 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {item.date && (
+                            <p className="text-base font-medium text-zinc-700 dark:text-zinc-300">
+                              {formatDate(item.date)}
+                            </p>
+                          )}
+                          {canEdit && (
+                            <button
+                              onClick={() => {
+                                setEditingTimelineItemId(item.id);
+                                setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
+                              }}
+                              className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                              title="Edit milestone date"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        </div>
+      </div>
+
+      {/* Edit Trip Dialog */}
+      {trip && (
+        <EditTripDialog
+          trip={trip}
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* Invite Users Dialog */}
+      {trip && (
+        <InviteUsersDialog
+          tripId={trip.id}
+          tripName={trip.name}
+          isOpen={isInviteDialogOpen}
+          onClose={() => setIsInviteDialogOpen(false)}
+          onSuccess={handleInviteSuccess}
+          currentMembers={trip.participants}
+        />
+      )}
+
+      {/* Add Spend Dialog */}
+      {trip && (
+        <AddSpendDialog
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
+          isOpen={isAddSpendDialogOpen}
+          onClose={() => setIsAddSpendDialogOpen(false)}
+          onSuccess={handleAddSpendSuccess}
+        />
+      )}
+
+      {/* View Spend Dialog */}
+      {trip && selectedSpendId && (
+        <ViewSpendDialog
+          spend={trip.spends?.find((s) => s.id === selectedSpendId) || null}
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency, spendStatus: trip.spendStatus }}
+          currentUserId={user?.uid}
+          isOpen={isViewSpendDialogOpen}
+          onClose={() => {
+            setIsViewSpendDialogOpen(false);
+            setSelectedSpendId(null);
+          }}
+          canUserFinalize={canUserFinalizeSpend}
+          canUserDelete={canUserDeleteSpend}
+          canUserEdit={canUserDeleteSpend}
+          onEdit={handleEditSpend}
+          onAssign={handleAssignSpend}
+          onSelfAssign={handleSelfAssignSpend}
+          onSplitRemainder={handleSplitRemainderSpend}
+          onEditAssignment={handleEditAssignment}
+          onJoin={handleJoinSpend}
+          onLeave={handleLeaveSpend}
+          onFinalize={handleFinalizeSpend}
+          onDelete={handleDeleteSpend}
+        />
+      )}
+
+      {/* Edit Spend Dialog */}
+      {trip && selectedSpendId && (
+        <EditSpendDialog
+          spend={trip.spends?.find((s) => s.id === selectedSpendId) || null}
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
+          isOpen={isEditSpendDialogOpen}
+          onClose={() => {
+            // Just close the edit dialog, keep view dialog open and selectedSpendId
+            setIsEditSpendDialogOpen(false);
+          }}
+          onSuccess={handleAddSpendSuccess}
+        />
+      )}
+
+      {/* Assign Spend Dialog */}
+      {trip && selectedSpendId && (
+        <AssignSpendDialog
+          spend={
+            trip.spends?.find((s) => s.id === selectedSpendId) || {
+              id: selectedSpendId,
+              description: "",
+              amount: 0,
+              currency: trip.baseCurrency,
+            }
+          }
+          participants={trip.participants}
+          tripId={trip.id}
+          tripRsvpStatus={trip.rsvpStatus}
+          isOpen={isAssignSpendDialogOpen}
+          onClose={() => {
+            // Just close the assign dialog, keep view dialog open and selectedSpendId
+            setIsAssignSpendDialogOpen(false);
+          }}
+          onSuccess={handleAddSpendSuccess}
+        />
+      )}
+
+      {/* Self Assign Dialog */}
+      {trip && selectedSpendId && user && (() => {
+        const selectedSpend = trip.spends?.find((s) => s.id === selectedSpendId);
+        const userAssignment = trip.userAssignments?.find(
+          (a) => a.userId === user.uid &&
+          // We need to match this assignment to the spend, but userAssignments doesn't have spendId
+          // For now, we'll check if user is in the spend's assignments
+          selectedSpend?.assignments?.some(sa => sa.userId === user.uid && sa.id === a.id)
+        );
+
+        return (
+          <SelfAssignDialog
+            spend={
+              selectedSpend || {
+                id: selectedSpendId,
+                description: "",
+                amount: 0,
+                currency: trip.baseCurrency,
+                normalizedAmount: 0,
+              }
+            }
+            trip={{ baseCurrency: trip.baseCurrency }}
+            currentUserId={user.uid}
+            existingAssignment={
+              userAssignment
+                ? {
+                    id: userAssignment.id,
+                    shareAmount: userAssignment.shareAmount,
+                    normalizedShareAmount: userAssignment.normalizedShareAmount,
+                  }
+                : undefined
+            }
+            assignedPercentage={selectedSpend?.assignedPercentage || 0}
+            isOpen={isSelfAssignDialogOpen}
+            onClose={() => {
+              setIsSelfAssignDialogOpen(false);
+            }}
+            onAssign={handleSelfAssignSubmit}
+          />
+        );
+      })()}
+
+      {/* Split Remainder Dialog */}
+      {trip && selectedSpendId && user && (() => {
+        const selectedSpend = trip.spends?.find((s) => s.id === selectedSpendId);
+        const allParticipants = trip.participants.map(p => ({
+          id: p.user.id,
+          email: p.user.email,
+          displayName: p.user.displayName,
+        }));
+
+        return (
+          <SplitRemainderDialog
+            spend={
+              selectedSpend || {
+                id: selectedSpendId,
+                description: "",
+                amount: 0,
+                currency: trip.baseCurrency,
+                normalizedAmount: 0,
+                fxRate: 1,
+              }
+            }
+            trip={{ baseCurrency: trip.baseCurrency }}
+            currentUserId={user.uid}
+            existingAssignments={selectedSpend?.assignments || []}
+            allParticipants={allParticipants}
+            isOpen={isSplitRemainderDialogOpen}
+            onClose={() => {
+              setIsSplitRemainderDialogOpen(false);
+            }}
+            onApply={handleSplitRemainderSubmit}
+          />
+        );
+      })()}
+
+      {/* Edit Assignment Dialog */}
+      {trip && selectedAssignmentId && user && (() => {
+        // Find the assignment and its spend
+        let assignment: any = null;
+        let spend: any = null;
+
+        for (const s of trip.spends || []) {
+          const found = s.assignments?.find(a => a.id === selectedAssignmentId);
+          if (found) {
+            assignment = found;
+            spend = s;
+            break;
+          }
+        }
+
+        if (!assignment || !spend) return null;
+
+        return (
+          <EditAssignmentDialog
+            assignment={assignment}
+            spend={spend}
+            currentUserId={user.uid}
+            assignedPercentage={spend.assignedPercentage || 0}
+            isOpen={isEditAssignmentDialogOpen}
+            onClose={() => {
+              setIsEditAssignmentDialogOpen(false);
+              setSelectedAssignmentId(null);
+            }}
+            onUpdate={handleEditAssignmentSubmit}
+            onRemove={handleRemoveAssignment}
+          />
+        );
+      })()}
+
+      {/* Balances Dialog */}
+      <BalancesDialog
+        tripId={trip.id}
+        baseCurrency={trip.baseCurrency}
+        isOpen={isBalancesDialogOpen}
+        onClose={() => setIsBalancesDialogOpen(false)}
+      />
+    </>
+  );
+}

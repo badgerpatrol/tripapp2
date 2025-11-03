@@ -1,15 +1,544 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema for TripPlanner
+// Mobile-first trip planner with collaborative spending, assignments, and settlement
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../lib/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPERADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  ENTERPRISE
+}
+
+enum TripStatus {
+  PLANNING
+  ACTIVE
+  FINALIZED
+  SETTLED
+}
+
+enum TripMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum RsvpStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  MAYBE
+}
+
+enum SplitType {
+  EQUAL
+  PERCENTAGE
+  EXACT
+  SHARE
+}
+
+enum SpendStatus {
+  OPEN
+  CLOSED
+}
+
+enum RsvpWindowStatus {
+  OPEN
+  CLOSED
+}
+
+enum SettlementStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  VERIFIED
+}
+
+enum NotificationType {
+  TRIP_INVITE
+  SPEND_ADDED
+  SPEND_UPDATED
+  SPEND_DELETED
+  ASSIGNMENT_CHANGED
+  SETTLEMENT_REQUESTED
+  PAYMENT_RECEIVED
+  PAYMENT_VERIFIED
+  CHECKLIST_ASSIGNED
+  TRIP_FINALIZED
+  SYSTEM
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum EventType {
+  USER_CREATED
+  USER_UPDATED
+  USER_SIGNED_IN
+  TRIP_CREATED
+  TRIP_UPDATED
+  TRIP_DELETED
+  SPEND_CREATED
+  SPEND_UPDATED
+  SPEND_CLOSED
+  SPEND_DELETED
+  SETTLEMENT_CREATED
+  SETTLEMENT_UPDATED
+  PAYMENT_RECORDED
+  CHECKLIST_CREATED
+  CHECKLIST_ITEM_COMPLETED
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id          String   @id // Firebase UID
+  email       String   @unique
+  displayName String?
+  photoURL    String?
+  phoneNumber String?
+  role        UserRole @default(USER)
+  subscription SubscriptionTier @default(FREE)
+  timezone    String?  @default("UTC")
+  language    String?  @default("en")
+  defaultCurrency String? @default("GBP")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relationships
+  tripsCreated       Trip[]            @relation("TripCreator")
+  tripMemberships    TripMember[]
+  spendsCreated      Spend[]           @relation("SpendPayer")
+  spendAssignments   SpendAssignment[]
+  settlementsFrom    Settlement[]      @relation("SettlementFrom")
+  settlementsTo      Settlement[]      @relation("SettlementTo")
+  paymentsRecorded   Payment[]
+  timelineItemsCreated TimelineItem[]
+  checklistsCreated  Checklist[]
+  checklistItemsCompleted ChecklistItem[] @relation("ChecklistItemCompleter")
+  checklistItemsAssigned  ChecklistItem[] @relation("ChecklistItemAssignee")
+  eventLogs          EventLog[]
+  invitationsSent    Invitation[]
+  notificationsSent  Notification[]    @relation("NotificationSender")
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  categoriesCreated  Category[]
+  featureFlags       FeatureFlag[]
+
+  passkeys           Passkey[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Passkey {
+  id                   String   @id @default(uuid())
+  userId               String
+  credentialID         String   @unique
+  credentialPublicKey  String
+  counter              Int      @default(0)
+  transports           String[]
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("passkeys")
+}
+
+// ============================================================================
+// TRIP & MEMBERSHIP
+// ============================================================================
+
+model Trip {
+  id           String      @id @default(uuid())
+  name         String
+  description  String?
+  baseCurrency String      @default("USD")
+  startDate    DateTime?
+  endDate      DateTime?
+  status       TripStatus  @default(PLANNING)
+  spendStatus  SpendStatus @default(OPEN) // Controls whether any spend can be added/edited on this trip
+  rsvpStatus   RsvpWindowStatus @default(OPEN) // Controls whether RSVPs can be changed
+  createdById  String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
+
+  // Relationships
+  createdBy    User           @relation("TripCreator", fields: [createdById], references: [id])
+  members      TripMember[]
+  spends       Spend[]
+  settlements  Settlement[]
+  timelineItems TimelineItem[]
+  checklists   Checklist[]
+  eventLogs    EventLog[]
+  invitations  Invitation[]
+  notifications Notification[]
+  featureFlags FeatureFlag[]
+
+  @@index([createdById])
+  @@index([status])
+  @@index([startDate])
+  @@map("trips")
+}
+
+model TripMember {
+  id          String         @id @default(uuid())
+  tripId      String
+  userId      String
+  role        TripMemberRole @default(MEMBER)
+  rsvpStatus  RsvpStatus     @default(PENDING)
+  joinedAt    DateTime       @default(now())
+  invitedById String?
+  deletedAt   DateTime?
+
+  // Relationships
+  trip  Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@index([userId])
+  @@index([tripId])
+  @@index([rsvpStatus])
+  @@map("trip_members")
+}
+
+model Invitation {
+  id          String    @id @default(uuid())
+  tripId      String
+  email       String
+  invitedById String
+  token       String    @unique @default(uuid())
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Relationships
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  invitedBy User @relation(fields: [invitedById], references: [id])
+
+  @@index([tripId])
+  @@index([email])
+  @@index([token])
+  @@map("invitations")
+}
+
+// ============================================================================
+// CATEGORIES
+// ============================================================================
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  icon        String?
+  color       String?
+  isDefault   Boolean   @default(false)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relationships
+  createdBy User?   @relation(fields: [createdById], references: [id])
+  spends    Spend[]
+
+  @@index([isDefault])
+  @@index([createdById])
+  @@map("categories")
+}
+
+// ============================================================================
+// SPENDING & ASSIGNMENTS
+// ============================================================================
+
+model Spend {
+  id               String      @id @default(uuid())
+  tripId           String
+  description      String
+  amount           Decimal     @db.Decimal(19, 4)
+  currency         String      @default("USD")
+  fxRate           Decimal     @default(1.0) @db.Decimal(19, 6)
+  normalizedAmount Decimal     @db.Decimal(19, 4) // In trip base currency
+  paidById         String
+  categoryId       String?
+  date             DateTime    @default(now())
+  status           SpendStatus @default(OPEN)
+  receiptUrl       String?
+  notes            String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  deletedAt        DateTime?
+
+  // Relationships
+  trip        Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  paidBy      User              @relation("SpendPayer", fields: [paidById], references: [id])
+  category    Category?         @relation(fields: [categoryId], references: [id])
+  assignments SpendAssignment[]
+
+  @@index([tripId])
+  @@index([paidById])
+  @@index([categoryId])
+  @@index([date])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("spends")
+}
+
+model SpendAssignment {
+  id                    String    @id @default(uuid())
+  spendId               String
+  userId                String
+  shareAmount           Decimal   @db.Decimal(19, 4) // In spend currency
+  normalizedShareAmount Decimal   @db.Decimal(19, 4) // In trip base currency
+  splitType             SplitType @default(EQUAL)
+  splitValue            Decimal?  @db.Decimal(19, 6) // For percentage or share-based
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relationships
+  spend Spend @relation(fields: [spendId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([spendId, userId])
+  @@index([spendId])
+  @@index([userId])
+  @@map("spend_assignments")
+}
+
+// ============================================================================
+// SETTLEMENT & PAYMENTS
+// ============================================================================
+
+model Settlement {
+  id               String           @id @default(uuid())
+  tripId           String
+  fromUserId       String
+  toUserId         String
+  amount           Decimal          @db.Decimal(19, 4) // In trip base currency
+  status           SettlementStatus @default(PENDING)
+  paymentMethod    String?
+  paymentReference String?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
+
+  // Relationships
+  trip     Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fromUser User      @relation("SettlementFrom", fields: [fromUserId], references: [id])
+  toUser   User      @relation("SettlementTo", fields: [toUserId], references: [id])
+  payments Payment[]
+
+  @@index([tripId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+  @@map("settlements")
+}
+
+model Payment {
+  id               String    @id @default(uuid())
+  settlementId     String
+  amount           Decimal   @db.Decimal(19, 4) // In trip base currency
+  paidAt           DateTime  @default(now())
+  verifiedAt       DateTime?
+  paymentMethod    String?
+  paymentReference String?
+  notes            String?
+  recordedById     String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relationships
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  recordedBy User       @relation(fields: [recordedById], references: [id])
+
+  @@index([settlementId])
+  @@index([paidAt])
+  @@index([verifiedAt])
+  @@map("payments")
+}
+
+// ============================================================================
+// TIMELINE
+// ============================================================================
+
+model TimelineItem {
+  id          String    @id @default(uuid())
+  tripId      String
+  title       String
+  description String?
+  date        DateTime?
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  order       Int       @default(0)
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relationships
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([tripId])
+  @@index([date])
+  @@index([createdById])
+  @@map("timeline_items")
+}
+
+// ============================================================================
+// CHECKLISTS
+// ============================================================================
+
+model Checklist {
+  id          String    @id @default(uuid())
+  tripId      String
+  title       String
+  description String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relationships
+  trip      Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User            @relation(fields: [createdById], references: [id])
+  items     ChecklistItem[]
+
+  @@index([tripId])
+  @@index([createdById])
+  @@map("checklists")
+}
+
+model ChecklistItem {
+  id            String    @id @default(uuid())
+  checklistId   String
+  text          String
+  isCompleted   Boolean   @default(false)
+  completedById String?
+  completedAt   DateTime?
+  assignedToId  String?
+  dueDate       DateTime?
+  order         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relationships
+  checklist   Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  completedBy User?     @relation("ChecklistItemCompleter", fields: [completedById], references: [id])
+  assignedTo  User?     @relation("ChecklistItemAssignee", fields: [assignedToId], references: [id])
+
+  @@index([checklistId])
+  @@index([assignedToId])
+  @@index([isCompleted])
+  @@map("checklist_items")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id           String             @id @default(uuid())
+  recipientId  String
+  senderId     String?
+  tripId       String?
+  type         NotificationType
+  status       NotificationStatus @default(UNREAD)
+  title        String
+  message      String
+  actionUrl    String?
+  metadata     Json?
+  createdAt    DateTime           @default(now())
+  readAt       DateTime?
+  archivedAt   DateTime?
+
+  // Relationships
+  recipient User  @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender    User? @relation("NotificationSender", fields: [senderId], references: [id])
+  trip      Trip? @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([tripId])
+  @@map("notifications")
+}
+
+// ============================================================================
+// AUDIT & EVENT LOG
+// ============================================================================
+
+model EventLog {
+  id         String    @id @default(uuid())
+  entity     String    // "Trip", "Spend", "Settlement", etc.
+  entityId   String
+  eventType  EventType
+  byUser     String    // User who triggered the event
+  tripId     String?
+  payload    Json?
+  createdAt  DateTime  @default(now())
+
+  // Relationships
+  user User  @relation(fields: [byUser], references: [id])
+  trip Trip? @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([entity, entityId])
+  @@index([tripId])
+  @@index([byUser])
+  @@index([createdAt])
+  @@map("event_logs")
+}
+
+// ============================================================================
+// FEATURE FLAGS (Premium features)
+// ============================================================================
+
+model FeatureFlag {
+  id        String    @id @default(uuid())
+  userId    String?
+  tripId    String?
+  flagKey   String    // "receipt_ocr", "receipt_translation", etc.
+  isEnabled Boolean   @default(false)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relationships
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip Trip? @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tripId, flagKey])
+  @@index([flagKey])
+  @@index([userId])
+  @@index([tripId])
+  @@map("feature_flags")
 }
