@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
-import { syncUserToDatabase } from '@/server/actions/auth';
 import { UserProfile } from '@/types/schemas';
 
 interface AuthContextType {
@@ -32,19 +31,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       if (firebaseUser) {
-        // User is signed in - sync to database
+        // User is signed in - sync to database via API
         try {
           const idToken = await firebaseUser.getIdToken();
-          const result = await syncUserToDatabase(idToken);
+
+          const response = await fetch('/api/auth/sync', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${idToken}`,
+            },
+          });
+
+          const result = await response.json();
 
           if (result.success && result.user) {
             setUserProfile(result.user);
+            console.log('[AUTH] User synced to database:', result.isNewUser ? 'NEW USER' : 'EXISTING USER');
           } else {
-            console.error('Failed to sync user to database:', result.error);
+            console.error('[AUTH] Failed to sync user to database:', result.error);
             setError(result.error || 'Failed to sync user profile');
           }
         } catch (err) {
-          console.error('Error syncing user:', err);
+          console.error('[AUTH] Error syncing user:', err);
           setError('Failed to sync user profile');
         }
       } else {

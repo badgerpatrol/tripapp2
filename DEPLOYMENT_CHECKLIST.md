@@ -14,10 +14,12 @@ Quick reference guide for deploying TripPlanner with dual database setup (local 
 
 ### 1. Initialize Production Database (One-time)
 
-Run this command to set up your Render database schema and seed data:
+✅ **COMPLETED** - Your production database is set up and seeded!
+
+The command that was run:
 
 ```bash
-DATABASE_URL="postgresql://trip_app_db_vnrv_user:ZVaYdWQhz9DazzJleOVt2qXbePnOujyM@dpg-d41uc7n5r7bs73e1jkqg-a/trip_app_db_vnrv" pnpm db:init:production:seed
+DATABASE_URL="postgresql://trip_app_db_vnrv_user:ZVaYdWQhz9DazzJleOVt2qXbePnOujyM@dpg-d41uc7n5r7bs73e1jkqg-a.frankfurt-postgres.render.com/trip_app_db_vnrv" pnpm db:init:production:seed
 ```
 
 ### 2. Configure Vercel Environment Variables
@@ -28,7 +30,7 @@ Go to your Vercel project → Settings → Environment Variables and add:
 
 1. **DATABASE_URL**
    ```
-   postgresql://trip_app_db_vnrv_user:ZVaYdWQhz9DazzJleOVt2qXbePnOujyM@dpg-d41uc7n5r7bs73e1jkqg-a/trip_app_db_vnrv
+   postgresql://trip_app_db_vnrv_user:ZVaYdWQhz9DazzJleOVt2qXbePnOujyM@dpg-d41uc7n5r7bs73e1jkqg-a.frankfurt-postgres.render.com/trip_app_db_vnrv
    ```
 
 2. **Firebase Config** (copy from `.env.local`):

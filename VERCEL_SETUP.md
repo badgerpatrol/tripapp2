@@ -35,7 +35,7 @@ Go to your Vercel project dashboard → Settings → Environment Variables and a
 
 **Value**:
 ```
-postgresql://trip_app_db_vnrv_user:ZVaYdWQhz9DazzJleOVt2qXbePnOujyM@dpg-d41uc7n5r7bs73e1jkqg-a/trip_app_db_vnrv
+postgresql://trip_app_db_vnrv_user:ZVaYdWQhz9DazzJleOVt2qXbePnOujyM@dpg-d41uc7n5r7bs73e1jkqg-a.frankfurt-postgres.render.com/trip_app_db_vnrv
 ```
 
 **Environments**: Production, Preview (optional)
@@ -130,8 +130,9 @@ Before your first deployment, initialize the Render database:
 DATABASE_URL="postgresql://trip_app_db_vnrv_user:ZVaYdWQhz9DazzJleOVt2qXbePnOujyM@dpg-d41uc7n5r7bs73e1jkqg-a.frankfurt-postgres.render.com/trip_app_db_vnrv" pnpm db:init:production:seed
 ```
 
-
 This creates the schema and seeds default data.
+
+✅ **You've already completed this step!** Your database is ready.
 
 ## Step 4: Deploy
 
