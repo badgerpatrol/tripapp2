@@ -132,7 +132,21 @@ export default function TripDetailPage() {
   const [sortBy, setSortBy] = useState<"date" | "amount" | "description">("description");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  // Member filtering state - default to 'ACCEPTED' when RSVP is closed, 'all' when open
+  const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
+
   const tripId = params.id as string;
+
+  // Set default filter based on trip RSVP status
+  useEffect(() => {
+    if (trip) {
+      if (trip.rsvpStatus === "CLOSED") {
+        setMemberRsvpFilter("ACCEPTED");
+      } else {
+        setMemberRsvpFilter("all");
+      }
+    }
+  }, [trip?.rsvpStatus]);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -922,6 +936,18 @@ export default function TripDetailPage() {
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
+  // Get filtered participants based on RSVP status
+  const getFilteredParticipants = () => {
+    if (!trip?.participants) return [];
+
+    // Filter by selected RSVP status
+    if (memberRsvpFilter !== "all") {
+      return trip.participants.filter((p) => p.rsvpStatus === memberRsvpFilter);
+    }
+
+    return trip.participants;
+  };
+
   // Check if current user can finalize (close/reopen) a specific spend
   const canUserFinalizeSpend = (spend: { paidBy: { id: string } }) => {
     if (!user) return false;
@@ -954,6 +980,17 @@ export default function TripDetailPage() {
     // Default to OPEN if spendStatus is undefined (for backwards compatibility)
     const currentStatus = trip.spendStatus || SpendStatus.OPEN;
     const isClosing = currentStatus === SpendStatus.OPEN;
+
+    // Check if trying to close with unassigned spend
+    if (isClosing && (trip.totalUnassigned || 0) > 0.01) {
+      const unassignedAmount = trip.totalUnassigned || 0;
+      window.alert(
+        `⚠️ WARNING: You have ${trip.baseCurrency} ${unassignedAmount.toFixed(2)} in unassigned spend.\n\n` +
+        `Spend cannot be closed until all expenses are fully assigned to trip members.\n\n` +
+        `Please assign all remaining spend before closing.`
+      );
+      return; // Don't proceed with closing
+    }
 
     console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus, confirmClearSettlements });
 
@@ -1466,6 +1503,8 @@ export default function TripDetailPage() {
               <SettlementPlanSection
                 tripId={trip.id}
                 baseCurrency={trip.baseCurrency}
+                tripRsvpStatus={trip.rsvpStatus}
+                participants={trip.participants}
                 onToggleSpends={() => setShowSpendsWhenClosed(true)}
                 onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
                 canReopenSpending={canInvite}
@@ -1510,7 +1549,9 @@ export default function TripDetailPage() {
                         className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
                           (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
                             ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                            : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
+                            : (trip.totalUnassigned || 0) > 0.00
+                            ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400"
+                            : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
                         }`}
                       >
                         {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen Spending" : "Close Spending"}
@@ -1605,8 +1646,28 @@ export default function TripDetailPage() {
               </div>
             )}
           </div>
+
+          {/* RSVP Filter Dropdown */}
+          <div className="mb-4">
+            <label htmlFor="member-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              Filter by RSVP Status
+            </label>
+            <select
+              id="member-filter"
+              value={memberRsvpFilter}
+              onChange={(e) => setMemberRsvpFilter(e.target.value as typeof memberRsvpFilter)}
+              className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            >
+              <option value="all">All Members</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="PENDING">Pending</option>
+              <option value="MAYBE">Maybe</option>
+              <option value="DECLINED">Declined</option>
+            </select>
+          </div>
+
           <div className="space-y-3">
-            {trip.participants.map((member) => (
+            {getFilteredParticipants().map((member) => (
               <div
                 key={member.id}
                 className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
@@ -1845,6 +1906,7 @@ export default function TripDetailPage() {
           }
           participants={trip.participants}
           tripId={trip.id}
+          tripRsvpStatus={trip.rsvpStatus}
           isOpen={isAssignSpendDialogOpen}
           onClose={() => {
             // Just close the assign dialog, keep view dialog open and selectedSpendId

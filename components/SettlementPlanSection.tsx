@@ -6,9 +6,21 @@ import { PersonBalance } from "@/types/schemas";
 import RecordPaymentDialog from "@/app/trips/[id]/RecordPaymentDialog";
 import EditPaymentDialog from "@/app/trips/[id]/EditPaymentDialog";
 
+interface Participant {
+  id: string;
+  rsvpStatus: string;
+  user: {
+    id: string;
+    email: string;
+    displayName: string | null;
+  };
+}
+
 interface SettlementPlanSectionProps {
   tripId: string;
   baseCurrency: string;
+  tripRsvpStatus?: string;
+  participants?: Participant[];
   onToggleSpends: () => void;
   onReopenSpending?: () => void;
   canReopenSpending?: boolean;
@@ -57,6 +69,8 @@ interface PersistedSettlement {
 export default function SettlementPlanSection({
   tripId,
   baseCurrency,
+  tripRsvpStatus,
+  participants = [],
   onToggleSpends,
   onReopenSpending,
   canReopenSpending = false,
@@ -70,6 +84,7 @@ export default function SettlementPlanSection({
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [editingPayment, setEditingPayment] = useState<any | null>(null);
   const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
+  const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
 
   const fetchData = async () => {
     if (!user) return;
@@ -115,6 +130,15 @@ export default function SettlementPlanSection({
     fetchData();
   }, [user, tripId]);
 
+  // Set default filter based on trip RSVP status
+  useEffect(() => {
+    if (tripRsvpStatus === "CLOSED") {
+      setMemberRsvpFilter("ACCEPTED");
+    } else {
+      setMemberRsvpFilter("all");
+    }
+  }, [tripRsvpStatus]);
+
   const formatCurrency = (amount: number) => {
     return `${baseCurrency} ${amount.toFixed(2)}`;
   };
@@ -138,6 +162,37 @@ export default function SettlementPlanSection({
     if (!dateString) return "";
     const date = new Date(dateString);
     return `Debt since ${formatDate(dateString)} (${date.toLocaleDateString()})`;
+  };
+
+  // Get filtered balances based on RSVP status
+  const getFilteredBalances = () => {
+    if (!balanceData?.balances) return [];
+
+    // Filter by selected RSVP status
+    if (memberRsvpFilter !== "all") {
+      return balanceData.balances.filter((balance) => {
+        const participant = participants.find((p) => p.user.id === balance.userId);
+        return participant?.rsvpStatus === memberRsvpFilter;
+      });
+    }
+
+    return balanceData.balances;
+  };
+
+  // Get filtered settlements based on RSVP status
+  const getFilteredSettlements = () => {
+    if (!balanceData?.settlements) return [];
+
+    // Filter by selected RSVP status
+    if (memberRsvpFilter !== "all") {
+      return balanceData.settlements.filter((settlement) => {
+        const fromParticipant = participants.find((p) => p.user.id === settlement.fromUserId);
+        const toParticipant = participants.find((p) => p.user.id === settlement.toUserId);
+        return fromParticipant?.rsvpStatus === memberRsvpFilter && toParticipant?.rsvpStatus === memberRsvpFilter;
+      });
+    }
+
+    return balanceData.settlements;
   };
 
   const handleRecordPayment = (settlement: PersistedSettlement) => {
@@ -250,20 +305,39 @@ export default function SettlementPlanSection({
       {!loading && !error && balanceData && (
         <div className="space-y-6">
           {/* Total Spent Summary */}
-          
+
+
+          {/* RSVP Filter Dropdown */}
+          <div className="mb-4">
+            <label htmlFor="settlement-member-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              Filter by RSVP Status
+            </label>
+            <select
+              id="settlement-member-filter"
+              value={memberRsvpFilter}
+              onChange={(e) => setMemberRsvpFilter(e.target.value as typeof memberRsvpFilter)}
+              className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+            >
+              <option value="all">All Members</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="PENDING">Pending</option>
+              <option value="MAYBE">Maybe</option>
+              <option value="DECLINED">Declined</option>
+            </select>
+          </div>
 
           {/* Settlement Plan with Payment Tracking */}
           <div>
-            
+
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-              {balanceData.settlements.length > 0
-                ? `${balanceData.settlements.length} ${
-                    balanceData.settlements.length === 1 ? "transfer" : "transfers"
+              {getFilteredSettlements().length > 0
+                ? `${getFilteredSettlements().length} ${
+                    getFilteredSettlements().length === 1 ? "transfer" : "transfers"
                   } needed to settle all balances`
                 : "All balanced!"}
             </p>
 
-            {balanceData.settlements.length === 0 ? (
+            {getFilteredSettlements().length === 0 ? (
               <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center">
                 <p className="text-green-600 dark:text-green-400 font-medium">
                   All balanced! No settlements needed.
@@ -271,7 +345,7 @@ export default function SettlementPlanSection({
               </div>
             ) : (
               <div className="space-y-3">
-                {balanceData.settlements.map((settlement, index) => {
+                {getFilteredSettlements().map((settlement, index) => {
                   // Find matching persisted settlement for this calculated settlement
                   const persistedSettlement = persistedSettlements.find(
                     (ps) =>
@@ -427,7 +501,7 @@ export default function SettlementPlanSection({
               Per-Person Totals
             </h3>
             <div className="space-y-3">
-              {balanceData.balances
+              {getFilteredBalances()
                 .sort((a, b) => b.netBalance - a.netBalance) // Owed money first
                 .map((balance) => (
                   <div

@@ -32,6 +32,7 @@ interface AssignSpendDialogProps {
   spend: Spend;
   participants: Participant[];
   tripId: string;
+  tripRsvpStatus?: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -41,6 +42,7 @@ export default function AssignSpendDialog({
   spend,
   participants,
   tripId,
+  tripRsvpStatus,
   isOpen,
   onClose,
   onSuccess,
@@ -49,6 +51,7 @@ export default function AssignSpendDialog({
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
 
   // Initialize with already assigned users
   useEffect(() => {
@@ -59,7 +62,30 @@ export default function AssignSpendDialog({
     }
   }, [spend.id, spend.assignments]);
 
+  // Set default filter based on trip RSVP status
+  useEffect(() => {
+    if (tripRsvpStatus === "CLOSED") {
+      setMemberRsvpFilter("ACCEPTED");
+    } else {
+      setMemberRsvpFilter("all");
+    }
+  }, [tripRsvpStatus]);
+
   if (!isOpen) return null;
+
+  // Get filtered participants based on RSVP status
+  const getFilteredParticipants = () => {
+    // Filter by selected RSVP status
+    if (memberRsvpFilter !== "all") {
+      return participants.filter((p) => {
+        // Check if participant has rsvpStatus property (from the trip's participants array)
+        const participant = p as any;
+        return participant.rsvpStatus === memberRsvpFilter;
+      });
+    }
+
+    return participants;
+  };
 
   const handleToggleUser = (userId: string) => {
     const newSelected = new Set(selectedUserIds);
@@ -154,10 +180,29 @@ export default function AssignSpendDialog({
               </div>
             )}
 
-            <div className="space-y-2">
-        
+            {/* RSVP Filter Dropdown */}
+            <div className="mb-4">
+              <label htmlFor="assign-member-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Filter by RSVP Status
+              </label>
+              <select
+                id="assign-member-filter"
+                value={memberRsvpFilter}
+                onChange={(e) => setMemberRsvpFilter(e.target.value as typeof memberRsvpFilter)}
+                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              >
+                <option value="all">All Members</option>
+                <option value="ACCEPTED">Accepted</option>
+                <option value="PENDING">Pending</option>
+                <option value="MAYBE">Maybe</option>
+                <option value="DECLINED">Declined</option>
+              </select>
+            </div>
 
-              {participants.map((participant) => {
+            <div className="space-y-2">
+
+
+              {getFilteredParticipants().map((participant) => {
                 const isSelected = selectedUserIds.has(participant.user.id);
                 const displayName = participant.user.displayName || participant.user.email;
 
