@@ -363,12 +363,12 @@ export default function InviteUsersDialog({
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                      <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 whitespace-nowrap">
                           {member.role}
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                          className={`px-1.5 py-0.5 text-xs font-medium rounded whitespace-nowrap ${
                             member.rsvpStatus === "ACCEPTED"
                               ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
                               : member.rsvpStatus === "DECLINED"
@@ -385,7 +385,7 @@ export default function InviteUsersDialog({
                             type="button"
                             onClick={() => handleRemoveMember(member.user.id, member.user.displayName || member.user.email)}
                             disabled={removingUserId === member.user.id}
-                            className="ml-1 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Remove member"
                           >
                             {removingUserId === member.user.id ? (

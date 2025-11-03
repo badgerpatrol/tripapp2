@@ -334,19 +334,19 @@ export default function SplitRemainderDialog({
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
               Split Method
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setSplitMode("equal")}
                 disabled={isSubmitting}
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all ${
                   splitMode === "equal"
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500"
                 } disabled:opacity-50`}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     splitMode === "equal"
                       ? "border-blue-500"
                       : "border-zinc-400"
@@ -355,7 +355,7 @@ export default function SplitRemainderDialog({
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">Equal Split</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Equal Split</span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
                   Divide remainder equally among selected participants
@@ -366,14 +366,14 @@ export default function SplitRemainderDialog({
                 type="button"
                 onClick={() => setSplitMode("proportional")}
                 disabled={isSubmitting}
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all ${
                   splitMode === "proportional"
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500"
                 } disabled:opacity-50`}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     splitMode === "proportional"
                       ? "border-blue-500"
                       : "border-zinc-400"
@@ -382,7 +382,7 @@ export default function SplitRemainderDialog({
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">Proportional</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Proportional</span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
                   Distribute based on current share percentages
@@ -396,19 +396,19 @@ export default function SplitRemainderDialog({
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
               Split Among
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setSplitTarget("zero-cost")}
                 disabled={isSubmitting}
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all ${
                   splitTarget === "zero-cost"
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500"
                 } disabled:opacity-50`}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     splitTarget === "zero-cost"
                       ? "border-blue-500"
                       : "border-zinc-400"
@@ -417,7 +417,7 @@ export default function SplitRemainderDialog({
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">Unnassigned Users</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Unassigned Users</span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
                   Only users with no assigned cost
@@ -428,14 +428,14 @@ export default function SplitRemainderDialog({
                 type="button"
                 onClick={() => setSplitTarget("all-users")}
                 disabled={isSubmitting}
-                className={`p-4 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all ${
                   splitTarget === "all-users"
                     ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                     : "border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500"
                 } disabled:opacity-50`}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                     splitTarget === "all-users"
                       ? "border-blue-500"
                       : "border-zinc-400"
@@ -444,7 +444,7 @@ export default function SplitRemainderDialog({
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">All Users</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">All Users</span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
                   All users involved in this spend
