@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface Payment {
   id: string;
@@ -214,20 +215,24 @@ export default function EditPaymentDialog({
 
           {/* Actions */}
           <div className="flex gap-3">
-            <button
+            <Button
               type="button"
               onClick={handleClose}
-              className="flex-1 px-4 py-2 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors"
+              disabled={isSubmitting}
+              variant="secondary"
+              full
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium transition-colors"
+              loading={isSubmitting}
+              variant="primary"
+              full
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </button>
+              Save Changes
+            </Button>
           </div>
         </form>
       </div>

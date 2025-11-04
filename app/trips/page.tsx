@@ -137,9 +137,9 @@ export default function TripsPage() {
   });
 
   return (
-    <>
+    <div className="flex flex-col h-screen overflow-hidden">
       <Header />
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
+      <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
         <div className="max-w-6xl mx-auto min-w-0">
           {/* Header */}
           <div className="flex justify-between items-center mb-8 gap-4 min-w-0">
@@ -365,8 +365,8 @@ export default function TripsPage() {
             </div>
           </div>
         ) : null}
+        </div>
       </div>
     </div>
-    </>
   );
 }
