@@ -1171,15 +1171,28 @@ export default function TripDetailPage() {
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-                {trip.name}
-              </h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+                  {trip.name}
+                </h1>
+                <span
+                  className={`px-3 py-1 text-sm font-medium rounded-full ${
+                    trip.status === "PLANNING"
+                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                      : trip.status === "ACTIVE"
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                      : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                  }`}
+                >
+                  {trip.status}
+                </span>
+              </div>
               {trip.description && (
                 <p className="text-zinc-600 dark:text-zinc-400">{trip.description}</p>
               )}
             </div>
             <div className="flex items-center gap-3">
-              
+
               {isOwner && (
                 <button
                   onClick={() => setIsEditDialogOpen(true)}
@@ -1191,17 +1204,6 @@ export default function TripDetailPage() {
                   Edit
                 </button>
               )}
-              <span
-                className={`px-3 py-1 text-sm font-medium rounded-full ${
-                  trip.status === "PLANNING"
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                    : trip.status === "ACTIVE"
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                    : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                {trip.status}
-              </span>
             </div>
           </div>
 
@@ -1363,20 +1365,7 @@ export default function TripDetailPage() {
                   </p>
                 </div>
               </div>
-              {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
-                <button
-                  /*onClick={() => setIsEditDialogOpen(true)}*/
-                  className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
-                    trip.userRsvpStatus === "ACCEPTED"
-                      ? "bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300"
-                      : trip.userRsvpStatus === "DECLINED"
-                      ? "bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/70 text-red-700 dark:text-red-300"
-                      : "bg-yellow-100 dark:bg-yellow-900/50 hover:bg-yellow-200 dark:hover:bg-yellow-900/70 text-yellow-700 dark:text-yellow-300"
-                  }`}
-                >
-                  Change Response
-                </button>
-              )}
+             
             </div>
 
             {/* Quick change buttons */}
@@ -1502,34 +1491,35 @@ export default function TripDetailPage() {
               />
             ) : (
               /* Show Spends section when spending is open OR when toggled to show spends */
-              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
-                      <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
                         Spending Closed
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {/* Show View Settlement button when spending is closed and spends are visible */}
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
                       <button
                         onClick={() => setShowSpendsWhenClosed(false)}
-                        className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-2"
+                        className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
-                        View Settlement
+                        <span className="hidden sm:inline">View Settlement</span>
+                        <span className="sm:hidden">Settlement</span>
                       </button>
                     )}
                     {/* Only show Add Spend button when spending is open */}
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
                       <button
                         onClick={() => setIsAddSpendDialogOpen(true)}
-                        className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                        className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
                       >
                         Add Spend
                       </button>
@@ -1537,7 +1527,7 @@ export default function TripDetailPage() {
                     {canInvite && (
                       <button
                         onClick={() => handleToggleTripSpendStatus()}
-                        className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                        className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
                           (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
                             ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
                             : (trip.totalUnassigned || 0) > 0.00
@@ -1545,7 +1535,7 @@ export default function TripDetailPage() {
                             : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
                         }`}
                       >
-                        {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen Spending" : "Close Spending"}
+                        {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending
                       </button>
                     )}
                   </div>
