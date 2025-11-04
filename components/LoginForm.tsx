@@ -5,6 +5,8 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthError }
 import { auth } from '@/lib/firebase/client';
 import { SignUpSchema, SignInSchema } from '@/types/schemas';
 import { authenticateWithPasskey } from '@/lib/passkey/client';
+import { Button } from '@/components/ui/button';
+import { Field, Input } from '@/components/ui/field';
 
 /**
  * Maps Firebase Auth error codes to user-friendly messages.
@@ -108,34 +110,26 @@ export default function LoginForm() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Email
-              </label>
-              <input
+            <Field label="Email" htmlFor="email">
+              <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Password
-              </label>
-              <input
+            <Field label="Password" htmlFor="password">
+              <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
               />
-            </div>
+            </Field>
 
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
@@ -143,13 +137,15 @@ export default function LoginForm() {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="tap-target w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg transition-colors"
+              loading={loading}
+              variant="primary"
+              full
             >
-              {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-            </button>
+              {isSignUp ? 'Create Account' : 'Sign In'}
+            </Button>
           </form>
 
           {!isSignUp && (
@@ -160,27 +156,31 @@ export default function LoginForm() {
                 <div className="flex-1 h-px bg-zinc-300 dark:bg-zinc-700" />
               </div>
 
-              <button
+              <Button
                 type="button"
                 onClick={handlePasskeySignIn}
                 disabled={loading}
-                className="tap-target mt-4 w-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-semibold py-3 rounded-lg transition-colors border border-zinc-300 dark:border-zinc-600"
+                variant="outline"
+                full
+                className="mt-4"
               >
                 Sign in with Passkey
-              </button>
+              </Button>
             </>
           )}
 
           <div className="mt-6 text-center">
-            <button
+            <Button
+              type="button"
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setError('');
               }}
-              className="tap-target text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
+              variant="ghost"
+              className="text-sm"
             >
               {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

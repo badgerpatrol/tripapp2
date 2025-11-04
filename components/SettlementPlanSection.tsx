@@ -253,32 +253,34 @@ export default function SettlementPlanSection({
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
+    <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
       {/* Header with Reopen Spending and View Spends buttons */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Settlement Plan</h2>
-          <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Settlement Plan</h2>
+          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
             Spending Closed
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onToggleSpends}
-            className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-2"
+            className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            View Spends
+            <span className="hidden sm:inline">View Spends</span>
+            <span className="sm:hidden">Spends</span>
           </button>
           {canReopenSpending && onReopenSpending && (
             <button
               onClick={onReopenSpending}
-              className="tap-target px-4 py-2 rounded-lg font-medium transition-colors bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+              className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 text-xs sm:text-sm whitespace-nowrap"
             >
-              Reopen Spending
+              <span className="hidden sm:inline">Reopen Spending</span>
+              <span className="sm:hidden">Reopen</span>
             </button>
           )}
         </div>
@@ -364,34 +366,34 @@ export default function SettlementPlanSection({
                   return (
                     <div
                       key={`${settlement.fromUserId}-${settlement.toUserId}-${index}`}
-                      className={`border rounded-lg p-4 ${cardColor}`}
+                      className={`border rounded-lg p-3 sm:p-4 ${cardColor}`}
                     >
                       {/* Settlement Header */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                      <div className="flex flex-col gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 break-all">
                             {settlement.fromUserName}
                           </span>
-                          <span className="text-zinc-600 dark:text-zinc-300">→</span>
-                          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                          <span className="text-zinc-600 dark:text-zinc-300 flex-shrink-0">→</span>
+                          <span className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 break-all">
                             {settlement.toUserName}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100 break-all">
+                            {formatCurrency(settlement.amount)}
+                          </span>
                           {persistedSettlement && (
-                            <span className="px-2 py-1 rounded-full text-xs font-semibold border">
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap">
                               {
                                 persistedSettlement.remainingAmount === persistedSettlement.amount
                                   ? "Unpaid"
                                   : persistedSettlement.remainingAmount > 0
-                                  ? "Partially Paid"
+                                  ? "Partial"
                                   : "Paid"
                               }
                             </span>
                           )}
-                          <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                            {formatCurrency(settlement.amount)}
-                          </span>
                         </div>
                       </div>
 
@@ -399,22 +401,22 @@ export default function SettlementPlanSection({
                       {persistedSettlement ? (
                         <>
                           {/* Amount Breakdown */}
-                          <div className="grid grid-cols-3 gap-4 mt-3 pt-3 border-t border-zinc-300 dark:border-zinc-600">
+                          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-zinc-300 dark:border-zinc-600">
                             <div>
                               <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium">Total</p>
-                              <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                              <p className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 break-all">
                                 {formatCurrency(persistedSettlement.amount)}
                               </p>
                             </div>
                             <div>
                               <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium">Paid</p>
-                              <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                              <p className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 break-all">
                                 {formatCurrency(persistedSettlement.totalPaid)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium">Remaining</p>
-                              <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                              <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium">Remain</p>
+                              <p className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 break-all">
                                 {formatCurrency(persistedSettlement.remainingAmount)}
                               </p>
                             </div>
@@ -447,18 +449,18 @@ export default function SettlementPlanSection({
                                     <div className="flex border-t border-zinc-200 dark:border-zinc-600">
                                       <button
                                         onClick={() => handleEditPayment(payment, persistedSettlement)}
-                                        className="tap-target flex-1 flex items-center justify-center gap-2 py-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium transition-colors"
+                                        className="tap-target flex-1 flex items-center justify-center gap-1 py-2 sm:py-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium transition-colors text-xs sm:text-sm"
                                       >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                         Edit
                                       </button>
                                       <button
                                         onClick={() => handleDeletePayment(payment.id, persistedSettlement.id)}
-                                        className="tap-target flex-1 flex items-center justify-center gap-2 py-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium border-l border-zinc-200 dark:border-zinc-600 transition-colors"
+                                        className="tap-target flex-1 flex items-center justify-center gap-1 py-2 sm:py-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium border-l border-zinc-200 dark:border-zinc-600 transition-colors text-xs sm:text-sm"
                                       >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                         </svg>
                                         Delete
@@ -474,7 +476,7 @@ export default function SettlementPlanSection({
                           {persistedSettlement.remainingAmount > 0 && (
                             <button
                               onClick={() => handleRecordPayment(persistedSettlement)}
-                              className="w-full mt-3 px-4 py-2 bg-white dark:bg-zinc-800 border-2 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 rounded-lg font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                              className="w-full mt-3 px-3 py-2 bg-white dark:bg-zinc-800 border-2 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 rounded-lg font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-xs sm:text-sm"
                             >
                               Record Payment
                             </button>
@@ -497,7 +499,7 @@ export default function SettlementPlanSection({
 
           {/* Per-Person Balances */}
           <div>
-            <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
               Per-Person Totals
             </h3>
             <div className="space-y-3">
@@ -506,29 +508,29 @@ export default function SettlementPlanSection({
                 .map((balance) => (
                   <div
                     key={balance.userId}
-                    className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-4 border border-zinc-200 dark:border-zinc-600"
+                    className="bg-zinc-50 dark:bg-zinc-700/50 rounded-lg p-3 sm:p-4 border border-zinc-200 dark:border-zinc-600"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                         {balance.userPhotoURL && (
                           <img
                             src={balance.userPhotoURL}
                             alt={balance.userName}
-                            className="w-10 h-10 rounded-full"
+                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0"
                           />
                         )}
-                        <div>
-                          <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                             {balance.userName}
                           </p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
                             {balance.userEmail}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <p
-                          className={`text-lg font-bold ${
+                          className={`text-sm sm:text-base font-bold break-all ${
                             balance.netBalance > 0.01
                               ? "text-green-600 dark:text-green-400"
                               : balance.netBalance < -0.01
@@ -551,16 +553,16 @@ export default function SettlementPlanSection({
                         </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-600">
+                    <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-600">
                       <div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">Paid</p>
-                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        <p className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 break-all">
                           {formatCurrency(balance.totalPaid)}
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">Owes</p>
-                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        <p className="text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 break-all">
                           {formatCurrency(balance.totalOwed)}
                         </p>
                       </div>
