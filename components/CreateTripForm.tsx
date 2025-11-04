@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { CreateTripSchema, type CreateTripInput } from "@/types/schemas";
+import { Button } from "@/components/ui/button";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 
 interface CreateTripFormProps {
   onSuccess?: (tripId: string) => void;
@@ -92,14 +94,8 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
       )}
 
       {/* Trip Name */}
-      <div>
-        <label
-          htmlFor="name"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-        >
-          Trip Name <span className="text-red-500">*</span>
-        </label>
-        <input
+      <Field label="Trip Name" htmlFor="name" required>
+        <Input
           id="name"
           type="text"
           value={name}
@@ -107,77 +103,48 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           required
           maxLength={200}
           placeholder="e.g., Summer Vacation 2025"
-          className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
         />
-      </div>
+      </Field>
 
       {/* Location */}
-      <div>
-        <label
-          htmlFor="location"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-        >
-          Location
-        </label>
-        <input
+      <Field label="Location" htmlFor="location">
+        <Input
           id="location"
           type="text"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="e.g., Paris, France"
-          className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
         />
-      </div>
+      </Field>
 
       {/* Date Range */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label
-            htmlFor="startDate"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-          >
-            Start Date
-          </label>
-          <input
+        <Field label="Start Date" htmlFor="startDate">
+          <Input
             id="startDate"
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
           />
-        </div>
+        </Field>
 
-        <div>
-          <label
-            htmlFor="endDate"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-          >
-            End Date
-          </label>
-          <input
+        <Field label="End Date" htmlFor="endDate">
+          <Input
             id="endDate"
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             min={startDate || undefined}
-            className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
           />
-        </div>
+        </Field>
       </div>
 
       {/* Base Currency */}
-      <div>
-        <label
-          htmlFor="baseCurrency"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-        >
-          Base Currency
-        </label>
-        <select
+      <Field label="Base Currency" htmlFor="baseCurrency">
+        <Select
           id="baseCurrency"
           value={baseCurrency}
           onChange={(e) => setBaseCurrency(e.target.value)}
-          className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
         >
           <option value="USD">USD - US Dollar</option>
           <option value="EUR">EUR - Euro</option>
@@ -189,46 +156,42 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           <option value="CNY">CNY - Chinese Yuan</option>
           <option value="INR">INR - Indian Rupee</option>
           <option value="NZD">NZD - New Zealand Dollar</option>
-        </select>
-      </div>
+        </Select>
+      </Field>
 
       {/* Description */}
-      <div>
-        <label
-          htmlFor="description"
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-        >
-          Description
-        </label>
-        <textarea
+      <Field label="Description" htmlFor="description">
+        <Textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           placeholder="Add any details about your trip..."
-          className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition resize-none"
         />
-      </div>
+      </Field>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3 pt-2 min-w-0">
         {onCancel && (
-          <button
+          <Button
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="tap-target flex-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-50 text-zinc-700 dark:text-zinc-300 font-semibold py-3 px-6 rounded-lg transition-colors"
+            variant="secondary"
+            className="flex-1"
           >
             Cancel
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="submit"
           disabled={loading || !name.trim()}
-          className="tap-target flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          loading={loading}
+          variant="primary"
+          className="flex-1"
         >
           {loading ? "Creating..." : "Create Trip"}
-        </button>
+        </Button>
       </div>
     </form>
   );

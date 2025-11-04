@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
+import { Button } from "@/components/ui/button";
 
 interface Trip {
   id: string;
@@ -139,36 +140,38 @@ export default function TripsPage() {
     <>
       <Header />
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto min-w-0">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+          <div className="flex justify-between items-center mb-8 gap-4 min-w-0">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 truncate">
                 My Trips
               </h1>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
                 Plot world domination
               </p>
             </div>
-            <a
-              href="/trips/new"
-              className="tap-target bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-sm inline-flex items-center gap-2"
+            <Button
+              variant="primary"
+              onClick={() => router.push("/trips/new")}
+              leftIcon={
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              }
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
               New Trip
-            </a>
+            </Button>
           </div>
 
         {error && (
@@ -202,8 +205,8 @@ export default function TripsPage() {
                   href={`/trips/${trip.id}`}
                   className="block bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-600 transition-all"
                 >
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1">
+                  <div className="flex justify-between items-start mb-3 gap-2 min-w-0">
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1 min-w-0 break-words">
                       {trip.name}
                     </h3>
                     <span className="px-2 py-1 text-xs font-medium rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
@@ -271,12 +274,12 @@ export default function TripsPage() {
             <p className="text-zinc-600 dark:text-zinc-400 mb-6">
               Create your first trip to start planning!
             </p>
-            <a
-              href="/trips/new"
-              className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            <Button
+              variant="primary"
+              onClick={() => router.push("/trips/new")}
             >
               Create Trip
-            </a>
+            </Button>
           </div>
         ) : acceptedTrips.length > 0 ? (
           <div>
@@ -301,8 +304,8 @@ export default function TripsPage() {
                     href={`/trips/${trip.id}`}
                     className="block bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1">
+                    <div className="flex justify-between items-start mb-4 gap-2 min-w-0">
+                      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1 min-w-0 break-words">
                         {trip.name}
                       </h3>
                       <div className="flex gap-1.5">

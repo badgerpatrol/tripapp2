@@ -1601,38 +1601,39 @@ export default function TripDetailPage() {
         )}
 
         {/* Members */}
-        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
               {trip.rsvpStatus === "CLOSED" && (
-                <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
                   RSVP Closed
                 </span>
               )}
             </div>
             {canInvite && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
                   <button
                     onClick={() => setIsInviteDialogOpen(true)}
-                    className="tap-target px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
+                    className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
-                    Invite Users
+                    <span className="hidden sm:inline">Invite Users</span>
+                    <span className="sm:hidden">Invite</span>
                   </button>
                 )}
                 <button
                   onClick={handleToggleRsvpStatus}
-                  className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
                     trip.rsvpStatus === "CLOSED"
                       ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
                       : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
                   }`}
                 >
-                  {trip.rsvpStatus === "CLOSED" ? "Reopen RSVP" : "Close RSVP"}
+                  {trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP
                 </button>
               </div>
             )}
@@ -1661,29 +1662,29 @@ export default function TripDetailPage() {
             {getFilteredParticipants().map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
+                className="flex items-center justify-between gap-2 p-3 sm:p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">
                       {(member.user.displayName || member.user.email)[0].toUpperCase()}
                     </span>
                   </div>
-                  <div>
-                    <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
                       {member.user.displayName || member.user.email}
                     </p>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{member.user.email}</p>
+                    <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 truncate">{member.user.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
                   {member.role === "OWNER" && (
-                    <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                    <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 whitespace-nowrap">
                       {member.role}
                     </span>
                   )}
                   <span
-                    className={`px-2 py-1 text-xs font-medium rounded ${
+                    className={`px-1.5 py-0.5 text-xs font-medium rounded whitespace-nowrap ${
                       member.rsvpStatus === "ACCEPTED"
                         ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
                         : member.rsvpStatus === "DECLINED"
@@ -1700,13 +1701,13 @@ export default function TripDetailPage() {
                       type="button"
                       onClick={() => handleRemoveMember(member.user.id, member.user.displayName || member.user.email)}
                       disabled={removingUserId === member.user.id}
-                      className="ml-1 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Remove member"
                     >
                       {removingUserId === member.user.id ? (
-                        <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
                       ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       )}
