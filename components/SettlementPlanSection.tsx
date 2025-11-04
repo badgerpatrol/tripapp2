@@ -254,8 +254,8 @@ export default function SettlementPlanSection({
 
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-      {/* Header with Reopen Spending and View Spends buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      {/* Header with  and View Spends buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 flex-wrap">
           <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Settlement Plan</h2>
           <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
@@ -267,7 +267,7 @@ export default function SettlementPlanSection({
             onClick={onToggleSpends}
             className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
           >
-            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
@@ -279,7 +279,7 @@ export default function SettlementPlanSection({
               onClick={onReopenSpending}
               className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 text-xs sm:text-sm whitespace-nowrap"
             >
-              <span className="hidden sm:inline">Reopen Spending</span>
+              <span className="hidden sm:inline">Reopen</span>
               <span className="sm:hidden">Reopen</span>
             </button>
           )}

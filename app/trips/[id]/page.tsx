@@ -1492,7 +1492,7 @@ export default function TripDetailPage() {
             ) : (
               /* Show Spends section when spending is open OR when toggled to show spends */
               <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
