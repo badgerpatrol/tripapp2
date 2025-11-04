@@ -206,7 +206,7 @@ export default function AddSpendDialog({
 
             {/* FX Rate and Date */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="min-w-0">
                 <label
                   htmlFor="fxRate"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
@@ -230,7 +230,7 @@ export default function AddSpendDialog({
                 </p>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label
                   htmlFor="date"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
@@ -245,7 +245,7 @@ export default function AddSpendDialog({
                     setFormData({ ...formData, date: e.target.value })
                   }
                   required
-                  className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="tap-target w-full min-w-0 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
               </div>
             </div>
