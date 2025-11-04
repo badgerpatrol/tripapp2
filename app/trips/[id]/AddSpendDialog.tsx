@@ -156,8 +156,8 @@ export default function AddSpendDialog({
             </div>
 
             {/* Amount and Currency */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+              <div className="min-w-0">
                 <label
                   htmlFor="amount"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
@@ -175,11 +175,11 @@ export default function AddSpendDialog({
                   min="0.01"
                   step="0.01"
                   placeholder="0.00"
-                  className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <label
                   htmlFor="currency"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
@@ -196,7 +196,7 @@ export default function AddSpendDialog({
                   required
                   maxLength={3}
                   placeholder="GBP"
-                  className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                   Trip currency: {trip.baseCurrency}
@@ -205,7 +205,7 @@ export default function AddSpendDialog({
             </div>
 
             {/* FX Rate and Date */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
               <div className="min-w-0">
                 <label
                   htmlFor="fxRate"
@@ -223,7 +223,7 @@ export default function AddSpendDialog({
                   min="0.000001"
                   step="0.000001"
                   placeholder="1.0"
-                  className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                   Rate to convert to {trip.baseCurrency}
@@ -245,7 +245,7 @@ export default function AddSpendDialog({
                     setFormData({ ...formData, date: e.target.value })
                   }
                   required
-                  className="tap-target w-full min-w-0 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="tap-target w-full max-w-full min-w-0 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 />
               </div>
             </div>
