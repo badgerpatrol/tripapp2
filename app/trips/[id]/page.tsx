@@ -1169,40 +1169,39 @@ export default function TripDetailPage() {
 
         {/* Trip Header */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
+          <div className="flex flex-col gap-4 mb-4">
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 break-words">
                   {trip.name}
                 </h1>
-                <span
-                  className={`px-3 py-1 text-sm font-medium rounded-full ${
-                    trip.status === "PLANNING"
-                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                      : trip.status === "ACTIVE"
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                      : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                  }`}
-                >
-                  {trip.status}
-                </span>
               </div>
-              {trip.description && (
-                <p className="text-zinc-600 dark:text-zinc-400">{trip.description}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-
               {isOwner && (
                 <button
                   onClick={() => setIsEditDialogOpen(true)}
-                  className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2"
+                  className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2 flex-shrink-0"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Edit
                 </button>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <span
+                className={`px-3 py-1 text-sm font-medium rounded-full flex-shrink-0 self-start ${
+                  trip.status === "PLANNING"
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                    : trip.status === "ACTIVE"
+                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                    : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                {trip.status}
+              </span>
+              {trip.description && (
+                <p className="text-zinc-600 dark:text-zinc-400">{trip.description}</p>
               )}
             </div>
           </div>
