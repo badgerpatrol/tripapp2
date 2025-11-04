@@ -85,6 +85,8 @@ export default function SettlementPlanSection({
   const [editingPayment, setEditingPayment] = useState<any | null>(null);
   const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
   const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -197,14 +199,16 @@ export default function SettlementPlanSection({
 
   const handleRecordPayment = (settlement: PersistedSettlement) => {
     setSelectedSettlement(settlement);
+    setRecordingPaymentId(settlement.id);
     setShowPaymentDialog(true);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     setShowPaymentDialog(false);
     setSelectedSettlement(null);
     // Refetch data to update the UI
-    fetchData();
+    await fetchData();
+    setRecordingPaymentId(null);
   };
 
   const handleEditPayment = (payment: any, settlement: PersistedSettlement) => {
@@ -230,6 +234,8 @@ export default function SettlementPlanSection({
 
     if (!confirmed) return;
 
+    setDeletingPaymentId(paymentId);
+
     try {
       const idToken = await user.getIdToken();
       const response = await fetch(`/api/settlements/${settlementId}/payments/${paymentId}`, {
@@ -245,10 +251,12 @@ export default function SettlementPlanSection({
       }
 
       // Refetch data to update the UI
-      fetchData();
+      await fetchData();
     } catch (err) {
       console.error("Error deleting payment:", err);
       alert(err instanceof Error ? err.message : "Failed to delete payment");
+    } finally {
+      setDeletingPaymentId(null);
     }
   };
 
@@ -449,7 +457,8 @@ export default function SettlementPlanSection({
                                     <div className="flex border-t border-zinc-200 dark:border-zinc-600">
                                       <button
                                         onClick={() => handleEditPayment(payment, persistedSettlement)}
-                                        className="tap-target flex-1 flex items-center justify-center gap-1 py-2 sm:py-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium transition-colors text-xs sm:text-sm"
+                                        disabled={deletingPaymentId === payment.id}
+                                        className="tap-target flex-1 flex items-center justify-center gap-1 py-2 sm:py-3 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium transition-colors text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
                                         <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -458,12 +467,17 @@ export default function SettlementPlanSection({
                                       </button>
                                       <button
                                         onClick={() => handleDeletePayment(payment.id, persistedSettlement.id)}
-                                        className="tap-target flex-1 flex items-center justify-center gap-1 py-2 sm:py-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium border-l border-zinc-200 dark:border-zinc-600 transition-colors text-xs sm:text-sm"
+                                        disabled={deletingPaymentId === payment.id}
+                                        className="tap-target flex-1 flex items-center justify-center gap-1 py-2 sm:py-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-700 dark:text-red-400 font-medium border-l border-zinc-200 dark:border-zinc-600 transition-colors text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed relative"
                                       >
-                                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                        Delete
+                                        {deletingPaymentId === payment.id ? (
+                                          <span className="h-3 w-3 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                        ) : (
+                                          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        )}
+                                        {deletingPaymentId === payment.id ? "Deleting..." : "Delete"}
                                       </button>
                                     </div>
                                   </div>
@@ -476,9 +490,17 @@ export default function SettlementPlanSection({
                           {persistedSettlement.remainingAmount > 0 && (
                             <button
                               onClick={() => handleRecordPayment(persistedSettlement)}
-                              className="w-full mt-3 px-3 py-2 bg-white dark:bg-zinc-800 border-2 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 rounded-lg font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-xs sm:text-sm"
+                              disabled={recordingPaymentId === persistedSettlement.id || deletingPaymentId !== null}
+                              className="w-full mt-3 px-3 py-2 bg-white dark:bg-zinc-800 border-2 border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100 rounded-lg font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                              Record Payment
+                              {recordingPaymentId === persistedSettlement.id ? (
+                                <>
+                                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  Opening...
+                                </>
+                              ) : (
+                                "Record Payment"
+                              )}
                             </button>
                           )}
                         </>
@@ -579,7 +601,10 @@ export default function SettlementPlanSection({
         settlement={selectedSettlement}
         baseCurrency={baseCurrency}
         isOpen={showPaymentDialog}
-        onClose={() => setShowPaymentDialog(false)}
+        onClose={() => {
+          setShowPaymentDialog(false);
+          setRecordingPaymentId(null);
+        }}
         onSuccess={handlePaymentSuccess}
       />
 

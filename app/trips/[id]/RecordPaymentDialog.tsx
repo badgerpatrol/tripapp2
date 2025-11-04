@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface Settlement {
   id: string;
@@ -212,14 +213,15 @@ export default function RecordPaymentDialog({
                   className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                   placeholder="0.00"
                 />
-                <button
+                <Button
                   type="button"
                   onClick={handlePayFull}
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  variant="primary"
+                  className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 whitespace-nowrap"
                 >
                   Pay Full
-                </button>
+                </Button>
               </div>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 Maximum: {formatCurrency(remainingAmount)}
@@ -273,21 +275,26 @@ export default function RecordPaymentDialog({
 
             {/* Actions */}
             <div className="flex gap-3 pt-4">
-              <button
+              <Button
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-lg font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                variant="outline"
+                full
+                size="lg"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                loading={isSubmitting}
+                variant="primary"
+                full
+                size="lg"
               >
-                {isSubmitting ? "Recording..." : "Record Payment"}
-              </button>
+                Record Payment
+              </Button>
             </div>
           </form>
         </div>
