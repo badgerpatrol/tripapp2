@@ -141,12 +141,14 @@ export default function TripDetailPage() {
     rsvp: boolean;
     balance: boolean;
     spends: boolean;
+    settlement: boolean;
     members: boolean;
     timeline: boolean;
   }>({
     rsvp: false,
     balance: false,
     spends: false,
+    settlement: false,
     members: false,
     timeline: false,
   });
@@ -1568,6 +1570,8 @@ export default function TripDetailPage() {
                 onToggleSpends={() => setShowSpendsWhenClosed(true)}
                 onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
                 canReopenSpending={canInvite}
+                collapsed={collapsedSections.settlement}
+                onToggleCollapse={() => toggleSection('settlement')}
               />
             ) : (
               /* Show Spends section when spending is open OR when toggled to show spends */
@@ -1582,19 +1586,6 @@ export default function TripDetailPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => toggleSection('spends')}
-                      className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                      aria-label={collapsedSections.spends ? "Expand section" : "Collapse section"}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {collapsedSections.spends ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        ) : (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        )}
-                      </svg>
-                    </button>
                     {/* Show View Settlement button when spending is closed and spends are visible */}
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
                       <button
@@ -1631,6 +1622,19 @@ export default function TripDetailPage() {
                         {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending
                       </button>
                     )}
+                    <button
+                      onClick={() => toggleSection('spends')}
+                      className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+                      aria-label={collapsedSections.spends ? "Expand section" : "Collapse section"}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {collapsedSections.spends ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        )}
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
@@ -1699,19 +1703,6 @@ export default function TripDetailPage() {
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => toggleSection('members')}
-                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.members ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.members ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  )}
-                </svg>
-              </button>
               {canInvite && (
                 <>
                   <button
@@ -1738,6 +1729,19 @@ export default function TripDetailPage() {
                   )}
                 </>
               )}
+              <button
+                onClick={() => toggleSection('members')}
+                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+                aria-label={collapsedSections.members ? "Expand section" : "Collapse section"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {collapsedSections.members ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  )}
+                </svg>
+              </button>
             </div>
           </div>
 
