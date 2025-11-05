@@ -1669,9 +1669,10 @@ export default function TripDetailPage() {
                 </div>
 
                 {/* Action buttons row */}
-                <div className="flex items-center gap-2 flex-wrap mb-4">
-                  {/* Show View Settlement button when spending is closed and spends are visible */}
-                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
+                {!collapsedSections.spends && (
+                  <div className="flex items-center gap-2 flex-wrap mb-4">
+                    {/* Show View Settlement button when spending is closed and spends are visible */}
+                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
                     <button
                       onClick={() => setShowSpendsWhenClosed(false)}
                       className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
@@ -1706,7 +1707,8 @@ export default function TripDetailPage() {
                       {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending
                     </button>
                   )}
-                </div>
+                  </div>
+                )}
 
                 {!collapsedSections.spends && (
                   <>
@@ -1789,7 +1791,7 @@ export default function TripDetailPage() {
           </div>
 
           {/* Action buttons row */}
-          {canInvite && (
+          {!collapsedSections.members && canInvite && (
             <div className="flex items-center gap-2 flex-wrap mb-4">
               <button
                 onClick={handleToggleRsvpStatus}
