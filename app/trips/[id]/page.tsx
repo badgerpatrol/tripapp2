@@ -1963,7 +1963,7 @@ export default function TripDetailPage() {
                             type="date"
                             value={editingTimelineDate}
                             onChange={(e) => setEditingTimelineDate(e.target.value)}
-                            className="w-full px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                            className="w-full max-w-[180px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
                           />
                           <div className="flex gap-2">
                             <button
