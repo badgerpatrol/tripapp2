@@ -1762,7 +1762,7 @@ export default function TripDetailPage() {
         )}
 
         {/* Members */}
-        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8">
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
           {/* Header row with title and toggle - always stays together */}
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex items-center gap-2 flex-wrap flex-1">
