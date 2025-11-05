@@ -1597,7 +1597,8 @@ export default function TripDetailPage() {
             ) : (
               /* Show Spends section when spending is open OR when toggled to show spends */
               <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                {/* Header row with title and toggle - always stays together */}
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2 flex-wrap flex-1">
                     <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
@@ -1606,57 +1607,59 @@ export default function TripDetailPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {/* Show View Settlement button when spending is closed and spends are visible */}
-                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
-                      <button
-                        onClick={() => setShowSpendsWhenClosed(false)}
-                        className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
-                      >
-                        <svg className="w-3 h-3 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                        <span className="hidden sm:inline">View Settlement</span>
-                        <span className="sm:hidden">Settlement</span>
-                      </button>
-                    )}
-                    {/* Only show Add Spend button when spending is open */}
-                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
-                      <button
-                        onClick={() => setIsAddSpendDialogOpen(true)}
-                        className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                      >
-                        Add Spend
-                      </button>
-                    )}
-                    {canInvite && (
-                      <button
-                        onClick={() => handleToggleTripSpendStatus()}
-                        className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
-                          (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
-                            ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                            : (trip.totalUnassigned || 0) > 0.00
-                            ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400"
-                            : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                        }`}
-                      >
-                        {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending
-                      </button>
-                    )}
+                  <button
+                    onClick={() => toggleSection('spends')}
+                    className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+                    aria-label={collapsedSections.spends ? "Expand section" : "Collapse section"}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {collapsedSections.spends ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                      )}
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Action buttons row */}
+                <div className="flex items-center gap-2 flex-wrap mb-4">
+                  {/* Show View Settlement button when spending is closed and spends are visible */}
+                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
                     <button
-                      onClick={() => toggleSection('spends')}
-                      className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                      aria-label={collapsedSections.spends ? "Expand section" : "Collapse section"}
+                      onClick={() => setShowSpendsWhenClosed(false)}
+                      className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {collapsedSections.spends ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        ) : (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        )}
+                      <svg className="w-3 h-3 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
+                      <span className="hidden sm:inline">View Settlement</span>
+                      <span className="sm:hidden">Settlement</span>
                     </button>
-                  </div>
+                  )}
+                  {/* Only show Add Spend button when spending is open */}
+                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
+                    <button
+                      onClick={() => setIsAddSpendDialogOpen(true)}
+                      className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                    >
+                      Add Spend
+                    </button>
+                  )}
+                  {canInvite && (
+                    <button
+                      onClick={() => handleToggleTripSpendStatus()}
+                      className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
+                        (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
+                          ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                          : (trip.totalUnassigned || 0) > 0.00
+                          ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400"
+                          : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                      }`}
+                    >
+                      {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending
+                    </button>
+                  )}
                 </div>
 
                 {!collapsedSections.spends && (
@@ -1714,7 +1717,8 @@ export default function TripDetailPage() {
 
         {/* Members */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+          {/* Header row with title and toggle - always stays together */}
+          <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex items-center gap-2 flex-wrap flex-1">
               <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
               {trip.rsvpStatus === "CLOSED" && (
@@ -1723,48 +1727,48 @@ export default function TripDetailPage() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {canInvite && (
-                <>
-                  <button
-                    onClick={handleToggleRsvpStatus}
-                    className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
-                      trip.rsvpStatus === "CLOSED"
-                        ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                        : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
-                    }`}
-                  >
-                    {trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP
-                  </button>
-                  {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
-                    <button
-                      onClick={() => setIsInviteDialogOpen(true)}
-                      className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                      </svg>
-                      <span className="hidden sm:inline">Invite Users</span>
-                      <span className="sm:hidden">Invite</span>
-                    </button>
-                  )}
-                </>
-              )}
-              <button
-                onClick={() => toggleSection('members')}
-                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.members ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.members ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  )}
-                </svg>
-              </button>
-            </div>
+            <button
+              onClick={() => toggleSection('members')}
+              className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+              aria-label={collapsedSections.members ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.members ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
           </div>
+
+          {/* Action buttons row */}
+          {canInvite && (
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              <button
+                onClick={handleToggleRsvpStatus}
+                className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
+                  trip.rsvpStatus === "CLOSED"
+                    ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                    : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
+                }`}
+              >
+                {trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP
+              </button>
+              {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
+                <button
+                  onClick={() => setIsInviteDialogOpen(true)}
+                  className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
+                >
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  <span className="hidden sm:inline">Invite Users</span>
+                  <span className="sm:hidden">Invite</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {!collapsedSections.members && (
             <>
