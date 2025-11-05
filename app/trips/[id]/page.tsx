@@ -163,6 +163,28 @@ export default function TripDetailPage() {
     }));
   };
 
+  const expandAllSections = () => {
+    setCollapsedSections({
+      rsvp: false,
+      balance: false,
+      spends: false,
+      settlement: false,
+      members: false,
+      timeline: false,
+    });
+  };
+
+  const collapseAllSections = () => {
+    setCollapsedSections({
+      rsvp: true,
+      balance: true,
+      spends: true,
+      settlement: true,
+      members: true,
+      timeline: true,
+    });
+  };
+
   const tripId = params.id as string;
 
   // Set default filter based on trip RSVP status
@@ -1288,7 +1310,31 @@ export default function TripDetailPage() {
               </div>
             </div>
 
-            
+
+          </div>
+        </div>
+
+        {/* Expand/Collapse All Controls */}
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 mb-6">
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={expandAllSections}
+              className="tap-target flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Expand All
+            </button>
+            <button
+              onClick={collapseAllSections}
+              className="tap-target flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              </svg>
+              Hide All
+            </button>
           </div>
         </div>
 
