@@ -266,15 +266,34 @@ export default function SettlementPlanSection({
 
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-      {/* Header with View Spends and toggle buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      {/* Header row with title and toggle - always stays together */}
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 flex-wrap flex-1">
           <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Settlement Plan</h2>
           <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
             Spending Closed
           </span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+            aria-label={collapsed ? "Expand section" : "Collapse section"}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {collapsed ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              )}
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Action buttons row */}
+      {!collapsed && (
+        <div className="flex items-center gap-2 flex-wrap mb-4">
           <button
             onClick={onToggleSpends}
             className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
@@ -295,23 +314,8 @@ export default function SettlementPlanSection({
               <span className="sm:hidden">Reopen</span>
             </button>
           )}
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-              aria-label={collapsed ? "Expand section" : "Collapse section"}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {collapsed ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                )}
-              </svg>
-            </button>
-          )}
         </div>
-      </div>
+      )}
 
       {!collapsed && (
         <>
