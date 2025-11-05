@@ -985,10 +985,14 @@ export default function TripDetailPage() {
     // Check if trying to close with unassigned spend
     if (isClosing && (trip.totalUnassigned || 0) > 0.01) {
       const unassignedAmount = trip.totalUnassigned || 0;
-      window.alert(
+      const shouldProceed = window.confirm(
         `⚠️ WARNING: You have ${trip.baseCurrency} ${unassignedAmount.toFixed(2)} in unassigned spend.\n\n` +
-        `You can close spending but not everything gets paid.`
+        `You can close spending but not everything gets paid.\n\n` +
+        `Do you want to close spending anyway?`
       );
+      if (!shouldProceed) {
+        return; // User cancelled, so exit without closing spending
+      }
     }
 
     console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus, confirmClearSettlements });
