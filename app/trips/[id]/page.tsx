@@ -173,6 +173,24 @@ export default function TripDetailPage() {
     }
   }, [trip?.rsvpStatus]);
 
+  // Auto-collapse RSVP section if user has accepted or RSVP is closed
+  useEffect(() => {
+    if (trip) {
+      const shouldCollapseRsvp =
+        trip.userRsvpStatus === "ACCEPTED" ||
+        trip.userRsvpStatus === "DECLINED" ||
+        trip.userRsvpStatus === "MAYBE" ||
+        trip.rsvpStatus === "CLOSED";
+
+      if (shouldCollapseRsvp && !collapsedSections.rsvp) {
+        setCollapsedSections(prev => ({
+          ...prev,
+          rsvp: true,
+        }));
+      }
+    }
+  }, [trip?.userRsvpStatus, trip?.rsvpStatus]);
+
   useEffect(() => {
     const fetchTrip = async () => {
       if (!user) return;
