@@ -987,10 +987,8 @@ export default function TripDetailPage() {
       const unassignedAmount = trip.totalUnassigned || 0;
       window.alert(
         `⚠️ WARNING: You have ${trip.baseCurrency} ${unassignedAmount.toFixed(2)} in unassigned spend.\n\n` +
-        `Spend cannot be closed until all expenses are fully assigned to trip members.\n\n` +
-        `Please assign all remaining spend before closing.`
+        `You can close spending but not everything gets paid.`
       );
-      return; // Don't proceed with closing
     }
 
     console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus, confirmClearSettlements });
@@ -1602,6 +1600,17 @@ export default function TripDetailPage() {
             </div>
             {canInvite && (
               <div className="flex items-center gap-2 flex-wrap">
+                
+                <button
+                  onClick={handleToggleRsvpStatus}
+                  className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
+                    trip.rsvpStatus === "CLOSED"
+                      ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
+                      : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
+                  }`}
+                >
+                  {trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP
+                </button>
                 {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
                   <button
                     onClick={() => setIsInviteDialogOpen(true)}
@@ -1614,16 +1623,6 @@ export default function TripDetailPage() {
                     <span className="sm:hidden">Invite</span>
                   </button>
                 )}
-                <button
-                  onClick={handleToggleRsvpStatus}
-                  className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
-                    trip.rsvpStatus === "CLOSED"
-                      ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                      : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
-                  }`}
-                >
-                  {trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP
-                </button>
               </div>
             )}
           </div>
@@ -1741,59 +1740,56 @@ export default function TripDetailPage() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
-                      {item.description && (
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
+                      {!isEditing && item.date && (
+                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mt-1">
+                          {formatDate(item.date)}
+                        </p>
                       )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isEditing ? (
-                        <>
+                      {isEditing && (
+                        <div className="mt-3 space-y-2">
                           <input
                             type="date"
                             value={editingTimelineDate}
                             onChange={(e) => setEditingTimelineDate(e.target.value)}
-                            className="px-3 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                            className="w-full px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
                           />
-                          <button
-                            onClick={() => handleEditTimelineDate(item.id, editingTimelineDate)}
-                            className="tap-target px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingTimelineItemId(null);
-                              setEditingTimelineDate("");
-                            }}
-                            className="tap-target px-3 py-1.5 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {item.date && (
-                            <p className="text-base font-medium text-zinc-700 dark:text-zinc-300">
-                              {formatDate(item.date)}
-                            </p>
-                          )}
-                          {canEdit && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditTimelineDate(item.id, editingTimelineDate)}
+                              className="tap-target flex-1 px-3 py-2 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                            >
+                              Save
+                            </button>
                             <button
                               onClick={() => {
-                                setEditingTimelineItemId(item.id);
-                                setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
+                                setEditingTimelineItemId(null);
+                                setEditingTimelineDate("");
                               }}
-                              className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-                              title="Edit milestone date"
+                              className="tap-target flex-1 px-3 py-2 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
+                              Cancel
                             </button>
-                          )}
-                        </>
+                          </div>
+                        </div>
+                      )}
+                      {item.description && (
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
                       )}
                     </div>
+                    {!isEditing && canEdit && (
+                      <button
+                        onClick={() => {
+                          setEditingTimelineItemId(item.id);
+                          setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
+                        }}
+                        className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors self-start"
+                        title="Edit milestone date"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 );
               })}
