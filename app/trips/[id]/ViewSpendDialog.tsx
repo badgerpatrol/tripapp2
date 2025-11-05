@@ -455,6 +455,37 @@ export default function ViewSpendDialog({
           <div className="flex flex-col gap-3 pt-6 mt-6 border-t border-zinc-200 dark:border-zinc-700">
             {/* Primary Actions Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {showJoin && (
+                <button
+                  onClick={() => {
+                    // Keep view dialog open after joining
+                    onJoin(spend.id);
+                  }}
+                  className="tap-target px-4 py-3 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Join Spend
+                </button>
+              )}
+
+              {showLeave && (
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to remove yourself from this spend?")) {
+                      // Keep view dialog open after leaving
+                      onLeave(spend.id);
+                    }
+                  }}
+                  className="tap-target px-4 py-3 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-700 dark:text-orange-400 font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Leave Spend
+                </button>
+              )}
               {showEdit && (
                 <button
                   onClick={() => {
@@ -518,37 +549,7 @@ export default function ViewSpendDialog({
 
             {/* Secondary Actions Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {showJoin && (
-                <button
-                  onClick={() => {
-                    // Close view dialog before performing action
-                    handleClose();
-                    onJoin(spend.id);
-                  }}
-                  className="tap-target px-4 py-3 rounded-lg bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Join
-                </button>
-              )}
-
-              {showLeave && (
-                <button
-                  onClick={() => {
-                    // Close view dialog before performing action
-                    handleClose();
-                    onLeave(spend.id);
-                  }}
-                  className="tap-target px-4 py-3 rounded-lg bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-700 dark:text-orange-400 font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  Leave
-                </button>
-              )}
+              
             {/* Delete Button (if available) */}
             {showDelete && (
               <button
