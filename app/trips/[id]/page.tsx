@@ -395,6 +395,35 @@ export default function TripDetailPage() {
     fetchTrip();
   };
 
+  const handleAddSpendWithPeople = async (spendId: string) => {
+    // Refetch the trip data to get the newly created spend
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+
+          // Open the assign dialog with the newly created spend
+          setSelectedSpendId(spendId);
+          setIsAssignSpendDialogOpen(true);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    await fetchTrip();
+  };
+
   // Filter and sort spends
   const getFilteredAndSortedSpends = () => {
     if (!trip?.spends) return [];
@@ -2041,6 +2070,7 @@ export default function TripDetailPage() {
           isOpen={isAddSpendDialogOpen}
           onClose={() => setIsAddSpendDialogOpen(false)}
           onSuccess={handleAddSpendSuccess}
+          onSuccessWithAddPeople={handleAddSpendWithPeople}
         />
       )}
 
