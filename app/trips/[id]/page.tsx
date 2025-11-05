@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { SpendStatus } from "@/lib/generated/prisma";
@@ -153,6 +153,9 @@ export default function TripDetailPage() {
     timeline: false,
   });
 
+  // Track if we've set the initial RSVP collapse state
+  const hasInitializedRsvpCollapse = useRef(false);
+
   const toggleSection = (section: keyof typeof collapsedSections) => {
     setCollapsedSections(prev => ({
       ...prev,
@@ -173,23 +176,23 @@ export default function TripDetailPage() {
     }
   }, [trip?.rsvpStatus]);
 
-  // Auto-collapse RSVP section if user has accepted or RSVP is closed
+  // Auto-collapse RSVP section if user has accepted or RSVP is closed (only on initial load)
   useEffect(() => {
-    if (trip) {
+    if (trip && !hasInitializedRsvpCollapse.current) {
       const shouldCollapseRsvp =
         trip.userRsvpStatus === "ACCEPTED" ||
         trip.userRsvpStatus === "DECLINED" ||
         trip.userRsvpStatus === "MAYBE" ||
         trip.rsvpStatus === "CLOSED";
 
-      if (shouldCollapseRsvp && !collapsedSections.rsvp) {
-        setCollapsedSections(prev => ({
-          ...prev,
-          rsvp: true,
-        }));
-      }
+      setCollapsedSections(prev => ({
+        ...prev,
+        rsvp: shouldCollapseRsvp,
+      }));
+
+      hasInitializedRsvpCollapse.current = true;
     }
-  }, [trip?.userRsvpStatus, trip?.rsvpStatus]);
+  }, [trip]);
 
   useEffect(() => {
     const fetchTrip = async () => {
