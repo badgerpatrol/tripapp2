@@ -124,7 +124,7 @@ export default function AddSpendDialog({
         notes: "",
       });
 
-      onSuccess();
+      onSuccess(spendId);
       onClose();
 
       // Call the callback to open assign dialog with the new spend
