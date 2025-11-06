@@ -454,6 +454,31 @@ export default function TripDetailPage() {
     fetchTrip();
   };
 
+  const handleAssignmentSuccess = () => {
+    // Refetch the trip data after successful assignment changes
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
   // Filter and sort spends
   const getFilteredAndSortedSpends = () => {
     if (!trip?.spends) return [];
@@ -2172,7 +2197,7 @@ export default function TripDetailPage() {
             // Just close the assign dialog, keep view dialog open and selectedSpendId
             setIsAssignSpendDialogOpen(false);
           }}
-          onSuccess={handleAddSpendSuccess}
+          onSuccess={handleAssignmentSuccess}
         />
       )}
 
