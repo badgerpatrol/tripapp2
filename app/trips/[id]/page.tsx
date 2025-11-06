@@ -965,6 +965,10 @@ export default function TripDetailPage() {
       });
 
       if (response.ok) {
+        // Close the view dialog after successful deletion
+        setIsViewSpendDialogOpen(false);
+        setSelectedSpendId(null);
+
         // Refetch trip data
         const tripResponse = await fetch(`/api/trips/${tripId}`, {
           headers: {

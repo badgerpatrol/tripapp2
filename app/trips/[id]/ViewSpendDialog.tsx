@@ -554,8 +554,7 @@ export default function ViewSpendDialog({
             {showDelete && (
               <button
                 onClick={() => {
-                  // Close view dialog before performing action
-                  handleClose();
+                  // Don't close dialog yet - let user confirm first
                   onDelete(spend.id);
                 }}
                 className="tap-target w-full px-4 py-3 rounded-lg bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 font-medium transition-colors flex items-center justify-center gap-2"
