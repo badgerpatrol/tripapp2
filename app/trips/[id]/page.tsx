@@ -122,6 +122,7 @@ export default function TripDetailPage() {
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [isDeletingSpend, setIsDeletingSpend] = useState(false);
   const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
   const [editingTimelineDate, setEditingTimelineDate] = useState<string>("");
 
@@ -955,6 +956,8 @@ export default function TripDetailPage() {
     const confirmed = window.confirm("Are you sure you want to delete this spend?");
     if (!confirmed) return;
 
+    setIsDeletingSpend(true);
+
     try {
       const idToken = await user.getIdToken();
       const response = await fetch(`/api/spends/${spendId}`, {
@@ -986,6 +989,8 @@ export default function TripDetailPage() {
     } catch (err) {
       console.error("Error deleting spend:", err);
       alert("Failed to delete spend");
+    } finally {
+      setIsDeletingSpend(false);
     }
   };
 
@@ -2101,6 +2106,7 @@ export default function TripDetailPage() {
           onLeave={handleLeaveSpend}
           onFinalize={handleFinalizeSpend}
           onDelete={handleDeleteSpend}
+          isDeletingSpend={isDeletingSpend}
         />
       )}
 
