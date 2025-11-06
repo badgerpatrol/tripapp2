@@ -429,6 +429,31 @@ export default function TripDetailPage() {
     await fetchTrip();
   };
 
+  const handleEditSpendSuccess = () => {
+    // Refetch the trip data after successful spend edit
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
   // Filter and sort spends
   const getFilteredAndSortedSpends = () => {
     if (!trip?.spends) return [];
@@ -2124,7 +2149,7 @@ export default function TripDetailPage() {
             // Just close the edit dialog, keep view dialog open and selectedSpendId
             setIsEditSpendDialogOpen(false);
           }}
-          onSuccess={handleAddSpendSuccess}
+          onSuccess={handleEditSpendSuccess}
         />
       )}
 
