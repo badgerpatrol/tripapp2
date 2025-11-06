@@ -21,3 +21,4 @@ out/
 server/firebase-service-account.json
 
 /lib/generated/prisma
+tsconfig.tsbuildinfo
