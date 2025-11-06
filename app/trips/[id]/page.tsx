@@ -2076,6 +2076,8 @@ export default function TripDetailPage() {
       {trip && (
         <AddSpendDialog
           trip={{ id: trip.id, baseCurrency: trip.baseCurrency }}
+          participants={trip.participants}
+          tripRsvpStatus={trip.rsvpStatus}
           isOpen={isAddSpendDialogOpen}
           onClose={() => setIsAddSpendDialogOpen(false)}
           onSuccess={handleAddSpendSuccess}

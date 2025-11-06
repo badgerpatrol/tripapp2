@@ -2,12 +2,24 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import AssignSpendDialog from "./AssignSpendDialog";
+
+interface Participant {
+  id: string;
+  user: {
+    id: string;
+    email: string;
+    displayName: string | null;
+  };
+}
 
 interface AddSpendDialogProps {
   trip: {
     id: string;
     baseCurrency: string;
   };
+  participants?: Participant[];
+  tripRsvpStatus?: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -16,6 +28,8 @@ interface AddSpendDialogProps {
 
 export default function AddSpendDialog({
   trip,
+  participants = [],
+  tripRsvpStatus,
   isOpen,
   onClose,
   onSuccess,
@@ -32,6 +46,13 @@ export default function AddSpendDialog({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [createdSpendId, setCreatedSpendId] = useState<string | null>(null);
+  const [createdSpendData, setCreatedSpendData] = useState<{
+    description: string;
+    amount: number;
+    currency: string;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -114,23 +135,16 @@ export default function AddSpendDialog({
     try {
       const spendId = await saveSpend();
 
-      // Reset form
-      setFormData({
-        description: "",
-        amount: "",
-        currency: trip.baseCurrency,
-        fxRate: "1.0",
-        date: new Date().toISOString().split("T")[0],
-        notes: "",
+      // Store the created spend data for the assign dialog
+      setCreatedSpendId(spendId);
+      setCreatedSpendData({
+        description: formData.description,
+        amount: parseFloat(formData.amount),
+        currency: formData.currency,
       });
 
-      onSuccess();
-      onClose();
-
-      // Call the callback to open assign dialog with the new spend
-      if (onSuccessWithAddPeople) {
-        onSuccessWithAddPeople(spendId);
-      }
+      // Open the assign dialog WITHOUT closing this dialog
+      setIsAssignDialogOpen(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
     } finally {
@@ -143,6 +157,30 @@ export default function AddSpendDialog({
       setError(null);
       onClose();
     }
+  };
+
+  const handleAssignDialogSuccess = () => {
+    // When assign dialog saves, close both dialogs and reset form
+    setFormData({
+      description: "",
+      amount: "",
+      currency: trip.baseCurrency,
+      fxRate: "1.0",
+      date: new Date().toISOString().split("T")[0],
+      notes: "",
+    });
+    setIsAssignDialogOpen(false);
+    setCreatedSpendId(null);
+    setCreatedSpendData(null);
+    onSuccess();
+    onClose();
+  };
+
+  const handleAssignDialogCancel = () => {
+    // When assign dialog is cancelled, just close it and return to add spend form
+    setIsAssignDialogOpen(false);
+    setCreatedSpendId(null);
+    setCreatedSpendData(null);
   };
 
   return (
@@ -329,7 +367,7 @@ export default function AddSpendDialog({
                   disabled={isSubmitting}
                   className="tap-target flex-1 px-6 py-3 rounded-lg border border-blue-600 dark:border-blue-500 bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? "Saving..." : "Add People Later"}
+                  {isSubmitting ? "Saving..." : "Save"}
                 </button>
               </div>
               <button
@@ -344,6 +382,25 @@ export default function AddSpendDialog({
           </form>
         </div>
       </div>
+
+      {/* Nested Assign Spend Dialog - appears on top with higher z-index */}
+      {isAssignDialogOpen && createdSpendId && createdSpendData && (
+        <AssignSpendDialog
+          spend={{
+            id: createdSpendId,
+            description: createdSpendData.description,
+            amount: createdSpendData.amount,
+            currency: createdSpendData.currency,
+            assignments: [],
+          }}
+          participants={participants}
+          tripId={trip.id}
+          tripRsvpStatus={tripRsvpStatus}
+          isOpen={isAssignDialogOpen}
+          onClose={handleAssignDialogCancel}
+          onSuccess={handleAssignDialogSuccess}
+        />
+      )}
     </div>
   );
 }
