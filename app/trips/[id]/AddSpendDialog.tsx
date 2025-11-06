@@ -10,7 +10,7 @@ interface AddSpendDialogProps {
   };
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (spendId: string) => void;
   onSuccessWithAddPeople?: (spendId: string) => void;
 }
 
@@ -85,7 +85,7 @@ export default function AddSpendDialog({
     setIsSubmitting(true);
 
     try {
-      await saveSpend();
+      const spendId = await saveSpend();
 
       // Reset form
       setFormData({
@@ -97,7 +97,7 @@ export default function AddSpendDialog({
         notes: "",
       });
 
-      onSuccess();
+      onSuccess(spendId);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");

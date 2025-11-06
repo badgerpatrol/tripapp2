@@ -371,7 +371,7 @@ export default function TripDetailPage() {
     fetchTrip();
   };
 
-  const handleAddSpendSuccess = () => {
+  const handleAddSpendSuccess = async (spendId: string) => {
     // Refetch the trip data after successful spend creation
     const fetchTrip = async () => {
       if (!user) return;
@@ -387,13 +387,17 @@ export default function TripDetailPage() {
         if (response.ok) {
           const data = await response.json();
           setTrip(data.trip);
+
+          // Open the view spend dialog with the newly created spend
+          setSelectedSpendId(spendId);
+          setIsViewSpendDialogOpen(true);
         }
       } catch (err) {
         console.error("Error refetching trip:", err);
       }
     };
 
-    fetchTrip();
+    await fetchTrip();
   };
 
   const handleAddSpendWithPeople = async (spendId: string) => {
