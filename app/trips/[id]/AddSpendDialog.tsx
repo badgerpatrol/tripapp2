@@ -125,7 +125,7 @@ export default function AddSpendDialog({
       });
 
       onSuccess(spendId);
-      onClose();
+      // Don't close here - keep dialog open while assign dialog opens on top
 
       // Call the callback to open assign dialog with the new spend
       if (onSuccessWithAddPeople) {

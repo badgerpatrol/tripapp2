@@ -115,6 +115,7 @@ export default function TripDetailPage() {
   const [isViewSpendDialogOpen, setIsViewSpendDialogOpen] = useState(false);
   const [isEditSpendDialogOpen, setIsEditSpendDialogOpen] = useState(false);
   const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
+  const [assignDialogOpenedFromAddSpend, setAssignDialogOpenedFromAddSpend] = useState(false);
   const [isSelfAssignDialogOpen, setIsSelfAssignDialogOpen] = useState(false);
   const [isSplitRemainderDialogOpen, setIsSplitRemainderDialogOpen] = useState(false);
   const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
@@ -419,6 +420,7 @@ export default function TripDetailPage() {
 
           // Open the assign dialog with the newly created spend
           setSelectedSpendId(spendId);
+          setAssignDialogOpenedFromAddSpend(true);
           setIsAssignSpendDialogOpen(true);
         }
       } catch (err) {
@@ -525,6 +527,7 @@ export default function TripDetailPage() {
 
   const handleAssignSpend = (spendId: string) => {
     setSelectedSpendId(spendId);
+    setAssignDialogOpenedFromAddSpend(false);
     setIsAssignSpendDialogOpen(true);
   };
 
@@ -2194,10 +2197,22 @@ export default function TripDetailPage() {
           tripRsvpStatus={trip.rsvpStatus}
           isOpen={isAssignSpendDialogOpen}
           onClose={() => {
-            // Just close the assign dialog, keep view dialog open and selectedSpendId
+            // Close the assign dialog
             setIsAssignSpendDialogOpen(false);
+            // If opened from add spend dialog, close that too
+            if (assignDialogOpenedFromAddSpend) {
+              setIsAddSpendDialogOpen(false);
+              setAssignDialogOpenedFromAddSpend(false);
+            }
           }}
-          onSuccess={handleAssignmentSuccess}
+          onSuccess={() => {
+            handleAssignmentSuccess();
+            // If opened from add spend dialog, close that too
+            if (assignDialogOpenedFromAddSpend) {
+              setIsAddSpendDialogOpen(false);
+              setAssignDialogOpenedFromAddSpend(false);
+            }
+          }}
         />
       )}
 
