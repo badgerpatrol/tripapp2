@@ -419,6 +419,9 @@ export async function deleteSpendItem(itemId: string, userId: string) {
     });
 
     if (linkedAssignment) {
+      const assignedUserId = linkedAssignment.userId;
+
+      // Delete the assignment for this item
       await tx.spendAssignment.delete({
         where: { id: linkedAssignment.id },
       });
@@ -426,9 +429,50 @@ export async function deleteSpendItem(itemId: string, userId: string) {
       await logEvent("SpendAssignment", linkedAssignment.id, EventType.ASSIGNMENT_DELETED, userId, {
         spendId: existingItem.spendId,
         itemId,
-        userId: linkedAssignment.userId,
+        userId: assignedUserId,
         reason: "Item deleted",
       });
+
+      // Check if user has any other assignments for this spend
+      const remainingAssignments = await tx.spendAssignment.findFirst({
+        where: {
+          spendId: existingItem.spendId,
+          userId: assignedUserId
+        },
+      });
+
+      // If no other assignments exist, create a zero-amount assignment to keep user on spend
+      if (!remainingAssignments) {
+        const newAssignment = await tx.spendAssignment.upsert({
+          where: {
+            spendId_userId: {
+              spendId: existingItem.spendId,
+              userId: assignedUserId,
+            },
+          },
+          create: {
+            spendId: existingItem.spendId,
+            userId: assignedUserId,
+            shareAmount: new Decimal(0),
+            normalizedShareAmount: new Decimal(0),
+            splitType: "EXACT",
+            itemId: null,
+          },
+          update: {
+            shareAmount: new Decimal(0),
+            normalizedShareAmount: new Decimal(0),
+            splitType: "EXACT",
+            itemId: null,
+          },
+        });
+
+        await logEvent("SpendAssignment", newAssignment.id, EventType.ASSIGNMENT_CREATED, userId, {
+          spendId: existingItem.spendId,
+          userId: assignedUserId,
+          reason: "User kept on spend after last item deleted",
+          shareAmount: 0,
+        });
+      }
     }
 
     // Delete item

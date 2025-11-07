@@ -148,26 +148,7 @@ export default function LoginForm() {
             </Button>
           </form>
 
-          {!isSignUp && (
-            <>
-              <div className="mt-6 flex items-center gap-3">
-                <div className="flex-1 h-px bg-zinc-300 dark:bg-zinc-700" />
-                <span className="text-sm text-zinc-500 dark:text-zinc-400">or</span>
-                <div className="flex-1 h-px bg-zinc-300 dark:bg-zinc-700" />
-              </div>
-
-              <Button
-                type="button"
-                onClick={handlePasskeySignIn}
-                disabled={loading}
-                variant="outline"
-                full
-                className="mt-4"
-              >
-                Sign in with Passkey
-              </Button>
-            </>
-          )}
+          
 
           <div className="mt-6 text-center">
             <Button
