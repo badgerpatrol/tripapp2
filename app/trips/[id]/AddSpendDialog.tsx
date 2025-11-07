@@ -20,6 +20,7 @@ interface AddSpendDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onSuccessWithAddPeople?: (spendId: string) => void;
 }
 
 export default function AddSpendDialog({
@@ -27,6 +28,7 @@ export default function AddSpendDialog({
   isOpen,
   onClose,
   onSuccess,
+  onSuccessWithAddPeople,
 }: AddSpendDialogProps) {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
@@ -62,50 +64,57 @@ export default function AddSpendDialog({
 
   if (!isOpen) return null;
 
+  const saveSpend = async (): Promise<string> => {
+    if (!user) {
+      throw new Error("You must be logged in to add a spend");
+    }
+
+    // Validate amount
+    const amount = parseFloat(formData.amount);
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error("Amount must be a positive number");
+    }
+
+    // Validate FX rate
+    const fxRate = parseFloat(formData.fxRate);
+    if (isNaN(fxRate) || fxRate <= 0) {
+      throw new Error("FX rate must be a positive number");
+    }
+
+    const idToken = await user.getIdToken();
+    const response = await fetch("/api/spends", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({
+        tripId: trip.id,
+        description: formData.description,
+        amount,
+        currency: formData.currency,
+        fxRate,
+        date: new Date(formData.date),
+        notes: formData.notes || undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Failed to create spend");
+    }
+
+    const data = await response.json();
+    return data.spend.id;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
     try {
-      if (!user) {
-        throw new Error("You must be logged in to add a spend");
-      }
-
-      // Validate amount
-      const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error("Amount must be a positive number");
-      }
-
-      // Validate FX rate
-      const fxRate = parseFloat(formData.fxRate);
-      if (isNaN(fxRate) || fxRate <= 0) {
-        throw new Error("FX rate must be a positive number");
-      }
-
-      const idToken = await user.getIdToken();
-      const response = await fetch("/api/spends", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          tripId: trip.id,
-          description: formData.description,
-          amount,
-          currency: formData.currency,
-          fxRate,
-          date: new Date(formData.date),
-          notes: formData.notes || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create spend");
-      }
+      await saveSpend();
 
       const data = await response.json();
       const spendId = data.spend.id;
@@ -147,6 +156,38 @@ export default function AddSpendDialog({
 
       onSuccess();
       onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitAndAddPeople = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const spendId = await saveSpend();
+
+      // Reset form
+      setFormData({
+        description: "",
+        amount: "",
+        currency: trip.baseCurrency,
+        fxRate: "1.0",
+        date: new Date().toISOString().split("T")[0],
+        notes: "",
+      });
+
+      onSuccess();
+      onClose();
+
+      // Call the callback to open assign dialog with the new spend
+      if (onSuccessWithAddPeople) {
+        onSuccessWithAddPeople(spendId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
     } finally {
@@ -342,7 +383,7 @@ export default function AddSpendDialog({
                     setFormData({ ...formData, date: e.target.value })
                   }
                   required
-                  className="tap-target w-full max-w-full min-w-0 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="tap-target w-full max-w-[180px] min-w-0 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition box-border"
                 />
               </div>
             </div>
@@ -369,21 +410,32 @@ export default function AddSpendDialog({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col-reverse md:flex-row gap-3 pt-4">
+            <div className="flex flex-col gap-3 pt-4">
+              <div className="flex flex-col-reverse md:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={isSubmitting}
+                  className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="tap-target flex-1 px-6 py-3 rounded-lg border border-blue-600 dark:border-blue-500 bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Saving..." : "Add People Later"}
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={handleSubmitAndAddPeople}
                 disabled={isSubmitting}
-                className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="tap-target w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Adding Spend..." : "Add Spend"}
+                {isSubmitting ? "Saving..." : "Add People"}
               </button>
             </div>
           </form>
