@@ -114,13 +114,11 @@ export default function AddSpendDialog({
     setIsSubmitting(true);
 
     try {
-      await saveSpend();
-
-      const data = await response.json();
-      const spendId = data.spend.id;
+      const spendId = await saveSpend();
 
       // If there are items, create them
-      if (items.length > 0) {
+      if (items.length > 0 && user) {
+        const idToken = await user.getIdToken();
         for (const item of items) {
           const itemResponse = await fetch(`/api/spends/${spendId}/items`, {
             method: "POST",
