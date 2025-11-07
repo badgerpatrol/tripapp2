@@ -281,7 +281,7 @@ export default function EditSpendDialog({
                     setFormData({ ...formData, date: e.target.value })
                   }
                   required
-                  className="tap-target w-full max-w-full min-w-0 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="tap-target w-full max-w-[180px] min-w-0 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition box-border"
                 />
               </div>
             </div>
