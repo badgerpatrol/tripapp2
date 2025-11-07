@@ -115,6 +115,7 @@ export default function TripDetailPage() {
   const [isViewSpendDialogOpen, setIsViewSpendDialogOpen] = useState(false);
   const [isEditSpendDialogOpen, setIsEditSpendDialogOpen] = useState(false);
   const [isAssignSpendDialogOpen, setIsAssignSpendDialogOpen] = useState(false);
+  const [isAssignFromAddSpend, setIsAssignFromAddSpend] = useState(false);
   const [isSelfAssignDialogOpen, setIsSelfAssignDialogOpen] = useState(false);
   const [isSplitRemainderDialogOpen, setIsSplitRemainderDialogOpen] = useState(false);
   const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
@@ -415,6 +416,7 @@ export default function TripDetailPage() {
 
           // Open the assign dialog with the newly created spend
           setSelectedSpendId(spendId);
+          setIsAssignFromAddSpend(true);
           setIsAssignSpendDialogOpen(true);
         }
       } catch (err) {
@@ -471,6 +473,7 @@ export default function TripDetailPage() {
 
   const handleAssignSpend = (spendId: string) => {
     setSelectedSpendId(spendId);
+    setIsAssignFromAddSpend(false);
     setIsAssignSpendDialogOpen(true);
   };
 
@@ -2140,10 +2143,22 @@ export default function TripDetailPage() {
           tripRsvpStatus={trip.rsvpStatus}
           isOpen={isAssignSpendDialogOpen}
           onClose={() => {
-            // Just close the assign dialog, keep view dialog open and selectedSpendId
+            // Close the assign dialog
             setIsAssignSpendDialogOpen(false);
+            // If we came from add spend dialog, close that too
+            if (isAssignFromAddSpend) {
+              setIsAddSpendDialogOpen(false);
+              setIsAssignFromAddSpend(false);
+            }
           }}
-          onSuccess={handleAddSpendSuccess}
+          onSuccess={() => {
+            handleAddSpendSuccess();
+            // If we came from add spend dialog, close that too
+            if (isAssignFromAddSpend) {
+              setIsAddSpendDialogOpen(false);
+              setIsAssignFromAddSpend(false);
+            }
+          }}
         />
       )}
 

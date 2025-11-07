@@ -114,18 +114,8 @@ export default function AddSpendDialog({
     try {
       const spendId = await saveSpend();
 
-      // Reset form
-      setFormData({
-        description: "",
-        amount: "",
-        currency: trip.baseCurrency,
-        fxRate: "1.0",
-        date: new Date().toISOString().split("T")[0],
-        notes: "",
-      });
-
-      onSuccess();
-      onClose();
+      // Don't reset form or close dialog - keep it open under the assign dialog
+      // The parent will handle closing both dialogs when assign dialog closes
 
       // Call the callback to open assign dialog with the new spend
       if (onSuccessWithAddPeople) {
