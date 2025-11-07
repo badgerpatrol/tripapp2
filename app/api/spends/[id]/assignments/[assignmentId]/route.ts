@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import { updateAssignment, deleteAssignment } from "@/server/services/assignments";
+import { prisma } from "@/lib/prisma";
 
 /**
  * PUT /api/spends/:id/assignments/:assignmentId
  * Update an individual assignment amount
+ * Optionally handles item-based assignments via itemIds
  */
 export async function PUT(
   request: NextRequest,
@@ -25,7 +27,7 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json();
-    const { shareAmount, normalizedShareAmount, splitType } = body;
+    const { shareAmount, normalizedShareAmount, splitType, itemIds } = body;
 
     // Validate required fields
     if (shareAmount === undefined || normalizedShareAmount === undefined) {
@@ -43,6 +45,15 @@ export async function PUT(
       );
     }
 
+    // Get the assignment to find the userId
+    const assignment = await prisma.spendAssignment.findUnique({
+      where: { id: assignmentId },
+    });
+
+    if (!assignment) {
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
+    }
+
     // Update the assignment
     const updatedAssignment = await updateAssignment(
       assignmentId,
@@ -53,6 +64,35 @@ export async function PUT(
         splitType: splitType || "EXACT",
       }
     );
+
+    // If itemIds are provided, update the items' assignedUserId field
+    if (itemIds && Array.isArray(itemIds)) {
+      await prisma.$transaction(async (tx) => {
+        // First, clear any items that were previously assigned to this user for this spend
+        await tx.spendItem.updateMany({
+          where: {
+            spendId: spendId,
+            assignedUserId: assignment.userId,
+          },
+          data: {
+            assignedUserId: null,
+          },
+        });
+
+        // Then, assign the selected items to this user
+        if (itemIds.length > 0) {
+          await tx.spendItem.updateMany({
+            where: {
+              id: { in: itemIds },
+              spendId: spendId,
+            },
+            data: {
+              assignedUserId: assignment.userId,
+            },
+          });
+        }
+      });
+    }
 
     return NextResponse.json(
       { assignment: updatedAssignment },

@@ -14,7 +14,9 @@ import AssignSpendDialog from "./AssignSpendDialog";
 import SelfAssignDialog from "./SelfAssignDialog";
 import SplitRemainderDialog from "./SplitRemainderDialog";
 import EditAssignmentDialog from "./EditAssignmentDialog";
+import EditItemAssignmentDialog from "./EditItemAssignmentDialog";
 import BalancesDialog from "./BalancesDialog";
+import ItemsDialog from "./ItemsDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
@@ -118,7 +120,9 @@ export default function TripDetailPage() {
   const [isSelfAssignDialogOpen, setIsSelfAssignDialogOpen] = useState(false);
   const [isSplitRemainderDialogOpen, setIsSplitRemainderDialogOpen] = useState(false);
   const [isEditAssignmentDialogOpen, setIsEditAssignmentDialogOpen] = useState(false);
+  const [isEditItemAssignmentDialogOpen, setIsEditItemAssignmentDialogOpen] = useState(false);
   const [isBalancesDialogOpen, setIsBalancesDialogOpen] = useState(false);
+  const [isItemsDialogOpen, setIsItemsDialogOpen] = useState(false);
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
@@ -484,9 +488,57 @@ export default function TripDetailPage() {
     setIsSplitRemainderDialogOpen(true);
   };
 
-  const handleEditAssignment = (assignmentId: string) => {
+  const handleEditAssignment = async (assignmentId: string) => {
+    if (!user) return;
+
     setSelectedAssignmentId(assignmentId);
-    setIsEditAssignmentDialogOpen(true);
+
+    // Find the spend for this assignment
+    let spend: any = null;
+    for (const s of trip?.spends || []) {
+      if (s.assignments?.some(a => a.id === assignmentId)) {
+        spend = s;
+        break;
+      }
+    }
+
+    if (!spend) {
+      setIsEditAssignmentDialogOpen(true);
+      return;
+    }
+
+    // Check if spend has items
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/spends/${spend.id}/items`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const hasItems = data.items && data.items.length > 0;
+
+        if (hasItems) {
+          setIsEditItemAssignmentDialogOpen(true);
+        } else {
+          setIsEditAssignmentDialogOpen(true);
+        }
+      } else {
+        // Default to regular assignment dialog on error
+        setIsEditAssignmentDialogOpen(true);
+      }
+    } catch (err) {
+      console.error("Error checking for items:", err);
+      // Default to regular assignment dialog on error
+      setIsEditAssignmentDialogOpen(true);
+    }
+  };
+
+  const handleViewItems = (spendId: string) => {
+    setSelectedSpendId(spendId);
+    setIsItemsDialogOpen(true);
   };
 
   const handleEditAssignmentSubmit = async (amount: number) => {
@@ -553,6 +605,90 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleEditItemAssignmentSubmit = async (selectedItemIds: string[]) => {
+    if (!user || !trip || !selectedAssignmentId) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Find the assignment and its spend
+      let assignment: any = null;
+      let spend: any = null;
+
+      for (const s of trip.spends || []) {
+        const found = s.assignments?.find(a => a.id === selectedAssignmentId);
+        if (found) {
+          assignment = found;
+          spend = s;
+          break;
+        }
+      }
+
+      if (!assignment || !spend) {
+        throw new Error("Assignment not found");
+      }
+
+      // Fetch items to calculate total
+      const itemsResponse = await fetch(`/api/spends/${spend.id}/items`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!itemsResponse.ok) {
+        throw new Error("Failed to fetch items");
+      }
+
+      const itemsData = await itemsResponse.json();
+      const items = itemsData.items || [];
+
+      // Calculate the total amount from selected items
+      const totalAmount = items
+        .filter((item: any) => selectedItemIds.includes(item.id))
+        .reduce((sum: number, item: any) => sum + item.cost, 0);
+
+      // Calculate normalized amount
+      const normalizedAmount = totalAmount * spend.fxRate;
+
+      // Update the assignment via API
+      const response = await fetch(`/api/spends/${spend.id}/assignments/${selectedAssignmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          shareAmount: totalAmount,
+          normalizedShareAmount: normalizedAmount,
+          splitType: "EXACT",
+          itemIds: selectedItemIds,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update assignment");
+      }
+
+      // Refetch trip data
+      const tripResponse = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (tripResponse.ok) {
+        const data = await tripResponse.json();
+        setTrip(data.trip);
+      }
+
+      setIsEditItemAssignmentDialogOpen(false);
+    } catch (err) {
+      console.error("Error updating item assignment:", err);
+      throw err;
+    }
+  };
+
   const handleRemoveAssignment = async () => {
     if (!user || !trip || !selectedAssignmentId) return;
 
@@ -598,6 +734,7 @@ export default function TripDetailPage() {
       }
 
       setIsEditAssignmentDialogOpen(false);
+      setIsEditItemAssignmentDialogOpen(false);
     } catch (err) {
       console.error("Error removing assignment:", err);
       throw err;
@@ -2257,6 +2394,40 @@ export default function TripDetailPage() {
         );
       })()}
 
+      {/* Edit Item Assignment Dialog */}
+      {trip && selectedAssignmentId && user && (() => {
+        // Find the assignment and its spend
+        let assignment: any = null;
+        let spend: any = null;
+
+        for (const s of trip.spends || []) {
+          const found = s.assignments?.find(a => a.id === selectedAssignmentId);
+          if (found) {
+            assignment = found;
+            spend = s;
+            break;
+          }
+        }
+
+        if (!assignment || !spend) return null;
+
+        return (
+          <EditItemAssignmentDialog
+            assignment={assignment}
+            spend={spend}
+            currentUserId={user.uid}
+            assignedPercentage={spend.assignedPercentage || 0}
+            isOpen={isEditItemAssignmentDialogOpen}
+            onClose={() => {
+              setIsEditItemAssignmentDialogOpen(false);
+              setSelectedAssignmentId(null);
+            }}
+            onUpdate={handleEditItemAssignmentSubmit}
+            onRemove={handleRemoveAssignment}
+          />
+        );
+      })()}
+
       {/* Balances Dialog */}
       <BalancesDialog
         tripId={trip.id}
@@ -2264,6 +2435,24 @@ export default function TripDetailPage() {
         isOpen={isBalancesDialogOpen}
         onClose={() => setIsBalancesDialogOpen(false)}
       />
+
+      {/* Items Dialog */}
+      {trip && selectedSpendId && (
+        <ItemsDialog
+          spend={trip.spends?.find((s) => s.id === selectedSpendId) || null}
+          trip={{ id: trip.id, baseCurrency: trip.baseCurrency, spendStatus: trip.spendStatus }}
+          currentUserId={user?.uid}
+          isOpen={isItemsDialogOpen}
+          onClose={() => {
+            setIsItemsDialogOpen(false);
+            // Refresh trip data to update spend amounts
+            handleAddSpendSuccess();
+            // Keep selectedSpendId so ViewSpendDialog can stay open if needed
+          }}
+          onRefreshTrip={handleAddSpendSuccess}
+          canUserEdit={selectedSpendId ? canUserDeleteSpend(trip.spends?.find((s) => s.id === selectedSpendId) || null as any) : false}
+        />
+      )}
     </div>
   );
 }

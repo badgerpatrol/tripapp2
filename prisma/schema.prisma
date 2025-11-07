@@ -103,6 +103,13 @@ enum EventType {
   SPEND_UPDATED
   SPEND_CLOSED
   SPEND_DELETED
+  SPEND_ITEM_CREATED
+  SPEND_ITEM_UPDATED
+  SPEND_ITEM_DELETED
+  ASSIGNMENT_CREATED
+  ASSIGNMENT_UPDATED
+  ASSIGNMENT_DELETED
+  ASSIGNMENT_MOVED
   SETTLEMENT_CREATED
   SETTLEMENT_UPDATED
   PAYMENT_RECORDED
@@ -134,6 +141,8 @@ model User {
   tripMemberships    TripMember[]
   spendsCreated      Spend[]           @relation("SpendPayer")
   spendAssignments   SpendAssignment[]
+  spendItemsCreated  SpendItem[]       @relation("ItemCreator")
+  spendItemsAssigned SpendItem[]       @relation("ItemAssignedUser")
   settlementsFrom    Settlement[]      @relation("SettlementFrom")
   settlementsTo      Settlement[]      @relation("SettlementTo")
   paymentsRecorded   Payment[]
@@ -300,6 +309,7 @@ model Spend {
   paidBy      User              @relation("SpendPayer", fields: [paidById], references: [id])
   category    Category?         @relation(fields: [categoryId], references: [id])
   assignments SpendAssignment[]
+  items       SpendItem[]
 
   @@index([tripId])
   @@index([paidById])
@@ -310,23 +320,49 @@ model Spend {
   @@map("spends")
 }
 
-model SpendAssignment {
-  id                    String    @id @default(uuid())
-  spendId               String
-  userId                String
-  shareAmount           Decimal   @db.Decimal(19, 4) // In spend currency
-  normalizedShareAmount Decimal   @db.Decimal(19, 4) // In trip base currency
-  splitType             SplitType @default(EQUAL)
-  splitValue            Decimal?  @db.Decimal(19, 6) // For percentage or share-based
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+model SpendItem {
+  id               String    @id @default(uuid())
+  spendId          String
+  name             String    // Item name (e.g., "Beer", "Pizza slice")
+  description      String?   // Optional description (0-280 chars)
+  cost             Decimal   @db.Decimal(19, 4) // Item cost in spend currency
+  assignedUserId   String?   // Optional: user assigned to this item
+  createdById      String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Relationships
-  spend Spend @relation(fields: [spendId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spend        Spend             @relation(fields: [spendId], references: [id], onDelete: Cascade)
+  assignedUser User?             @relation("ItemAssignedUser", fields: [assignedUserId], references: [id])
+  createdBy    User              @relation("ItemCreator", fields: [createdById], references: [id])
+  assignments  SpendAssignment[]
+
+  @@index([spendId])
+  @@index([assignedUserId])
+  @@index([createdById])
+  @@map("spend_items")
+}
+
+model SpendAssignment {
+  id                    String     @id @default(uuid())
+  spendId               String
+  itemId                String?    // Optional: link to specific SpendItem
+  userId                String
+  shareAmount           Decimal    @db.Decimal(19, 4) // In spend currency
+  normalizedShareAmount Decimal    @db.Decimal(19, 4) // In trip base currency
+  splitType             SplitType  @default(EQUAL)
+  splitValue            Decimal?   @db.Decimal(19, 6) // For percentage or share-based
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  // Relationships
+  spend Spend      @relation(fields: [spendId], references: [id], onDelete: Cascade)
+  item  SpendItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([spendId, userId])
   @@index([spendId])
+  @@index([itemId])
   @@index([userId])
   @@map("spend_assignments")
 }
