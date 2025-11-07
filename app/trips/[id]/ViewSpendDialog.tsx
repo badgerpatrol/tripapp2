@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { SpendStatus } from "@/lib/generated/prisma";
+import { useAuth } from "@/lib/auth/AuthContext";
 
 interface Spend {
   id: string;
@@ -57,6 +59,7 @@ interface ViewSpendDialogProps {
   onLeave?: (spendId: string) => void;
   onFinalize?: (spendId: string) => void;
   onDelete?: (spendId: string) => void;
+  onViewItems?: (spendId: string) => void;
 }
 
 export default function ViewSpendDialog({
@@ -77,7 +80,44 @@ export default function ViewSpendDialog({
   onLeave,
   onFinalize,
   onDelete,
+  onViewItems,
 }: ViewSpendDialogProps) {
+  const { user } = useAuth();
+  const [itemsCount, setItemsCount] = useState<number>(0);
+  const [itemsTotal, setItemsTotal] = useState<number>(0);
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  // Fetch items summary when dialog opens or spend data changes
+  useEffect(() => {
+    if (isOpen && spend && user) {
+      fetchItemsSummary();
+    }
+  }, [isOpen, spend?.id, spend?.amount, user]);
+
+  const fetchItemsSummary = async () => {
+    if (!spend || !user) return;
+
+    setLoadingItems(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/spends/${spend.id}/items`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setItemsCount(data.items?.length || 0);
+        setItemsTotal(data.total || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching items summary:", error);
+      // Silently fail - items section will just show 0
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
   if (!isOpen || !spend) return null;
 
   const formatDate = (dateString: string) => {
@@ -126,8 +166,13 @@ export default function ViewSpendDialog({
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {spend.description}
+              <br />
+              <span className="text-lg font-normal">
+                {spend.currency} {spend.amount.toFixed(2)}
+              </span>
             </h2>
 
+            
             <div className="flex items-center gap-2">
               {/* Lock/Unlock Toggle Icon */}
               {showFinalize && (
@@ -214,6 +259,44 @@ export default function ViewSpendDialog({
             </span>
           </div>
 
+          {/* Amount Summary */}
+          <div className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Amount:
+                </span>
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {spend.currency} {spend.amount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Exchange Rate:
+                </span>
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {spend.fxRate.toFixed(6)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Converted Amount:
+                </span>
+                <div className="text-right">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+
           {/* Assignment Summary */}
           {(() => {
             const assignedPercentage = spend.assignedPercentage || 0;
@@ -224,11 +307,10 @@ export default function ViewSpendDialog({
             const userAssignment = currentUserId && spend.assignments?.find(a => a.userId === currentUserId);
             const showYouOwe = userAssignment && userAssignment.shareAmount !== undefined && userAssignment.shareAmount > 0;
 
+            
             return (
               <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                  Summary
-                </h3>
+                
                 <div className="space-y-2">
                   {showYouOwe && userAssignment && userAssignment.shareAmount !== undefined && (
                     <>
@@ -299,42 +381,7 @@ export default function ViewSpendDialog({
             );
           })()}
 
-          {/* Amount Summary */}
-          <div className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-            
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Amount:
-                </span>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {spend.currency} {spend.amount.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Converted Amount:
-                </span>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Exchange Rate:
-                </span>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {spend.fxRate.toFixed(6)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          
 
           {/* Details */}
           <div className="space-y-6">
@@ -448,7 +495,41 @@ export default function ViewSpendDialog({
               </div>
             )}
 
-            
+            {/* Items Section */}
+            {onViewItems && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-2">
+                  Items
+                </label>
+                <button
+                  onClick={() => onViewItems(spend.id)}
+                  className="w-full flex items-center justify-between p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                      </svg>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100">
+                        {loadingItems ? "Loading..." : itemsCount === 0 ? "No items" : `${itemsCount} item${itemsCount !== 1 ? 's' : ''}`}
+                      </p>
+                      {itemsCount > 0 && !loadingItems && (
+                        <p className="text-xs text-indigo-700 dark:text-indigo-400">
+                          Total: {spend.currency} {itemsTotal.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+
           </div>
 
           {/* Action Buttons */}

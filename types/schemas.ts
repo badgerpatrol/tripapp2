@@ -274,6 +274,60 @@ export const GetSpendsQuerySchema = z.object({
 });
 
 // ============================================================================
+// Spend Item Schemas
+// ============================================================================
+
+export const CreateSpendItemSchema = z.object({
+  name: z.string().min(1, "Item name is required").max(80, "Item name is too long"),
+  description: z.string().max(280, "Item description is too long").optional(),
+  cost: z.number().nonnegative("Item cost must be non-negative"),
+  userId: z.string().uuid("Valid user ID required").optional(), // Optional user assignment
+});
+
+export const UpdateSpendItemSchema = z.object({
+  name: z.string().min(1, "Item name is required").max(80, "Item name is too long").optional(),
+  description: z.string().max(280, "Item description is too long").optional().nullable(),
+  cost: z.number().nonnegative("Item cost must be non-negative").optional(),
+  userId: z.string().uuid("Valid user ID required").optional().nullable(), // Can be set to null to unassign
+});
+
+export const SpendItemResponseSchema = z.object({
+  id: z.string(),
+  spendId: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  cost: z.number(),
+  assignedUserId: z.string().nullable(),
+  assignedUser: UserSummarySchema.nullable().optional(),
+  createdById: z.string(),
+  createdBy: UserSummarySchema.optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export const CreateSpendItemResponseSchema = z.object({
+  success: z.boolean(),
+  item: SpendItemResponseSchema.optional(),
+  error: z.string().optional(),
+});
+
+export const UpdateSpendItemResponseSchema = z.object({
+  success: z.boolean(),
+  item: SpendItemResponseSchema.optional(),
+  error: z.string().optional(),
+});
+
+export const GetSpendItemsResponseSchema = z.object({
+  success: z.boolean(),
+  items: z.array(SpendItemResponseSchema),
+  total: z.number(), // Sum of all item costs
+  spendTotal: z.number(), // Total amount of the spend
+  difference: z.number(), // spendTotal - itemsTotal
+  percentAssigned: z.number(), // Percentage of spend amount assigned (from assignments)
+  error: z.string().optional(),
+});
+
+// ============================================================================
 // Settlement & Balance Schemas
 // ============================================================================
 
@@ -365,6 +419,12 @@ export type CreateSpendResponse = z.infer<typeof CreateSpendResponseSchema>;
 export type UpdateSpendInput = z.infer<typeof UpdateSpendSchema>;
 export type CloseSpendInput = z.infer<typeof CloseSpendSchema>;
 export type GetSpendsQuery = z.infer<typeof GetSpendsQuerySchema>;
+export type CreateSpendItemInput = z.infer<typeof CreateSpendItemSchema>;
+export type UpdateSpendItemInput = z.infer<typeof UpdateSpendItemSchema>;
+export type SpendItemResponse = z.infer<typeof SpendItemResponseSchema>;
+export type CreateSpendItemResponse = z.infer<typeof CreateSpendItemResponseSchema>;
+export type UpdateSpendItemResponse = z.infer<typeof UpdateSpendItemResponseSchema>;
+export type GetSpendItemsResponse = z.infer<typeof GetSpendItemsResponseSchema>;
 export type PersonBalance = z.infer<typeof PersonBalanceSchema>;
 export type SettlementTransfer = z.infer<typeof SettlementTransferSchema>;
 export type TripBalanceSummary = z.infer<typeof TripBalanceSummarySchema>;

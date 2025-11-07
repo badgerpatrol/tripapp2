@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import ManageItemsDialog from "./ManageItemsDialog";
+
+interface SpendItem {
+  id: string; // temporary ID for in-memory items
+  name: string;
+  description?: string;
+  cost: number;
+  userId?: string;
+}
 
 interface AddSpendDialogProps {
   trip: {
@@ -30,6 +39,26 @@ export default function AddSpendDialog({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [items, setItems] = useState<SpendItem[]>([]);
+  const [isManageItemsOpen, setIsManageItemsOpen] = useState(false);
+
+  // Calculate total from items
+  const itemsTotal = items.reduce((sum, item) => sum + item.cost, 0);
+
+  // Update amount field when items change
+  useEffect(() => {
+    if (items.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        amount: itemsTotal.toFixed(2),
+      }));
+    }
+  }, [items, itemsTotal]);
+
+  const handleManageItemsClose = (updatedItems: SpendItem[]) => {
+    setItems(updatedItems);
+    setIsManageItemsOpen(false);
+  };
 
   if (!isOpen) return null;
 
@@ -78,6 +107,33 @@ export default function AddSpendDialog({
         throw new Error(errorData.error || "Failed to create spend");
       }
 
+      const data = await response.json();
+      const spendId = data.spend.id;
+
+      // If there are items, create them
+      if (items.length > 0) {
+        for (const item of items) {
+          const itemResponse = await fetch(`/api/spends/${spendId}/items`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              name: item.name,
+              description: item.description || undefined,
+              cost: item.cost,
+              userId: item.userId || undefined,
+            }),
+          });
+
+          if (!itemResponse.ok) {
+            const errorData = await itemResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || "Failed to create item");
+          }
+        }
+      }
+
       // Reset form
       setFormData({
         description: "",
@@ -87,6 +143,7 @@ export default function AddSpendDialog({
         date: new Date().toISOString().split("T")[0],
         notes: "",
       });
+      setItems([]);
 
       onSuccess();
       onClose();
@@ -100,6 +157,16 @@ export default function AddSpendDialog({
   const handleClose = () => {
     if (!isSubmitting) {
       setError(null);
+      setItems([]);
+      // Reset form
+      setFormData({
+        description: "",
+        amount: "",
+        currency: trip.baseCurrency,
+        fxRate: "1.0",
+        date: new Date().toISOString().split("T")[0],
+        notes: "",
+      });
       onClose();
     }
   };
@@ -155,6 +222,26 @@ export default function AddSpendDialog({
               />
             </div>
 
+            {/* Add Items Button */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setIsManageItemsOpen(true)}
+                disabled={isSubmitting || !formData.description}
+                className="tap-target w-full px-4 py-3 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                {items.length > 0 ? `Manage Items (${items.length})` : "Add Items"}
+              </button>
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                {items.length > 0
+                  ? `${items.length} item${items.length !== 1 ? "s" : ""} totaling ${formData.currency} ${itemsTotal.toFixed(2)}`
+                  : "Optional: Break down the spend into individual items"}
+              </p>
+            </div>
+
             {/* Amount and Currency */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
               <div className="min-w-0">
@@ -175,8 +262,18 @@ export default function AddSpendDialog({
                   min="0.01"
                   step="0.01"
                   placeholder="0.00"
-                  className="tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  readOnly={items.length > 0}
+                  className={`tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                    items.length > 0
+                      ? "bg-zinc-100 dark:bg-zinc-900 cursor-not-allowed"
+                      : "bg-white dark:bg-zinc-800"
+                  }`}
                 />
+                {items.length > 0 && (
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Amount calculated from {items.length} item{items.length !== 1 ? "s" : ""}
+                  </p>
+                )}
               </div>
 
               <div className="min-w-0">
@@ -292,6 +389,14 @@ export default function AddSpendDialog({
           </form>
         </div>
       </div>
+
+      {/* Manage Items Dialog */}
+      <ManageItemsDialog
+        items={items}
+        currency={formData.currency}
+        isOpen={isManageItemsOpen}
+        onClose={handleManageItemsClose}
+      />
     </div>
   );
 }
