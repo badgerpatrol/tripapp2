@@ -229,6 +229,7 @@ export const CreateSpendSchema = z.object({
   date: z.coerce.date().optional(),
   notes: z.string().max(2000, "Notes are too long").optional(),
   categoryId: z.string().uuid().optional(),
+  receiptImageData: z.string().optional(), // Base64 encoded receipt image
 });
 
 export const CreateSpendResponseSchema = z.object({

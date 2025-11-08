@@ -299,6 +299,7 @@ model Spend {
   date             DateTime    @default(now())
   status           SpendStatus @default(OPEN)
   receiptUrl       String?
+  receiptImageData String?     @db.Text // Base64 encoded receipt image
   notes            String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt

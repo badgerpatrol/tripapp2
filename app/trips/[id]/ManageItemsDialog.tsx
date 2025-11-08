@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import ScanReceiptDialog from "./ScanReceiptDialog";
+import ScanReceiptDialogIOS from "./ScanReceiptDialogIOS";
+import ScanReceiptDialogOffline from "./ScanReceiptDialogOffline";
 
 interface SpendItem {
   id: string;
@@ -13,7 +16,7 @@ interface ManageItemsDialogProps {
   items: SpendItem[];
   currency: string;
   isOpen: boolean;
-  onClose: (items: SpendItem[]) => void;
+  onClose: (items: SpendItem[], receiptImage?: string) => void;
 }
 
 export default function ManageItemsDialog({
@@ -25,6 +28,16 @@ export default function ManageItemsDialog({
   const [items, setItems] = useState<SpendItem[]>(initialItems);
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<SpendItem | null>(null);
+  const [isScanReceiptOpen, setIsScanReceiptOpen] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [useOfflineMode, setUseOfflineMode] = useState(true); // Default to offline for privacy
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+
+  // Detect iOS on mount
+  useEffect(() => {
+    const checkIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(checkIOS);
+  }, []);
 
   // Calculate total
   const itemsTotal = items.reduce((sum, item) => sum + item.cost, 0);
@@ -32,7 +45,7 @@ export default function ManageItemsDialog({
   if (!isOpen) return null;
 
   const handleClose = () => {
-    onClose(items);
+    onClose(items, receiptImage || undefined);
   };
 
   const handleAddItem = (item: Omit<SpendItem, "id">) => {
@@ -47,6 +60,17 @@ export default function ManageItemsDialog({
 
   const handleDeleteItem = (itemId: string) => {
     setItems(items.filter((item) => item.id !== itemId));
+  };
+
+  const handleItemsScanned = (scannedItems: Array<{ name: string; cost: number; description?: string }>, scannedReceiptImage?: string) => {
+    const newItems = scannedItems.map((item) => ({
+      ...item,
+      id: crypto.randomUUID(),
+    }));
+    setItems([...items, ...newItems]);
+    if (scannedReceiptImage) {
+      setReceiptImage(scannedReceiptImage);
+    }
   };
 
   return (
@@ -162,29 +186,66 @@ export default function ManageItemsDialog({
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col-reverse md:flex-row gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+          <div className="flex flex-col gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-700">
             {!showItemForm && !editingItem && (
-              <button
-                type="button"
-                onClick={() => setShowItemForm(true)}
-                className="tap-target flex-1 px-6 py-3 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Item
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsScanReceiptOpen(true)}
+                  className="tap-target px-6 py-3 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Scan Receipt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowItemForm(true)}
+                  className="tap-target px-6 py-3 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Item Manually
+                </button>
+              </div>
             )}
             <button
               type="button"
               onClick={handleClose}
-              className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+              className="tap-target w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
             >
               Done ({items.length} {items.length === 1 ? "item" : "items"}, {currency} {itemsTotal.toFixed(2)})
             </button>
           </div>
         </div>
       </div>
+
+      {/* Scan Receipt Dialog - Use offline scanner by default for privacy */}
+      {useOfflineMode ? (
+        <ScanReceiptDialogOffline
+          currency={currency}
+          isOpen={isScanReceiptOpen}
+          onClose={() => setIsScanReceiptOpen(false)}
+          onItemsScanned={handleItemsScanned}
+        />
+      ) : isIOS ? (
+        <ScanReceiptDialogIOS
+          currency={currency}
+          isOpen={isScanReceiptOpen}
+          onClose={() => setIsScanReceiptOpen(false)}
+          onItemsScanned={handleItemsScanned}
+        />
+      ) : (
+        <ScanReceiptDialog
+          currency={currency}
+          isOpen={isScanReceiptOpen}
+          onClose={() => setIsScanReceiptOpen(false)}
+          onItemsScanned={handleItemsScanned}
+        />
+      )}
     </div>
   );
 }

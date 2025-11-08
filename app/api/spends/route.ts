@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
         normalizedAmount: Number(spend.normalizedAmount),
         date: spend.date,
         status: spend.status,
+        notes: spend.notes,
+        receiptImageData: spend.receiptImageData,
         paidBy: spend.paidBy,
         category: spend.category,
         assignments: spend.assignments.map((a) => ({

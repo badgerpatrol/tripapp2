@@ -14,6 +14,7 @@ interface Spend {
   date: string;
   status: SpendStatus;
   notes: string | null;
+  receiptImageData?: string | null;
   paidBy: {
     id: string;
     email: string;
@@ -219,9 +220,35 @@ export default function ViewSpendDialog({
               <p className="text-base text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap gap-2 mb-6">
                   {spend.notes}
               </p>
-              
+
             </div>
-            
+
+          {/* Receipt Image */}
+          {spend.receiptImageData && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Receipt Image
+              </h3>
+              <div className="relative rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 cursor-pointer hover:opacity-90 transition-opacity">
+                <img
+                  src={spend.receiptImageData}
+                  alt="Receipt"
+                  className="w-full h-auto"
+                  onClick={() => {
+                    // Open image in new tab when clicked
+                    const win = window.open();
+                    if (win) {
+                      win.document.write(`<img src="${spend.receiptImageData}" style="max-width:100%;height:auto;" />`);
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Click image to view full size
+              </p>
+            </div>
+          )}
+
 
           {/* Status and Involvement Badges */}
           <div className="flex flex-wrap gap-2 mb-6">
