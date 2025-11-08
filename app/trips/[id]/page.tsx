@@ -2291,6 +2291,11 @@ export default function TripDetailPage() {
             setIsEditSpendDialogOpen(false);
           }}
           onSuccess={handleAddSpendSuccess}
+          onManageItems={() => {
+            // Close edit dialog and open items dialog
+            setIsEditSpendDialogOpen(false);
+            setIsItemsDialogOpen(true);
+          }}
         />
       )}
 
@@ -2479,10 +2484,10 @@ export default function TripDetailPage() {
           onClose={() => {
             setIsItemsDialogOpen(false);
             // Refresh trip data to update spend amounts
-            handleAddSpendSuccess();
+            handleAssignSpendSuccess();
             // Keep selectedSpendId so ViewSpendDialog can stay open if needed
           }}
-          onRefreshTrip={handleAddSpendSuccess}
+          onRefreshTrip={handleAssignSpendSuccess}
           canUserEdit={selectedSpendId ? canUserDeleteSpend(trip.spends?.find((s) => s.id === selectedSpendId) || null as any) : false}
         />
       )}
