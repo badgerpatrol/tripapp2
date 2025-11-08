@@ -42,7 +42,7 @@ interface EditSpendDialogProps {
   };
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (spendId: string) => void;
 }
 
 export default function EditSpendDialog({
@@ -124,7 +124,7 @@ export default function EditSpendDialog({
         throw new Error(errorData.error || "Failed to update spend");
       }
 
-      onSuccess();
+      onSuccess(spend.id);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
