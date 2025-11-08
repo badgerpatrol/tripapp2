@@ -59,6 +59,7 @@ interface ViewSpendDialogProps {
   onLeave?: (spendId: string) => void;
   onFinalize?: (spendId: string) => void;
   onDelete?: (spendId: string) => void;
+  onViewItems?: (spendId: string) => void;
   isDeletingSpend?: boolean;
 }
 
@@ -80,6 +81,7 @@ export default function ViewSpendDialog({
   onLeave,
   onFinalize,
   onDelete,
+  onViewItems,
   isDeletingSpend = false,
 }: ViewSpendDialogProps) {
   const { user } = useAuth();
