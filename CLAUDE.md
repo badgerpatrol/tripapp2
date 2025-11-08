@@ -30,3 +30,11 @@
 26) Forms: Large tap targets; default values pre-filled; clear error states inline.
 27) Color & tokens: Define in tokens.css — single source of truth for palette and spacing.
 28) Accessibility: Focus order, role/aria for context menus; high-contrast tap states.
+29) For any database changes:
+      Make schema changes in schema.prisma
+      Create migration: pnpm db:migrate (creates SQL files in prisma/migrations/)
+      Commit migration files to git
+      Deploy to Vercel (git push triggers deployment)
+      Add build hook: Vercel runs prisma migrate deploy automatically
+      Migrations apply during deployment
+
