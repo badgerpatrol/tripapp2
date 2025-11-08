@@ -59,6 +59,7 @@ interface ViewSpendDialogProps {
   onLeave?: (spendId: string) => void;
   onFinalize?: (spendId: string) => void;
   onDelete?: (spendId: string) => void;
+  onViewItems?: (spendId: string) => void;
   isDeletingSpend?: boolean;
 }
 
@@ -80,6 +81,7 @@ export default function ViewSpendDialog({
   onLeave,
   onFinalize,
   onDelete,
+  onViewItems,
   isDeletingSpend = false,
 }: ViewSpendDialogProps) {
   const { user } = useAuth();
@@ -148,7 +150,7 @@ export default function ViewSpendDialog({
   const showEdit = onEdit && canUserEdit && canUserEdit(spend) && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showAssign = onAssign && isSpender && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showSelfAssign = onSelfAssign && isAlreadyInvolved && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
-  const showSplitRemainder = onSplitRemainder && isSpender && hasRemainder && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed && spend.assignments && spend.assignments.length > 0;
+  const showSplitRemainder = onSplitRemainder && isSpender && hasRemainder && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed && (spend.assignments?.length || 0) > 0;
   const showJoin = onJoin && !isAlreadyInvolved && currentUserId && !isSpender && !isTripSpendingClosed;
   const showLeave = onLeave && isAlreadyInvolved && !isSpender && spend.status !== SpendStatus.CLOSED && !isTripSpendingClosed;
   const showFinalize = onFinalize && canUserFinalize && canUserFinalize(spend);

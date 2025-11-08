@@ -375,8 +375,41 @@ export default function TripDetailPage() {
     fetchTrip();
   };
 
-  const handleAddSpendSuccess = () => {
+  const handleAddSpendSuccess = (spendId: string) => {
     // Refetch the trip data after successful spend creation
+    const fetchTrip = async () => {
+      if (!user) return;
+
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/trips/${tripId}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTrip(data.trip);
+
+          // Close the Add Spend dialog
+          setIsAddSpendDialogOpen(false);
+
+          // Open the View Spend dialog with the newly created spend
+          setSelectedSpendId(spendId);
+          setIsViewSpendDialogOpen(true);
+        }
+      } catch (err) {
+        console.error("Error refetching trip:", err);
+      }
+    };
+
+    fetchTrip();
+  };
+
+  const handleAssignSpendSuccess = () => {
+    // Refetch the trip data after successful assignment update
+    // Keep the current dialog states (ViewSpendDialog remains open)
     const fetchTrip = async () => {
       if (!user) return;
 
@@ -2280,7 +2313,7 @@ export default function TripDetailPage() {
             // Just close the assign dialog, keep view dialog open and selectedSpendId
             setIsAssignSpendDialogOpen(false);
           }}
-          onSuccess={handleAddSpendSuccess}
+          onSuccess={handleAssignSpendSuccess}
         />
       )}
 

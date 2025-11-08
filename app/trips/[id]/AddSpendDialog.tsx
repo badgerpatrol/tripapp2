@@ -19,7 +19,7 @@ interface AddSpendDialogProps {
   };
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (spendId: string) => void;
   onSuccessWithAddPeople?: (spendId: string) => void;
 }
 
@@ -61,6 +61,22 @@ export default function AddSpendDialog({
     setItems(updatedItems);
     setIsManageItemsOpen(false);
   };
+
+  // Reset form and items when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        description: "",
+        amount: "",
+        currency: trip.baseCurrency,
+        fxRate: "1.0",
+        date: new Date().toISOString().split("T")[0],
+        notes: "",
+      });
+      setItems([]);
+      setError(null);
+    }
+  }, [isOpen, trip.baseCurrency]);
 
   if (!isOpen) return null;
 
@@ -114,13 +130,13 @@ export default function AddSpendDialog({
     setIsSubmitting(true);
 
     try {
-      await saveSpend();
-
-      const data = await response.json();
-      const spendId = data.spend.id;
+      // Save the spend first
+      const spendId = await saveSpend();
 
       // If there are items, create them
-      if (items.length > 0) {
+      if (items.length > 0 && user) {
+        const idToken = await user.getIdToken();
+
         for (const item of items) {
           const itemResponse = await fetch(`/api/spends/${spendId}/items`, {
             method: "POST",
@@ -154,7 +170,8 @@ export default function AddSpendDialog({
       });
       setItems([]);
 
-      onSuccess();
+      // Call success handler and close
+      onSuccess(spendId);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -169,7 +186,34 @@ export default function AddSpendDialog({
     setIsSubmitting(true);
 
     try {
+      // Save the spend first
       const spendId = await saveSpend();
+
+      // If there are items, create them
+      if (items.length > 0 && user) {
+        const idToken = await user.getIdToken();
+
+        for (const item of items) {
+          const itemResponse = await fetch(`/api/spends/${spendId}/items`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              name: item.name,
+              description: item.description || undefined,
+              cost: item.cost,
+              userId: item.userId || undefined,
+            }),
+          });
+
+          if (!itemResponse.ok) {
+            const errorData = await itemResponse.json().catch(() => ({}));
+            throw new Error(errorData.error || "Failed to create item");
+          }
+        }
+      }
 
       // Reset form
       setFormData({
@@ -180,8 +224,9 @@ export default function AddSpendDialog({
         date: new Date().toISOString().split("T")[0],
         notes: "",
       });
+      setItems([]);
 
-      onSuccess();
+      // Close this dialog
       onClose();
 
       // Call the callback to open assign dialog with the new spend
@@ -421,22 +466,20 @@ export default function AddSpendDialog({
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={handleSubmit}
+                  type="submit"
                   disabled={isSubmitting}
-                  className="tap-target flex-1 px-6 py-3 rounded-lg border border-blue-600 dark:border-blue-500 bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-semibold hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? "Saving..." : "Add People Later"}
+                  {isSubmitting && (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {isSubmitting ? "Adding Spend..." : "Add Spend"}
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={handleSubmitAndAddPeople}
-                disabled={isSubmitting}
-                className="tap-target w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Saving..." : "Add People"}
-              </button>
+              
             </div>
           </form>
         </div>

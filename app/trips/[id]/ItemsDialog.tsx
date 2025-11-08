@@ -205,7 +205,11 @@ export default function ItemsDialog({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+              }}
               className="tap-target ml-4 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -398,7 +402,11 @@ export default function ItemsDialog({
             )}
 
             <button
-              onClick={onClose}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+              }}
               className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
             >
               Close
@@ -492,8 +500,18 @@ function ItemForm({ spend, item, isOpen, onClose, onSaved }: ItemFormProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl max-w-lg w-full">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+    >
+      <div
+        className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl max-w-lg w-full"
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
         <form onSubmit={handleSubmit} className="p-6 md:p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -502,7 +520,11 @@ function ItemForm({ spend, item, isOpen, onClose, onSaved }: ItemFormProps) {
             </h2>
             <button
               type="button"
-              onClick={onClose}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClose();
+              }}
               className="tap-target text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
