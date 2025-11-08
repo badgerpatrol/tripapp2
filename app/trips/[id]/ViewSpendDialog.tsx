@@ -411,7 +411,13 @@ export default function ViewSpendDialog({
                   People Involved ({spend.assignments.length})
                 </label>
                 <div className="space-y-2">
-                  {spend.assignments.map((assignment) => {
+                  {[...spend.assignments]
+                    .sort((a, b) => {
+                      const nameA = (a.user.displayName || a.user.email).toLowerCase();
+                      const nameB = (b.user.displayName || b.user.email).toLowerCase();
+                      return nameA.localeCompare(nameB);
+                    })
+                    .map((assignment) => {
                     // Determine if user can click on this assignment
                     const isSpender = currentUserId && spend.paidBy.id === currentUserId;
                     const isAssignmentOwner = currentUserId && assignment.userId === currentUserId;
