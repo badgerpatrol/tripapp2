@@ -148,6 +148,7 @@ export default function TripDetailPage() {
 
   // Spend filtering and sorting state
   const [statusFilter, setStatusFilter] = useState<SpendStatus | "all">("all");
+  const [involvementFilter, setInvolvementFilter] = useState<"all" | "own" | "involved" | "not-involved">("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "description">("description");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -509,6 +510,25 @@ export default function TripDetailPage() {
     // Apply status filter
     if (statusFilter !== "all") {
       filteredSpends = filteredSpends.filter((spend) => spend.status === statusFilter);
+    }
+
+    // Apply involvement filter
+    if (involvementFilter !== "all" && user) {
+      filteredSpends = filteredSpends.filter((spend) => {
+        const isOwner = spend.paidBy.id === user.uid;
+        const isInvolved = spend.assignments?.some((assignment) => assignment.userId === user.uid) || false;
+
+        switch (involvementFilter) {
+          case "own":
+            return isOwner;
+          case "involved":
+            return isInvolved;
+          case "not-involved":
+            return !isOwner && !isInvolved;
+          default:
+            return true;
+        }
+      });
     }
 
     // Apply sorting
@@ -2090,6 +2110,8 @@ export default function TripDetailPage() {
                           <SpendFilters
                             statusFilter={statusFilter}
                             onStatusFilterChange={setStatusFilter}
+                            involvementFilter={involvementFilter}
+                            onInvolvementFilterChange={setInvolvementFilter}
                             sortBy={sortBy}
                             onSortByChange={setSortBy}
                             sortOrder={sortOrder}

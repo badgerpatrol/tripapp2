@@ -5,6 +5,8 @@ import { SpendStatus } from "@/lib/generated/prisma";
 export interface SpendFiltersProps {
   statusFilter: SpendStatus | "all";
   onStatusFilterChange: (status: SpendStatus | "all") => void;
+  involvementFilter: "all" | "own" | "involved" | "not-involved";
+  onInvolvementFilterChange: (filter: "all" | "own" | "involved" | "not-involved") => void;
   sortBy: "date" | "amount" | "description";
   onSortByChange: (sortBy: "date" | "amount" | "description") => void;
   sortOrder: "asc" | "desc";
@@ -18,6 +20,8 @@ export interface SpendFiltersProps {
 export function SpendFilters({
   statusFilter,
   onStatusFilterChange,
+  involvementFilter,
+  onInvolvementFilterChange,
   sortBy,
   onSortByChange,
   sortOrder,
@@ -42,6 +46,27 @@ export function SpendFilters({
           <option value="all">All Statuses</option>
           <option value={SpendStatus.OPEN}>Open</option>
           <option value={SpendStatus.CLOSED}>Closed</option>
+        </select>
+      </div>
+
+      {/* Involvement Filter */}
+      <div>
+        <label
+          htmlFor="involvement-filter"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+        >
+          Involvement
+        </label>
+        <select
+          id="involvement-filter"
+          value={involvementFilter}
+          onChange={(e) => onInvolvementFilterChange(e.target.value as "all" | "own" | "involved" | "not-involved")}
+          className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="all">All Spends</option>
+          <option value="own">Only My Own</option>
+          <option value="involved">Involved In</option>
+          <option value="not-involved">Not Involved In</option>
         </select>
       </div>
 
