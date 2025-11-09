@@ -1586,7 +1586,7 @@ export default function TripDetailPage() {
           </div>
         </div>
 
-        {/* Expand/Collapse All Controls */}
+        {/*
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 mb-6">
           <div className="flex items-center justify-center gap-3">
             <button
@@ -1609,6 +1609,7 @@ export default function TripDetailPage() {
             </button>
           </div>
         </div>
+        */}
 
         {/* RSVP Response Card (for invitees) */}
         {trip.userRsvpStatus === "PENDING" && (
