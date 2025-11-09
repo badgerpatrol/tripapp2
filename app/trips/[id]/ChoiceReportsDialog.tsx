@@ -100,7 +100,7 @@ export default function ChoiceReportsDialog({
       if (!response.ok) throw new Error("Failed to create spend");
 
       const data = await response.json();
-      alert(`Spend created successfully! ID: ${data.spendId}`);
+      alert(`Spend created successfully!`);
       onClose();
     } catch (err: any) {
       setError(err.message);
@@ -147,7 +147,7 @@ export default function ChoiceReportsDialog({
                   : "text-zinc-600 dark:text-zinc-400"
               }`}
             >
-              By Item
+              All Items
             </button>
             <button
               onClick={() => setTab("users")}

@@ -4,7 +4,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { TripMemberRole, ChoiceStatus, Prisma, EventType } from "@/lib/generated/prisma";
+import { ChoiceStatus, Prisma, EventType } from "@/lib/generated/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
 import { logEvent } from "@/server/eventLog";
 
@@ -312,7 +312,7 @@ export async function deleteChoice(choiceId: string, userId: string) {
   }
 
   // Log event before deletion
-  await logEvent("Choice", choiceId, EventType.CHOICE_DELETED, userId, {
+  await logEvent("Choice", choiceId, EventType.CHOICE_ARCHIVED, userId, {
     tripId: choice.tripId,
     name: choice.name,
   });
@@ -948,6 +948,17 @@ export async function createSpendFromChoice(
     where: { id: choiceId },
     include: {
       trip: true,
+      items: {
+        include: {
+          lines: {
+            include: {
+              selection: {
+                select: { userId: true },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -987,16 +998,77 @@ export async function createSpendFromChoice(
   });
 
   if (mode === "byItem") {
-    // Create spend items for each menu item
-    for (const item of itemsReport.items) {
-      if (item.totalPrice && item.totalPrice > 0) {
+    // Create spend items for each user's selection of each menu item
+    // This allows each item to show who ordered it (assignedUserId)
+
+    // Group selections by user and item
+    const userItemSelections = new Map<string, Map<string, { itemName: string; quantity: number; price: number }>>();
+
+    for (const choiceItem of choice.items) {
+      const itemPrice = choiceItem.price ? parseFloat(choiceItem.price.toString()) : 0;
+      if (itemPrice > 0) {
+        for (const line of choiceItem.lines) {
+          const selectedUserId = line.selection.userId;
+
+          if (!userItemSelections.has(selectedUserId)) {
+            userItemSelections.set(selectedUserId, new Map());
+          }
+
+          const userItems = userItemSelections.get(selectedUserId)!;
+          const existingSelection = userItems.get(choiceItem.id);
+
+          if (existingSelection) {
+            // Add to existing quantity
+            existingSelection.quantity += line.quantity;
+          } else {
+            // New selection
+            userItems.set(choiceItem.id, {
+              itemName: choiceItem.name,
+              quantity: line.quantity,
+              price: itemPrice,
+            });
+          }
+        }
+      }
+    }
+
+    // Create spend items for each user's selection
+    // Track total per user for assignments
+    const userTotals = new Map<string, number>();
+
+    for (const [selectedUserId, userItems] of userItemSelections.entries()) {
+      let userTotal = 0;
+
+      for (const [itemId, selection] of userItems.entries()) {
+        const itemCost = selection.price * selection.quantity;
+        userTotal += itemCost;
+
+        // Create a spend item for this user's selection of this item
         await prisma.spendItem.create({
           data: {
             spendId: spend.id,
-            name: item.name,
-            description: `Qty: ${item.qtyTotal}`,
-            cost: new Decimal(item.totalPrice),
+            name: selection.itemName,
+            description: `Qty: ${selection.quantity}`,
+            cost: new Decimal(itemCost),
+            assignedUserId: selectedUserId,
             createdById: userId,
+          },
+        });
+      }
+
+      userTotals.set(selectedUserId, userTotal);
+    }
+
+    // Create one assignment per user with their total
+    for (const [selectedUserId, totalAmount] of userTotals.entries()) {
+      if (totalAmount > 0) {
+        await prisma.spendAssignment.create({
+          data: {
+            spendId: spend.id,
+            userId: selectedUserId,
+            shareAmount: new Decimal(totalAmount),
+            normalizedShareAmount: new Decimal(totalAmount),
+            splitType: "EXACT",
           },
         });
       }
@@ -1010,7 +1082,7 @@ export async function createSpendFromChoice(
           .map(l => `${l.quantity}x ${l.itemName}`)
           .join(", ");
 
-        await prisma.spendItem.create({
+        const spendItem = await prisma.spendItem.create({
           data: {
             spendId: spend.id,
             name: `${userName}'s order`,
@@ -1021,10 +1093,11 @@ export async function createSpendFromChoice(
           },
         });
 
-        // Create assignment for this user
+        // Create assignment for this user, linked to their specific item
         await prisma.spendAssignment.create({
           data: {
             spendId: spend.id,
+            itemId: spendItem.id,
             userId: user.userId,
             shareAmount: new Decimal(user.userTotalPrice),
             normalizedShareAmount: new Decimal(user.userTotalPrice),

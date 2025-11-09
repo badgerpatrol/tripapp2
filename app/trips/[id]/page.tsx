@@ -1923,7 +1923,11 @@ export default function TripDetailPage() {
                     {choices.map((choice) => (
                       <div
                         key={choice.id}
-                        className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
+                        className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedChoiceId(choice.id);
+                          setIsChoiceDetailDialogOpen(true);
+                        }}
                       >
                         <div className="mb-3">
                           <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{choice.name}</h3>
@@ -1952,37 +1956,30 @@ export default function TripDetailPage() {
                           </div>
                         </div>
 
-                        <div className="flex gap-2 flex-wrap">
-                          <button
-                            onClick={() => {
-                              setSelectedChoiceId(choice.id);
-                              setIsChoiceDetailDialogOpen(true);
-                            }}
-                            className="tap-target px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-400 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                          >
-                            View/Select
-                          </button>
-                          {canInvite && (
+                        {(canInvite || true) && (
+                          <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                            {canInvite && (
+                              <button
+                                onClick={() => {
+                                  setSelectedChoiceId(choice.id);
+                                  setIsManageChoiceDialogOpen(true);
+                                }}
+                                className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                              >
+                                Manage
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedChoiceId(choice.id);
-                                setIsManageChoiceDialogOpen(true);
+                                setIsChoiceReportsDialogOpen(true);
                               }}
                               className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
                             >
-                              Manage
+                              What did everyone ask for?
                             </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              setSelectedChoiceId(choice.id);
-                              setIsChoiceReportsDialogOpen(true);
-                            }}
-                            className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                          >
-                            Reports
-                          </button>
-                        </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2666,13 +2663,19 @@ export default function TripDetailPage() {
       />
 
       {/* Choice Detail Dialog */}
-      {selectedChoiceId && (
+      {selectedChoiceId && user && (
         <ChoiceDetailDialog
           choiceId={selectedChoiceId}
+          userId={user.uid}
+          canManage={canInvite}
           isOpen={isChoiceDetailDialogOpen}
           onClose={() => {
             setIsChoiceDetailDialogOpen(false);
             setSelectedChoiceId(null);
+          }}
+          onManage={() => {
+            setIsChoiceDetailDialogOpen(false);
+            setIsManageChoiceDialogOpen(true);
           }}
         />
       )}
@@ -2699,6 +2702,8 @@ export default function TripDetailPage() {
       {selectedChoiceId && (
         <ChoiceReportsDialog
           choiceId={selectedChoiceId}
+          choiceName={choices.find(c => c.id === selectedChoiceId)?.name || "Choice"}
+          canCreateSpend={canInvite}
           isOpen={isChoiceReportsDialogOpen}
           onClose={() => {
             setIsChoiceReportsDialogOpen(false);
