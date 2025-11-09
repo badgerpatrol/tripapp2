@@ -174,6 +174,9 @@ export default function TripDetailPage() {
     timeline: false,
   });
 
+  // Filters collapse state
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+
   // Track if we've set the initial RSVP collapse state
   const hasInitializedRsvpCollapse = useRef(false);
 
@@ -2028,57 +2031,62 @@ export default function TripDetailPage() {
                           setIsChoiceDetailDialogOpen(true);
                         }}
                       >
-                        <div className="mb-3">
-                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{choice.name}</h3>
-                          {choice.datetime && (
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                              {new Date(choice.datetime).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                              })}
-                            </p>
-                          )}
-                          {choice.place && (
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400">{choice.place}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                              choice.status === 'OPEN'
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
-                            }`}>
-                              {choice.status}
-                            </span>
+                        <div className="flex gap-3 mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{choice.name}</h3>
+                            {choice.datetime && (
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                {new Date(choice.datetime).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            )}
+                            {choice.place && (
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400">{choice.place}</p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                choice.status === 'OPEN'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
+                              }`}>
+                                {choice.status}
+                              </span>
+                            </div>
                           </div>
+                          {canInvite && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedChoiceId(choice.id);
+                                setIsManageChoiceDialogOpen(true);
+                              }}
+                              className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0 self-start"
+                              title="Manage choice"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
 
-                        {(canInvite || true) && (
-                          <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                            {canInvite && (
-                              <button
-                                onClick={() => {
-                                  setSelectedChoiceId(choice.id);
-                                  setIsManageChoiceDialogOpen(true);
-                                }}
-                                className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                              >
-                                Manage
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setSelectedChoiceId(choice.id);
-                                setIsChoiceReportsDialogOpen(true);
-                              }}
-                              className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                            >
-                              What did everyone ask for?
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => {
+                              setSelectedChoiceId(choice.id);
+                              setIsChoiceReportsDialogOpen(true);
+                            }}
+                            className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                          >
+                            What did everyone ask for?
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2254,16 +2262,34 @@ export default function TripDetailPage() {
                       <>
                         {/* Filters */}
                         <div className="mb-4">
-                          <SpendFilters
-                            statusFilter={statusFilter}
-                            onStatusFilterChange={setStatusFilter}
-                            involvementFilter={involvementFilter}
-                            onInvolvementFilterChange={setInvolvementFilter}
-                            sortBy={sortBy}
-                            onSortByChange={setSortBy}
-                            sortOrder={sortOrder}
-                            onSortOrderChange={setSortOrder}
-                          />
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-zinc-600 dark:text-zinc-400">Filters & Sort</span>
+                            <button
+                              onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+                              className="tap-target p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+                              aria-label={filtersCollapsed ? "Expand filters" : "Collapse filters"}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {filtersCollapsed ? (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                ) : (
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                                )}
+                              </svg>
+                            </button>
+                          </div>
+                          {!filtersCollapsed && (
+                            <SpendFilters
+                              statusFilter={statusFilter}
+                              onStatusFilterChange={setStatusFilter}
+                              involvementFilter={involvementFilter}
+                              onInvolvementFilterChange={setInvolvementFilter}
+                              sortBy={sortBy}
+                              onSortByChange={setSortBy}
+                              sortOrder={sortOrder}
+                              onSortOrderChange={setSortOrder}
+                            />
+                          )}
                         </div>
 
                         {/* Spend List */}
