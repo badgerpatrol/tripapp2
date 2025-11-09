@@ -8,7 +8,8 @@ interface ChoiceReportsDialogProps {
   onClose: () => void;
   choiceId: string | null;
   choiceName: string;
-  canCreateSpend: boolean;
+  tripId: string;
+  onOpenSpend: (spendId: string) => void;
 }
 
 export default function ChoiceReportsDialog({
@@ -16,7 +17,8 @@ export default function ChoiceReportsDialog({
   onClose,
   choiceId,
   choiceName,
-  canCreateSpend,
+  tripId,
+  onOpenSpend,
 }: ChoiceReportsDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,8 @@ export default function ChoiceReportsDialog({
   const [itemsReport, setItemsReport] = useState<any>(null);
   const [usersReport, setUsersReport] = useState<any>(null);
   const [respondents, setRespondents] = useState<any>(null);
+  const [linkedSpendId, setLinkedSpendId] = useState<string | null>(null);
+  const [hasLinkedSpend, setHasLinkedSpend] = useState(false);
 
   useEffect(() => {
     if (isOpen && choiceId) {
@@ -39,7 +43,7 @@ export default function ChoiceReportsDialog({
     try {
       const idToken = await user.getIdToken();
 
-      const [itemsRes, usersRes, respondentsRes] = await Promise.all([
+      const [itemsRes, usersRes, respondentsRes, linkedSpendRes] = await Promise.all([
         fetch(`/api/choices/${choiceId}/report/items`, {
           headers: { Authorization: `Bearer ${idToken}` },
         }),
@@ -49,11 +53,18 @@ export default function ChoiceReportsDialog({
         fetch(`/api/choices/${choiceId}/respondents`, {
           headers: { Authorization: `Bearer ${idToken}` },
         }),
+        fetch(`/api/choices/${choiceId}/linked-spend`, {
+          headers: { Authorization: `Bearer ${idToken}` },
+        }),
       ]);
 
       setItemsReport(await itemsRes.json());
       setUsersReport(await usersRes.json());
       setRespondents(await respondentsRes.json());
+
+      const linkedSpendData = await linkedSpendRes.json();
+      setHasLinkedSpend(linkedSpendData.hasSpend);
+      setLinkedSpendId(linkedSpendData.spendId);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -100,10 +111,25 @@ export default function ChoiceReportsDialog({
       if (!response.ok) throw new Error("Failed to create spend");
 
       const data = await response.json();
+
+      // Update linked spend state
+      setHasLinkedSpend(true);
+      setLinkedSpendId(data.spendId);
+
       alert(`Spend created successfully!`);
       onClose();
+
+      // Open the spend dialog
+      onOpenSpend(data.spendId);
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const handleGoToSpend = () => {
+    if (linkedSpendId) {
+      onClose();
+      onOpenSpend(linkedSpendId);
     }
   };
 
@@ -199,13 +225,22 @@ export default function ChoiceReportsDialog({
                   >
                     📊 Export to CSV
                   </button>
-                  {canCreateSpend && itemsReport.grandTotalPrice > 0 && (
-                    <button
-                      onClick={() => handleCreateSpend("byItem")}
-                      className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                    >
-                      💰 Create Spend (by Item)
-                    </button>
+                  {itemsReport.grandTotalPrice > 0 && (
+                    hasLinkedSpend ? (
+                      <button
+                        onClick={handleGoToSpend}
+                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      >
+                        👉 Go to Spend
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleCreateSpend("byItem")}
+                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                      >
+                        💰 Create Spend (by Item)
+                      </button>
+                    )
                   )}
                 </div>
               )}
@@ -254,13 +289,22 @@ export default function ChoiceReportsDialog({
                   >
                     📊 Export to CSV
                   </button>
-                  {canCreateSpend && usersReport.grandTotalPrice > 0 && (
-                    <button
-                      onClick={() => handleCreateSpend("byUser")}
-                      className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                    >
-                      💰 Create Spend (by User)
-                    </button>
+                  {usersReport.grandTotalPrice > 0 && (
+                    hasLinkedSpend ? (
+                      <button
+                        onClick={handleGoToSpend}
+                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      >
+                        👉 Go to Spend
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleCreateSpend("byUser")}
+                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                      >
+                        💰 Create Spend (by User)
+                      </button>
+                    )
                   )}
                 </div>
               )}

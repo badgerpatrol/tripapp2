@@ -2740,11 +2740,35 @@ export default function TripDetailPage() {
         <ChoiceReportsDialog
           choiceId={selectedChoiceId}
           choiceName={choices.find(c => c.id === selectedChoiceId)?.name || "Choice"}
-          canCreateSpend={canInvite}
+          tripId={trip?.id || ""}
           isOpen={isChoiceReportsDialogOpen}
           onClose={() => {
             setIsChoiceReportsDialogOpen(false);
             setSelectedChoiceId(null);
+          }}
+          onOpenSpend={async (spendId) => {
+            // Refetch trip data to ensure the spend is loaded
+            if (!user) return;
+
+            try {
+              const idToken = await user.getIdToken();
+              const response = await fetch(`/api/trips/${tripId}`, {
+                headers: {
+                  Authorization: `Bearer ${idToken}`,
+                },
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                setTrip(data.trip);
+
+                // Open the View Spend dialog with the spend
+                setSelectedSpendId(spendId);
+                setIsViewSpendDialogOpen(true);
+              }
+            } catch (err) {
+              console.error("Error refetching trip:", err);
+            }
           }}
         />
       )}
