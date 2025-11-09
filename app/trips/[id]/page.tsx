@@ -2261,9 +2261,9 @@ export default function TripDetailPage() {
                     {trip.spends && trip.spends.length > 0 ? (
                       <>
                         {/* Filters */}
-                        <div className="mb-4 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
-                          <div className="flex items-center justify-between p-3">
-                            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Filter</h3>
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-zinc-600 dark:text-zinc-400">Filters & Sort</span>
                             <button
                               onClick={() => setFiltersCollapsed(!filtersCollapsed)}
                               className="tap-target p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
@@ -2271,26 +2271,24 @@ export default function TripDetailPage() {
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 {filtersCollapsed ? (
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                 ) : (
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                                 )}
                               </svg>
                             </button>
                           </div>
                           {!filtersCollapsed && (
-                            <div className="px-3 pb-3 pt-0 border-t border-zinc-200 dark:border-zinc-700">
-                              <SpendFilters
-                                statusFilter={statusFilter}
-                                onStatusFilterChange={setStatusFilter}
-                                involvementFilter={involvementFilter}
-                                onInvolvementFilterChange={setInvolvementFilter}
-                                sortBy={sortBy}
-                                onSortByChange={setSortBy}
-                                sortOrder={sortOrder}
-                                onSortOrderChange={setSortOrder}
-                              />
-                            </div>
+                            <SpendFilters
+                              statusFilter={statusFilter}
+                              onStatusFilterChange={setStatusFilter}
+                              involvementFilter={involvementFilter}
+                              onInvolvementFilterChange={setInvolvementFilter}
+                              sortBy={sortBy}
+                              onSortByChange={setSortBy}
+                              sortOrder={sortOrder}
+                              onSortOrderChange={setSortOrder}
+                            />
                           )}
                         </div>
 
