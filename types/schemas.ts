@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole, SubscriptionTier, SpendStatus } from "@/lib/generated/prisma";
+import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth Schemas
@@ -397,6 +397,182 @@ export const RecordPaymentResponseSchema = z.object({
 
 export type SignUpInput = z.infer<typeof SignUpSchema>;
 export type SignInInput = z.infer<typeof SignInSchema>;
+// ============================================================================
+// Choice Schemas
+// ============================================================================
+
+export const CreateChoiceSchema = z.object({
+  name: z.string().min(1, "Choice name is required").max(200, "Choice name is too long"),
+  description: z.string().optional(),
+  datetime: z.coerce.date().optional(),
+  place: z.string().optional(),
+  visibility: z.nativeEnum(ChoiceVisibility).default("TRIP"),
+});
+
+export const UpdateChoiceSchema = z.object({
+  name: z.string().min(1, "Choice name is required").max(200, "Choice name is too long").optional(),
+  description: z.string().optional().nullable(),
+  datetime: z.coerce.date().optional().nullable(),
+  place: z.string().optional().nullable(),
+  visibility: z.nativeEnum(ChoiceVisibility).optional(),
+});
+
+export const UpdateChoiceStatusSchema = z.object({
+  status: z.nativeEnum(ChoiceStatus),
+  deadline: z.coerce.date().optional().nullable(),
+});
+
+export const ChoiceResponseSchema = z.object({
+  id: z.string(),
+  tripId: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  datetime: z.coerce.date().nullable(),
+  place: z.string().nullable(),
+  visibility: z.nativeEnum(ChoiceVisibility),
+  status: z.nativeEnum(ChoiceStatus),
+  deadline: z.coerce.date().nullable(),
+  createdById: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  archivedAt: z.coerce.date().nullable(),
+});
+
+export const CreateChoiceItemSchema = z.object({
+  name: z.string().min(1, "Item name is required").max(200, "Item name is too long"),
+  description: z.string().optional(),
+  price: z.number().optional(),
+  tags: z.array(z.string()).optional(),
+  maxPerUser: z.number().int().positive().optional(),
+  maxTotal: z.number().int().positive().optional(),
+  allergens: z.array(z.string()).optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const UpdateChoiceItemSchema = z.object({
+  name: z.string().min(1, "Item name is required").max(200, "Item name is too long").optional(),
+  description: z.string().optional().nullable(),
+  price: z.number().optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+  maxPerUser: z.number().int().positive().optional().nullable(),
+  maxTotal: z.number().int().positive().optional().nullable(),
+  allergens: z.array(z.string()).optional().nullable(),
+  isActive: z.boolean().optional(),
+});
+
+export const ChoiceItemResponseSchema = z.object({
+  id: z.string(),
+  choiceId: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  price: z.number().nullable(),
+  tags: z.array(z.string()).nullable(),
+  maxPerUser: z.number().nullable(),
+  maxTotal: z.number().nullable(),
+  allergens: z.array(z.string()).nullable(),
+  isActive: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export const SelectionLineSchema = z.object({
+  itemId: z.string(),
+  quantity: z.number().int().positive("Quantity must be positive"),
+  note: z.string().optional(),
+});
+
+export const CreateSelectionSchema = z.object({
+  lines: z.array(SelectionLineSchema).min(1, "At least one item must be selected"),
+});
+
+export const UpdateSelectionNoteSchema = z.object({
+  note: z.string().optional(),
+});
+
+export const ChoiceSelectionLineResponseSchema = z.object({
+  id: z.string(),
+  itemId: z.string(),
+  quantity: z.number(),
+  note: z.string().nullable(),
+  item: ChoiceItemResponseSchema.optional(),
+});
+
+export const ChoiceSelectionResponseSchema = z.object({
+  id: z.string(),
+  choiceId: z.string(),
+  userId: z.string(),
+  note: z.string().nullable(),
+  lines: z.array(ChoiceSelectionLineResponseSchema),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export const ChoiceDetailResponseSchema = z.object({
+  choice: ChoiceResponseSchema,
+  items: z.array(ChoiceItemResponseSchema),
+  mySelections: z.array(ChoiceSelectionLineResponseSchema).optional(),
+  myTotal: z.number().optional(),
+});
+
+export const RespondentsResponseSchema = z.object({
+  respondedUserIds: z.array(z.string()),
+  pendingUserIds: z.array(z.string()),
+});
+
+export const ItemReportSchema = z.object({
+  itemId: z.string(),
+  name: z.string(),
+  qtyTotal: z.number(),
+  totalPrice: z.number().nullable(),
+  distinctUsers: z.number(),
+});
+
+export const ItemsReportResponseSchema = z.object({
+  items: z.array(ItemReportSchema),
+  grandTotalPrice: z.number().nullable(),
+});
+
+export const UserSelectionLineSchema = z.object({
+  itemName: z.string(),
+  quantity: z.number(),
+  linePrice: z.number().nullable(),
+  note: z.string().nullable(),
+});
+
+export const UserReportSchema = z.object({
+  userId: z.string(),
+  displayName: z.string().nullable(),
+  note: z.string().nullable(),
+  lines: z.array(UserSelectionLineSchema),
+  userTotalPrice: z.number().nullable(),
+});
+
+export const UsersReportResponseSchema = z.object({
+  users: z.array(UserReportSchema),
+  grandTotalPrice: z.number().nullable(),
+});
+
+export const ChoiceActivityResponseSchema = z.object({
+  id: z.string(),
+  actorId: z.string(),
+  action: z.string(),
+  payload: z.any().nullable(),
+  createdAt: z.coerce.date(),
+});
+
+export const CreateSpendFromChoiceSchema = z.object({
+  mode: z.enum(["byItem", "byUser"]),
+});
+
+export const GetChoicesQuerySchema = z.object({
+  includeClosed: z.coerce.boolean().default(false),
+  includeArchived: z.coerce.boolean().default(false),
+});
+
+// ============================================================================
+// Type exports
+// ============================================================================
+
 export type AuthToken = z.infer<typeof AuthTokenSchema>;
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 export type SignUpResponse = z.infer<typeof SignUpResponseSchema>;
@@ -431,3 +607,25 @@ export type SettlementTransfer = z.infer<typeof SettlementTransferSchema>;
 export type TripBalanceSummary = z.infer<typeof TripBalanceSummarySchema>;
 export type RecordPaymentInput = z.infer<typeof RecordPaymentSchema>;
 export type RecordPaymentResponse = z.infer<typeof RecordPaymentResponseSchema>;
+export type CreateChoiceInput = z.infer<typeof CreateChoiceSchema>;
+export type UpdateChoiceInput = z.infer<typeof UpdateChoiceSchema>;
+export type UpdateChoiceStatusInput = z.infer<typeof UpdateChoiceStatusSchema>;
+export type ChoiceResponse = z.infer<typeof ChoiceResponseSchema>;
+export type CreateChoiceItemInput = z.infer<typeof CreateChoiceItemSchema>;
+export type UpdateChoiceItemInput = z.infer<typeof UpdateChoiceItemSchema>;
+export type ChoiceItemResponse = z.infer<typeof ChoiceItemResponseSchema>;
+export type SelectionLine = z.infer<typeof SelectionLineSchema>;
+export type CreateSelectionInput = z.infer<typeof CreateSelectionSchema>;
+export type UpdateSelectionNoteInput = z.infer<typeof UpdateSelectionNoteSchema>;
+export type ChoiceSelectionLineResponse = z.infer<typeof ChoiceSelectionLineResponseSchema>;
+export type ChoiceSelectionResponse = z.infer<typeof ChoiceSelectionResponseSchema>;
+export type ChoiceDetailResponse = z.infer<typeof ChoiceDetailResponseSchema>;
+export type RespondentsResponse = z.infer<typeof RespondentsResponseSchema>;
+export type ItemReport = z.infer<typeof ItemReportSchema>;
+export type ItemsReportResponse = z.infer<typeof ItemsReportResponseSchema>;
+export type UserSelectionLine = z.infer<typeof UserSelectionLineSchema>;
+export type UserReport = z.infer<typeof UserReportSchema>;
+export type UsersReportResponse = z.infer<typeof UsersReportResponseSchema>;
+export type ChoiceActivityResponse = z.infer<typeof ChoiceActivityResponseSchema>;
+export type CreateSpendFromChoiceInput = z.infer<typeof CreateSpendFromChoiceSchema>;
+export type GetChoicesQuery = z.infer<typeof GetChoicesQuerySchema>;
