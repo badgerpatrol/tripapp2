@@ -7,7 +7,7 @@ interface CreateChoiceDialogProps {
   isOpen: boolean;
   onClose: () => void;
   tripId: string;
-  onSuccess: () => void;
+  onSuccess: (choiceId: string) => void;
 }
 
 export default function CreateChoiceDialog({
@@ -61,6 +61,9 @@ export default function CreateChoiceDialog({
         throw new Error(data.error || "Failed to create choice");
       }
 
+      const data = await response.json();
+      const newChoiceId = data.choice?.id || data.id;
+
       // Reset form
       setFormData({
         name: "",
@@ -70,8 +73,8 @@ export default function CreateChoiceDialog({
         visibility: "TRIP",
       });
 
-      onSuccess();
       onClose();
+      onSuccess(newChoiceId);
     } catch (err: any) {
       console.error("Error creating choice:", err);
       setError(err.message);

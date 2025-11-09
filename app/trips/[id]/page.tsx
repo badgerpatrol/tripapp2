@@ -141,6 +141,7 @@ export default function TripDetailPage() {
   const [isManageChoiceDialogOpen, setIsManageChoiceDialogOpen] = useState(false);
   const [isChoiceReportsDialogOpen, setIsChoiceReportsDialogOpen] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+  const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("details");
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -2656,9 +2657,11 @@ export default function TripDetailPage() {
         tripId={trip.id}
         isOpen={isCreateChoiceDialogOpen}
         onClose={() => setIsCreateChoiceDialogOpen(false)}
-        onSuccess={() => {
-          setIsCreateChoiceDialogOpen(false);
+        onSuccess={(newChoiceId: string) => {
           fetchChoices();
+          setSelectedChoiceId(newChoiceId);
+          setManageChoiceInitialTab("items");
+          setIsManageChoiceDialogOpen(true);
         }}
       />
 
@@ -2679,9 +2682,11 @@ export default function TripDetailPage() {
         <ManageChoiceDialog
           choiceId={selectedChoiceId}
           isOpen={isManageChoiceDialogOpen}
+          initialTab={manageChoiceInitialTab}
           onClose={() => {
             setIsManageChoiceDialogOpen(false);
             setSelectedChoiceId(null);
+            setManageChoiceInitialTab("details");
             fetchChoices();
           }}
           onSuccess={() => {

@@ -19,6 +19,7 @@ interface ManageChoiceDialogProps {
   onClose: () => void;
   choiceId: string | null;
   onSuccess: () => void;
+  initialTab?: "details" | "items" | "status";
 }
 
 export default function ManageChoiceDialog({
@@ -26,6 +27,7 @@ export default function ManageChoiceDialog({
   onClose,
   choiceId,
   onSuccess,
+  initialTab = "details",
 }: ManageChoiceDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export default function ManageChoiceDialog({
   const [choice, setChoice] = useState<any>(null);
   const [items, setItems] = useState<ChoiceItem[]>([]);
   const [showAddItem, setShowAddItem] = useState(false);
-  const [tab, setTab] = useState<"details" | "items" | "status">("details");
+  const [tab, setTab] = useState<"details" | "items" | "status">(initialTab);
 
   // Form states
   const [name, setName] = useState("");
@@ -42,6 +44,10 @@ export default function ManageChoiceDialog({
   const [place, setPlace] = useState("");
   const [status, setStatus] = useState("OPEN");
   const [deadline, setDeadline] = useState("");
+
+  // Track if details or status have been modified
+  const [detailsDirty, setDetailsDirty] = useState(false);
+  const [statusDirty, setStatusDirty] = useState(false);
 
   // New item form
   const [newItem, setNewItem] = useState({
@@ -57,8 +63,11 @@ export default function ManageChoiceDialog({
   useEffect(() => {
     if (isOpen && choiceId) {
       fetchChoice();
+      setTab(initialTab);
+      setDetailsDirty(false);
+      setStatusDirty(false);
     }
-  }, [isOpen, choiceId]);
+  }, [isOpen, choiceId, initialTab]);
 
   const fetchChoice = async () => {
     if (!user || !choiceId) return;
@@ -80,6 +89,8 @@ export default function ManageChoiceDialog({
       setPlace(data.choice.place || "");
       setStatus(data.choice.status);
       setDeadline(data.choice.deadline ? new Date(data.choice.deadline).toISOString().slice(0, 16) : "");
+      setDetailsDirty(false);
+      setStatusDirty(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -110,6 +121,7 @@ export default function ManageChoiceDialog({
 
       if (!response.ok) throw new Error("Failed to update choice");
 
+      setDetailsDirty(false);
       await fetchChoice();
       onSuccess();
       onClose();
@@ -142,6 +154,7 @@ export default function ManageChoiceDialog({
 
       if (!response.ok) throw new Error("Failed to update status");
 
+      setStatusDirty(false);
       await fetchChoice();
       onSuccess();
       onClose();
@@ -224,6 +237,65 @@ export default function ManageChoiceDialog({
     }
   };
 
+  const handleDoneWithSave = async () => {
+    if (!user || !choiceId) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Save details if dirty
+      if (detailsDirty) {
+        const detailsResponse = await fetch(`/api/choices/${choiceId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            name,
+            description: description || null,
+            place: place || null,
+          }),
+        });
+
+        if (!detailsResponse.ok) throw new Error("Failed to update choice details");
+        setDetailsDirty(false);
+      }
+
+      // Save status if dirty
+      if (statusDirty) {
+        const statusResponse = await fetch(`/api/choices/${choiceId}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            status,
+            deadline: deadline ? new Date(deadline).toISOString() : null,
+          }),
+        });
+
+        if (!statusResponse.ok) throw new Error("Failed to update status");
+        setStatusDirty(false);
+      }
+
+      if (detailsDirty || statusDirty) {
+        await fetchChoice();
+        onSuccess();
+      }
+
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!isOpen || !choice) return null;
 
   return (
@@ -291,7 +363,10 @@ export default function ManageChoiceDialog({
                     <input
                       type="text"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        setDetailsDirty(true);
+                      }}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -299,7 +374,10 @@ export default function ManageChoiceDialog({
                     <label className="block text-sm font-medium mb-1">Description</label>
                     <textarea
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      onChange={(e) => {
+                        setDescription(e.target.value);
+                        setDetailsDirty(true);
+                      }}
                       rows={3}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -309,7 +387,10 @@ export default function ManageChoiceDialog({
                     <input
                       type="text"
                       value={place}
-                      onChange={(e) => setPlace(e.target.value)}
+                      onChange={(e) => {
+                        setPlace(e.target.value);
+                        setDetailsDirty(true);
+                      }}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -400,6 +481,16 @@ export default function ManageChoiceDialog({
                       + Add Menu Item
                     </button>
                   )}
+
+                  <div className="pt-4">
+                    <button
+                      onClick={handleDoneWithSave}
+                      disabled={saving}
+                      className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white font-medium"
+                    >
+                      {saving ? "Saving..." : "Done"}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -410,7 +501,10 @@ export default function ManageChoiceDialog({
                     <label className="block text-sm font-medium mb-1">Status</label>
                     <select
                       value={status}
-                      onChange={(e) => setStatus(e.target.value)}
+                      onChange={(e) => {
+                        setStatus(e.target.value);
+                        setStatusDirty(true);
+                      }}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
                     >
                       <option value="OPEN">Open - Accept selections</option>
@@ -422,7 +516,10 @@ export default function ManageChoiceDialog({
                     <input
                       type="datetime-local"
                       value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
+                      onChange={(e) => {
+                        setDeadline(e.target.value);
+                        setStatusDirty(true);
+                      }}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
                     />
                   </div>
