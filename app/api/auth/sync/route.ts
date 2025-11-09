@@ -67,11 +67,20 @@ export async function POST(request: NextRequest) {
       // Create new user
       console.log('[AUTH SYNC] Creating new user:', { uid, email });
       isNewUser = true;
+
+      // Generate a default display name from email (e.g., "john.doe@example.com" → "John Doe")
+      const emailLocalPart = email.split('@')[0];
+      const displayName = emailLocalPart
+        .replace(/[._-]/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
       user = await prisma.user.create({
         data: {
           id: uid,
           email,
-          displayName: null,
+          displayName,
           photoURL: null,
           phoneNumber: null,
           timezone: 'UTC',
@@ -79,7 +88,7 @@ export async function POST(request: NextRequest) {
           defaultCurrency: 'GBP',
         },
       });
-      console.log('[AUTH SYNC] User created successfully');
+      console.log('[AUTH SYNC] User created successfully with displayName:', displayName);
 
       // Log sign up event
       await logEvent('User', uid, EventType.USER_CREATED, uid, {

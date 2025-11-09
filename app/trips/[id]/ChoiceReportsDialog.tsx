@@ -95,7 +95,7 @@ export default function ChoiceReportsDialog({
   const handleCreateSpend = async (mode: "byItem" | "byUser") => {
     if (!user || !choiceId) return;
 
-    if (!confirm(`Create a spend from this choice (${mode === "byItem" ? "by menu items" : "by user orders"})?`)) return;
+    if (!confirm(`Create a spend for this?`)) return;
 
     try {
       const idToken = await user.getIdToken();
@@ -116,7 +116,6 @@ export default function ChoiceReportsDialog({
       setHasLinkedSpend(true);
       setLinkedSpendId(data.spendId);
 
-      alert(`Spend created successfully!`);
       onClose();
 
       // Open the spend dialog
@@ -198,10 +197,14 @@ export default function ChoiceReportsDialog({
                     <div key={item.itemId} className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium">{item.name}</div>
+                          <div className="font-medium">{item.name}: {item.qtyTotal} </div>
                           <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                            Qty: {item.qtyTotal} • {item.distinctUsers} people
+                             {item.distinctUsers}
+                             {item.distinctUsers === 1
+                                ? " person"
+                                : " people"}
                           </div>
+                          
                         </div>
                         {item.totalPrice && (
                           <div className="font-bold text-zinc-900 dark:text-zinc-100">
