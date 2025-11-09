@@ -742,9 +742,12 @@ export async function deleteSelection(choiceId: string, userId: string) {
  * B5. Get respondents for a Choice
  */
 export async function getChoiceRespondents(choiceId: string, tripId: string) {
-  // Get all trip members
+  // Get all active trip members (excluding deleted)
   const tripMembers = await prisma.tripMember.findMany({
-    where: { tripId },
+    where: {
+      tripId,
+      deletedAt: null,
+    },
     select: { userId: true },
   });
 
@@ -818,7 +821,15 @@ export async function getItemsReport(choiceId: string) {
           lines: {
             include: {
               selection: {
-                select: { userId: true },
+                select: {
+                  userId: true,
+                  user: {
+                    select: {
+                      displayName: true,
+                      email: true,
+                    },
+                  },
+                },
               },
             },
           },
@@ -833,7 +844,19 @@ export async function getItemsReport(choiceId: string) {
 
   const items = choice.items.map(item => {
     const qtyTotal = item.lines.reduce((sum, line) => sum + line.quantity, 0);
-    const distinctUsers = new Set(item.lines.map(line => line.selection.userId)).size;
+    const userIds = new Set(item.lines.map(line => line.selection.userId));
+    const distinctUsers = userIds.size;
+
+    // Get unique users with their display names (fallback to email)
+    const usersMap = new Map();
+    item.lines.forEach(line => {
+      if (!usersMap.has(line.selection.userId)) {
+        const userName = line.selection.user.displayName || line.selection.user.email;
+        usersMap.set(line.selection.userId, userName);
+      }
+    });
+    const userNames = Array.from(usersMap.values());
+
     const totalPrice = item.price
       ? parseFloat(item.price.toString()) * qtyTotal
       : null;
@@ -844,6 +867,7 @@ export async function getItemsReport(choiceId: string) {
       qtyTotal,
       totalPrice,
       distinctUsers,
+      userNames,
     };
   });
 
@@ -868,6 +892,7 @@ export async function getUsersReport(choiceId: string) {
         select: {
           id: true,
           displayName: true,
+          email: true,
         },
       },
       lines: {
@@ -899,7 +924,7 @@ export async function getUsersReport(choiceId: string) {
 
     return {
       userId: selection.userId,
-      displayName: selection.user.displayName,
+      displayName: selection.user.displayName || selection.user.email,
       note: selection.note,
       lines,
       userTotalPrice: userTotalPrice > 0 ? userTotalPrice : null,

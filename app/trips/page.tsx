@@ -145,7 +145,7 @@ export default function TripsPage() {
           <div className="flex justify-between items-center mb-8 gap-4 min-w-0">
             <div className="min-w-0">
               <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                My Trips
+                My Stuff
               </h1>
               <p className="mt-2 text-zinc-600 dark:text-zinc-400">
                 Plot world domination
