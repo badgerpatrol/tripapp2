@@ -676,7 +676,7 @@ export default function TripDetailPage() {
     }
   };
 
-  const handleEditItemAssignmentSubmit = async (selectedItemIds: string[]) => {
+  const handleEditItemAssignmentSubmit = async (selectedItemIds: string[], customAmount?: number) => {
     if (!user || !trip || !selectedAssignmentId) return;
 
     try {
@@ -699,24 +699,30 @@ export default function TripDetailPage() {
         throw new Error("Assignment not found");
       }
 
-      // Fetch items to calculate total
-      const itemsResponse = await fetch(`/api/spends/${spend.id}/items`, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+      // Use custom amount if provided, otherwise calculate from items
+      let totalAmount: number;
+      if (customAmount !== undefined) {
+        totalAmount = customAmount;
+      } else {
+        // Fetch items to calculate total
+        const itemsResponse = await fetch(`/api/spends/${spend.id}/items`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
 
-      if (!itemsResponse.ok) {
-        throw new Error("Failed to fetch items");
+        if (!itemsResponse.ok) {
+          throw new Error("Failed to fetch items");
+        }
+
+        const itemsData = await itemsResponse.json();
+        const items = itemsData.items || [];
+
+        // Calculate the total amount from selected items
+        totalAmount = items
+          .filter((item: any) => selectedItemIds.includes(item.id))
+          .reduce((sum: number, item: any) => sum + item.cost, 0);
       }
-
-      const itemsData = await itemsResponse.json();
-      const items = itemsData.items || [];
-
-      // Calculate the total amount from selected items
-      const totalAmount = items
-        .filter((item: any) => selectedItemIds.includes(item.id))
-        .reduce((sum: number, item: any) => sum + item.cost, 0);
 
       // Calculate normalized amount
       const normalizedAmount = totalAmount * spend.fxRate;
