@@ -288,7 +288,7 @@ export default function SplitRemainderDialog({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              Split Remainder
+              Split The Rest
             </h2>
             <button
               onClick={handleClose}
@@ -320,7 +320,7 @@ export default function SplitRemainderDialog({
             <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                  Unassigned Remainder:
+                  Remaining amount:
                 </span>
                 <span className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
                   {spend.currency} {remainder.toFixed(2)} ({remainderPercentage.toFixed(1)}%)
@@ -417,7 +417,7 @@ export default function SplitRemainderDialog({
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Unassigned Users</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Those with no spend</span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
                   Only users with no assigned cost
@@ -444,7 +444,7 @@ export default function SplitRemainderDialog({
                       <div className="w-2 h-2 rounded-full bg-blue-500" />
                     )}
                   </div>
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">All Users</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Everyone</span>
                 </div>
                 <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left">
                   All users involved in this spend

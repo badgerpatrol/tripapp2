@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { SpendStatus } from "@/lib/generated/prisma";
@@ -17,6 +17,10 @@ import EditAssignmentDialog from "./EditAssignmentDialog";
 import EditItemAssignmentDialog from "./EditItemAssignmentDialog";
 import BalancesDialog from "./BalancesDialog";
 import ItemsDialog from "./ItemsDialog";
+import CreateChoiceDialog from "./CreateChoiceDialog";
+import ChoiceDetailDialog from "./ChoiceDetailDialog";
+import ManageChoiceDialog from "./ManageChoiceDialog";
+import ChoiceReportsDialog from "./ChoiceReportsDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
@@ -130,11 +134,21 @@ export default function TripDetailPage() {
   const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
   const [editingTimelineDate, setEditingTimelineDate] = useState<string>("");
 
+  // Choices state
+  const [choices, setChoices] = useState<any[]>([]);
+  const [isCreateChoiceDialogOpen, setIsCreateChoiceDialogOpen] = useState(false);
+  const [isChoiceDetailDialogOpen, setIsChoiceDetailDialogOpen] = useState(false);
+  const [isManageChoiceDialogOpen, setIsManageChoiceDialogOpen] = useState(false);
+  const [isChoiceReportsDialogOpen, setIsChoiceReportsDialogOpen] = useState(false);
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+  const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("details");
+
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
 
   // Spend filtering and sorting state
   const [statusFilter, setStatusFilter] = useState<SpendStatus | "all">("all");
+  const [involvementFilter, setInvolvementFilter] = useState<"all" | "own" | "involved" | "not-involved">("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "description">("description");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -145,6 +159,7 @@ export default function TripDetailPage() {
   const [collapsedSections, setCollapsedSections] = useState<{
     rsvp: boolean;
     balance: boolean;
+    choices: boolean;
     spends: boolean;
     settlement: boolean;
     members: boolean;
@@ -152,6 +167,7 @@ export default function TripDetailPage() {
   }>({
     rsvp: false,
     balance: false,
+    choices: false,
     spends: false,
     settlement: false,
     members: false,
@@ -172,6 +188,7 @@ export default function TripDetailPage() {
     setCollapsedSections({
       rsvp: false,
       balance: false,
+      choices: false,
       spends: false,
       settlement: false,
       members: false,
@@ -183,6 +200,7 @@ export default function TripDetailPage() {
     setCollapsedSections({
       rsvp: true,
       balance: true,
+      choices: true,
       spends: true,
       settlement: true,
       members: true,
@@ -220,6 +238,26 @@ export default function TripDetailPage() {
       hasInitializedRsvpCollapse.current = true;
     }
   }, [trip]);
+
+  const fetchChoices = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/choices`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setChoices(data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching choices:", err);
+    }
+  }, [user, tripId]);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -267,10 +305,11 @@ export default function TripDetailPage() {
 
     if (!authLoading && user) {
       fetchTrip();
+      fetchChoices();
     } else if (!authLoading && !user) {
       router.push("/");
     }
-  }, [user, authLoading, tripId, router]);
+  }, [user, authLoading, tripId, router, fetchChoices]);
 
   if (authLoading || loading) {
     return (
@@ -473,6 +512,25 @@ export default function TripDetailPage() {
       filteredSpends = filteredSpends.filter((spend) => spend.status === statusFilter);
     }
 
+    // Apply involvement filter
+    if (involvementFilter !== "all" && user) {
+      filteredSpends = filteredSpends.filter((spend) => {
+        const isOwner = spend.paidBy.id === user.uid;
+        const isInvolved = spend.assignments?.some((assignment) => assignment.userId === user.uid) || false;
+
+        switch (involvementFilter) {
+          case "own":
+            return isOwner;
+          case "involved":
+            return isInvolved;
+          case "not-involved":
+            return !isOwner && !isInvolved;
+          default:
+            return true;
+        }
+      });
+    }
+
     // Apply sorting
     filteredSpends.sort((a, b) => {
       let comparison = 0;
@@ -638,7 +696,7 @@ export default function TripDetailPage() {
     }
   };
 
-  const handleEditItemAssignmentSubmit = async (selectedItemIds: string[]) => {
+  const handleEditItemAssignmentSubmit = async (selectedItemIds: string[], customAmount?: number) => {
     if (!user || !trip || !selectedAssignmentId) return;
 
     try {
@@ -661,24 +719,30 @@ export default function TripDetailPage() {
         throw new Error("Assignment not found");
       }
 
-      // Fetch items to calculate total
-      const itemsResponse = await fetch(`/api/spends/${spend.id}/items`, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+      // Use custom amount if provided, otherwise calculate from items
+      let totalAmount: number;
+      if (customAmount !== undefined) {
+        totalAmount = customAmount;
+      } else {
+        // Fetch items to calculate total
+        const itemsResponse = await fetch(`/api/spends/${spend.id}/items`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
 
-      if (!itemsResponse.ok) {
-        throw new Error("Failed to fetch items");
+        if (!itemsResponse.ok) {
+          throw new Error("Failed to fetch items");
+        }
+
+        const itemsData = await itemsResponse.json();
+        const items = itemsData.items || [];
+
+        // Calculate the total amount from selected items
+        totalAmount = items
+          .filter((item: any) => selectedItemIds.includes(item.id))
+          .reduce((sum: number, item: any) => sum + item.cost, 0);
       }
-
-      const itemsData = await itemsResponse.json();
-      const items = itemsData.items || [];
-
-      // Calculate the total amount from selected items
-      const totalAmount = items
-        .filter((item: any) => selectedItemIds.includes(item.id))
-        .reduce((sum: number, item: any) => sum + item.cost, 0);
 
       // Calculate normalized amount
       const normalizedAmount = totalAmount * spend.fxRate;
@@ -1832,6 +1896,125 @@ export default function TripDetailPage() {
           return null;
         })()}
 
+        {/* Choices Section (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
+            {/* Header row with title and toggle */}
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2 flex-wrap flex-1">
+                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Choices</h2>
+              </div>
+              <button
+                onClick={() => toggleSection('choices')}
+                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+                aria-label={collapsedSections.choices ? "Expand section" : "Collapse section"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {collapsedSections.choices ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  )}
+                </svg>
+              </button>
+            </div>
+
+            {/* Action buttons row */}
+            {!collapsedSections.choices && (
+              <>
+                <div className="flex items-center gap-2 flex-wrap mb-4">
+                  {canInvite && (
+                    <button
+                      onClick={() => setIsCreateChoiceDialogOpen(true)}
+                      className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                    >
+                      Create Choice
+                    </button>
+                  )}
+                </div>
+
+                {/* Choices display */}
+                {choices.length === 0 ? (
+                  <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
+                    <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    <p className="font-medium">No choices yet</p>
+                    {canInvite && (
+                      <p className="text-sm mt-1">Create a choice to gather group preferences</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {choices.map((choice) => (
+                      <div
+                        key={choice.id}
+                        className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedChoiceId(choice.id);
+                          setIsChoiceDetailDialogOpen(true);
+                        }}
+                      >
+                        <div className="mb-3">
+                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{choice.name}</h3>
+                          {choice.datetime && (
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                              {new Date(choice.datetime).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          )}
+                          {choice.place && (
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400">{choice.place}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              choice.status === 'OPEN'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400'
+                            }`}>
+                              {choice.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {(canInvite || true) && (
+                          <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                            {canInvite && (
+                              <button
+                                onClick={() => {
+                                  setSelectedChoiceId(choice.id);
+                                  setIsManageChoiceDialogOpen(true);
+                                }}
+                                className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                              >
+                                Manage
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedChoiceId(choice.id);
+                                setIsChoiceReportsDialogOpen(true);
+                              }}
+                              className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                            >
+                              What did everyone ask for?
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Spends or Settlement Plan (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (
           <>
@@ -1927,6 +2110,8 @@ export default function TripDetailPage() {
                           <SpendFilters
                             statusFilter={statusFilter}
                             onStatusFilterChange={setStatusFilter}
+                            involvementFilter={involvementFilter}
+                            onInvolvementFilterChange={setInvolvementFilter}
                             sortBy={sortBy}
                             onSortByChange={setSortBy}
                             sortOrder={sortOrder}
@@ -2489,6 +2674,69 @@ export default function TripDetailPage() {
           }}
           onRefreshTrip={handleAssignSpendSuccess}
           canUserEdit={selectedSpendId ? canUserDeleteSpend(trip.spends?.find((s) => s.id === selectedSpendId) || null as any) : false}
+        />
+      )}
+
+      {/* Create Choice Dialog */}
+      <CreateChoiceDialog
+        tripId={trip.id}
+        isOpen={isCreateChoiceDialogOpen}
+        onClose={() => setIsCreateChoiceDialogOpen(false)}
+        onSuccess={(newChoiceId: string) => {
+          fetchChoices();
+          setSelectedChoiceId(newChoiceId);
+          setManageChoiceInitialTab("items");
+          setIsManageChoiceDialogOpen(true);
+        }}
+      />
+
+      {/* Choice Detail Dialog */}
+      {selectedChoiceId && user && (
+        <ChoiceDetailDialog
+          choiceId={selectedChoiceId}
+          userId={user.uid}
+          canManage={canInvite}
+          isOpen={isChoiceDetailDialogOpen}
+          onClose={() => {
+            setIsChoiceDetailDialogOpen(false);
+            setSelectedChoiceId(null);
+          }}
+          onManage={() => {
+            setIsChoiceDetailDialogOpen(false);
+            setIsManageChoiceDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* Manage Choice Dialog */}
+      {selectedChoiceId && (
+        <ManageChoiceDialog
+          choiceId={selectedChoiceId}
+          isOpen={isManageChoiceDialogOpen}
+          initialTab={manageChoiceInitialTab}
+          onClose={() => {
+            setIsManageChoiceDialogOpen(false);
+            setSelectedChoiceId(null);
+            setManageChoiceInitialTab("details");
+            fetchChoices();
+          }}
+          onSuccess={() => {
+            fetchChoices();
+          }}
+        />
+      )}
+
+      {/* Choice Reports Dialog */}
+      {selectedChoiceId && (
+        <ChoiceReportsDialog
+          choiceId={selectedChoiceId}
+          choiceName={choices.find(c => c.id === selectedChoiceId)?.name || "Choice"}
+          canCreateSpend={canInvite}
+          isOpen={isChoiceReportsDialogOpen}
+          onClose={() => {
+            setIsChoiceReportsDialogOpen(false);
+            setSelectedChoiceId(null);
+          }}
         />
       )}
     </div>

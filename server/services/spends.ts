@@ -42,6 +42,7 @@ export async function createSpend(userId: string, data: CreateSpendInput) {
       date: data.date || new Date(),
       notes: data.notes || null,
       categoryId: data.categoryId || null,
+      receiptImageData: data.receiptImageData || null,
     },
     include: {
       paidBy: {

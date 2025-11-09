@@ -72,6 +72,16 @@ enum SettlementStatus {
   VERIFIED
 }
 
+enum ChoiceStatus {
+  OPEN
+  CLOSED
+}
+
+enum ChoiceVisibility {
+  TRIP
+  PRIVATE
+}
+
 enum NotificationType {
   TRIP_INVITE
   SPEND_ADDED
@@ -115,6 +125,18 @@ enum EventType {
   PAYMENT_RECORDED
   CHECKLIST_CREATED
   CHECKLIST_ITEM_COMPLETED
+  CHOICE_CREATED
+  CHOICE_UPDATED
+  CHOICE_CLOSED
+  CHOICE_REOPENED
+  CHOICE_ARCHIVED
+  CHOICE_RESTORED
+  CHOICE_ITEM_CREATED
+  CHOICE_ITEM_UPDATED
+  CHOICE_ITEM_DEACTIVATED
+  CHOICE_SELECTION_CREATED
+  CHOICE_SELECTION_UPDATED
+  CHOICE_SELECTION_DELETED
 }
 
 // ============================================================================
@@ -156,6 +178,8 @@ model User {
   notificationsReceived Notification[] @relation("NotificationRecipient")
   categoriesCreated  Category[]
   featureFlags       FeatureFlag[]
+  choicesCreated     Choice[]          @relation("ChoiceCreator")
+  choiceSelections   ChoiceSelection[]
 
   passkeys           Passkey[]
 
@@ -209,6 +233,7 @@ model Trip {
   invitations  Invitation[]
   notifications Notification[]
   featureFlags FeatureFlag[]
+  choices      Choice[]
 
   @@index([createdById])
   @@index([status])
@@ -299,6 +324,7 @@ model Spend {
   date             DateTime    @default(now())
   status           SpendStatus @default(OPEN)
   receiptUrl       String?
+  receiptImageData String?     @db.Text // Base64 encoded receipt image
   notes            String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -577,4 +603,114 @@ model FeatureFlag {
   @@index([userId])
   @@index([tripId])
   @@map("feature_flags")
+}
+
+// ============================================================================
+// CHOICES (Menu voting/selection system)
+// ============================================================================
+
+model Choice {
+  id          String            @id @default(uuid())
+  tripId      String
+  name        String
+  description String?
+  datetime    DateTime?
+  place       String?
+  visibility  ChoiceVisibility  @default(TRIP)
+  status      ChoiceStatus      @default(OPEN)
+  deadline    DateTime?
+  createdById String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  archivedAt  DateTime?
+
+  // Relationships
+  trip       Trip               @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy  User               @relation("ChoiceCreator", fields: [createdById], references: [id])
+  items      ChoiceItem[]
+  selections ChoiceSelection[]
+  activities ChoiceActivity[]
+
+  @@index([tripId])
+  @@index([createdById])
+  @@index([status])
+  @@index([archivedAt])
+  @@map("choices")
+}
+
+model ChoiceItem {
+  id          String    @id @default(uuid())
+  choiceId    String
+  name        String
+  description String?
+  price       Decimal?  @db.Decimal(19, 4)
+  tags        Json?     // Array of strings
+  maxPerUser  Int?
+  maxTotal    Int?
+  allergens   Json?     // Array of strings
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relationships
+  choice Choice                 @relation(fields: [choiceId], references: [id], onDelete: Cascade)
+  lines  ChoiceSelectionLine[]
+
+  @@index([choiceId])
+  @@index([isActive])
+  @@map("choice_items")
+}
+
+model ChoiceSelection {
+  id        String    @id @default(uuid())
+  choiceId  String
+  userId    String
+  note      String?   // Overall note for this user's order
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relationships
+  choice Choice                 @relation(fields: [choiceId], references: [id], onDelete: Cascade)
+  user   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lines  ChoiceSelectionLine[]
+
+  @@unique([choiceId, userId])
+  @@index([choiceId])
+  @@index([userId])
+  @@map("choice_selections")
+}
+
+model ChoiceSelectionLine {
+  id          String    @id @default(uuid())
+  selectionId String
+  itemId      String
+  quantity    Int
+  note        String?   // Per-line note (e.g., "no nuts")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relationships
+  selection ChoiceSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  item      ChoiceItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([selectionId])
+  @@index([itemId])
+  @@map("choice_selection_lines")
+}
+
+model ChoiceActivity {
+  id        String    @id @default(uuid())
+  choiceId  String
+  actorId   String
+  action    String    // "created", "updated", "closed", "reopened", etc.
+  payload   Json?
+  createdAt DateTime  @default(now())
+
+  // Relationships
+  choice Choice @relation(fields: [choiceId], references: [id], onDelete: Cascade)
+
+  @@index([choiceId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("choice_activities")
 }

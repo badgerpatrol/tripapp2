@@ -43,6 +43,7 @@ export default function AddSpendDialog({
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<SpendItem[]>([]);
   const [isManageItemsOpen, setIsManageItemsOpen] = useState(false);
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
 
   // Calculate total from items
   const itemsTotal = items.reduce((sum, item) => sum + item.cost, 0);
@@ -57,8 +58,11 @@ export default function AddSpendDialog({
     }
   }, [items, itemsTotal]);
 
-  const handleManageItemsClose = (updatedItems: SpendItem[]) => {
+  const handleManageItemsClose = (updatedItems: SpendItem[], capturedReceiptImage?: string) => {
     setItems(updatedItems);
+    if (capturedReceiptImage) {
+      setReceiptImage(capturedReceiptImage);
+    }
     setIsManageItemsOpen(false);
   };
 
@@ -74,6 +78,7 @@ export default function AddSpendDialog({
         notes: "",
       });
       setItems([]);
+      setReceiptImage(null);
       setError(null);
     }
   }, [isOpen, trip.baseCurrency]);
@@ -112,6 +117,7 @@ export default function AddSpendDialog({
         fxRate,
         date: new Date(formData.date),
         notes: formData.notes || undefined,
+        receiptImageData: receiptImage || undefined,
       }),
     });
 
@@ -169,6 +175,7 @@ export default function AddSpendDialog({
         notes: "",
       });
       setItems([]);
+      setReceiptImage(null);
 
       // Call success handler and close
       onSuccess(spendId);
@@ -225,6 +232,7 @@ export default function AddSpendDialog({
         notes: "",
       });
       setItems([]);
+      setReceiptImage(null);
 
       // Close this dialog
       onClose();
@@ -244,6 +252,7 @@ export default function AddSpendDialog({
     if (!isSubmitting) {
       setError(null);
       setItems([]);
+      setReceiptImage(null);
       // Reset form
       setFormData({
         description: "",

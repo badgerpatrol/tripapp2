@@ -14,7 +14,7 @@ interface SpendItem {
 interface EditItemAssignmentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: (selectedItemIds: string[]) => Promise<void>;
+  onUpdate: (selectedItemIds: string[], customAmount?: number) => Promise<void>;
   onRemove: () => Promise<void>;
   assignment: {
     id: string;
@@ -59,6 +59,7 @@ export default function EditItemAssignmentDialog({
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [customAmount, setCustomAmount] = useState<string>("");
 
   // Determine permissions
   const isSpender = spend.paidBy.id === currentUserId;
@@ -79,10 +80,12 @@ export default function EditItemAssignmentDialog({
       // Find items that are currently assigned to this user
       const userItems = items.filter(item => item.assignedUserId === assignment.userId);
       setSelectedItemIds(new Set(userItems.map(item => item.id)));
+      // Initialize custom amount with current assignment amount
+      setCustomAmount(assignment.shareAmount.toFixed(2));
       setError(null);
       setShowRemoveConfirm(false);
     }
-  }, [isOpen, items, assignment.userId]);
+  }, [isOpen, items, assignment.userId, assignment.shareAmount]);
 
   const fetchItems = async () => {
     if (!user) return;
@@ -134,18 +137,31 @@ export default function EditItemAssignmentDialog({
     }
 
     const selectedIds = Array.from(selectedItemIds);
-    const totalAmount = items
+    const selectedItemsTotal = items
       .filter(item => selectedIds.includes(item.id))
       .reduce((sum, item) => sum + item.cost, 0);
 
-    // Validation
-    if (totalAmount > spend.amount) {
-      setError(`Selected items total (${spend.currency} ${totalAmount.toFixed(2)}) exceeds spend total`);
+    // Parse custom amount
+    const parsedCustomAmount = parseFloat(customAmount);
+    if (isNaN(parsedCustomAmount) || parsedCustomAmount < 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    // Validation: custom amount must be >= selected items total
+    if (parsedCustomAmount < selectedItemsTotal) {
+      setError(`Total amount (${spend.currency} ${parsedCustomAmount.toFixed(2)}) must be at least the selected items total (${spend.currency} ${selectedItemsTotal.toFixed(2)})`);
+      return;
+    }
+
+    // Validation: custom amount cannot exceed spend total
+    if (parsedCustomAmount > spend.amount) {
+      setError(`Total amount (${spend.currency} ${parsedCustomAmount.toFixed(2)}) cannot exceed spend total (${spend.currency} ${spend.amount.toFixed(2)})`);
       return;
     }
 
     // Calculate what percentage this would create
-    const newPercentage = (totalAmount / spend.amount) * 100;
+    const newPercentage = (parsedCustomAmount / spend.amount) * 100;
     const totalPercentageWithThisChange = assignedPercentage -
       ((assignment.shareAmount || 0) / spend.amount * 100) +
       newPercentage;
@@ -158,7 +174,7 @@ export default function EditItemAssignmentDialog({
 
     setIsSubmitting(true);
     try {
-      await onUpdate(selectedIds);
+      await onUpdate(selectedIds, parsedCustomAmount);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update assignment");
@@ -197,7 +213,9 @@ export default function EditItemAssignmentDialog({
 
   // Calculate real-time totals
   const selectedItems = items.filter(item => selectedItemIds.has(item.id));
-  const currentAmount = selectedItems.reduce((sum, item) => sum + item.cost, 0);
+  const selectedItemsTotal = selectedItems.reduce((sum, item) => sum + item.cost, 0);
+  const parsedCustomAmount = parseFloat(customAmount) || 0;
+  const currentAmount = parsedCustomAmount; // Use custom amount instead of item total
   const currentPercentage = (currentAmount / spend.amount) * 100;
   const totalAfterChange = assignedPercentage - ((assignment.shareAmount || 0) / spend.amount * 100) + currentPercentage;
   const remainingPercentage = 100 - totalAfterChange;
@@ -381,11 +399,47 @@ export default function EditItemAssignmentDialog({
                   )}
                 </div>
 
+                {/* Custom Amount Input */}
+                <div>
+                  <label htmlFor="customAmount" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    Total Amount to Assign
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-zinc-400 text-sm">
+                      {spend.currency}
+                    </span>
+                    <input
+                      id="customAmount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      disabled={!canEdit || loading}
+                      className="w-full pl-16 pr-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Must be at least {spend.currency} {selectedItemsTotal.toFixed(2)} (selected items total)
+                  </p>
+                </div>
+
                 {/* Real-time Stats */}
                 <div className="space-y-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                       Selected items total:
+                    </span>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-zinc-600 dark:text-zinc-400">
+                        {spend.currency} {selectedItemsTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Your total assignment:
                     </span>
                     <div className="text-right">
                       <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
