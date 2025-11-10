@@ -10,7 +10,6 @@ export const metadata: Metadata = {
 export default function StartPage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <Header showBackButton />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         {/* Hero section */}

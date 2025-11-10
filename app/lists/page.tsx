@@ -207,8 +207,7 @@ export default function ListsPage() {
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <Header />
-        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
+        <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
@@ -220,8 +219,6 @@ export default function ListsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <Header />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -235,12 +232,6 @@ export default function ListsPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button
-                onClick={() => window.location.href = "/trips"}
-                className="bg-zinc-600 hover:bg-zinc-700 text-white"
-              >
-                ← Trips
-              </Button>
               <Button
                 onClick={() => window.location.href = "/lists/create-todo"}
                 className="bg-blue-600 hover:bg-blue-700 text-white"

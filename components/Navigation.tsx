@@ -1,0 +1,49 @@
+"use client";
+
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthContext";
+
+export default function Navigation() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
+
+  if (!user) {
+    return null;
+  }
+
+  const isHomePage = pathname === "/";
+  const isListsPage = pathname?.startsWith("/lists");
+
+  return (
+    <nav className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-3 py-2">
+        <div className="flex items-center gap-4">
+          {/* Home Button */}
+          <button
+            onClick={() => router.push("/")}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              isHomePage
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            }`}
+          >
+            Home
+          </button>
+
+          {/* Lists Button */}
+          <button
+            onClick={() => router.push("/lists")}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              isListsPage
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            }`}
+          >
+            Lists
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}

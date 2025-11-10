@@ -51,8 +51,6 @@ export default async function SequenceRunPage({ params, searchParams }: PageProp
 
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-        <Header showBackButton />
-
         <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white dark:bg-zinc-800 rounded-lg p-8 shadow-sm border border-zinc-200 dark:border-zinc-700 text-center">
             <div className="text-6xl mb-4">🎉</div>
@@ -71,7 +69,7 @@ export default async function SequenceRunPage({ params, searchParams }: PageProp
                   </Button>
                 </Link>
               )}
-              <Link href="/trips">
+              <Link href="/">
                 <Button variant="secondary" size="lg">
                   View All Trips
                 </Button>
@@ -90,7 +88,6 @@ export default async function SequenceRunPage({ params, searchParams }: PageProp
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <Header showBackButton />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="mb-6">

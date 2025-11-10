@@ -58,7 +58,7 @@ export default function StepRunner({ run, next }: StepRunnerProps) {
           Authorization: `Bearer ${token}`,
         },
       });
-      router.push("/trips");
+      router.push("/");
     } catch (err) {
       console.error("Failed to cancel flow:", err);
     }

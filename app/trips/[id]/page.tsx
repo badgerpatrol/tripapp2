@@ -1512,7 +1512,6 @@ export default function TripDetailPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Header showBackButton={true} />
       <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
         <div className="max-w-6xl mx-auto">
 
