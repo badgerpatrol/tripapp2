@@ -4,6 +4,7 @@ import {
   getTripOverviewForInvitee,
   getTripOverviewForMember,
   updateTrip,
+  deleteTrip,
   checkAndAutoCloseRsvp,
 } from "@/server/services/trips";
 import { RsvpStatus } from "@/lib/generated/prisma";
@@ -141,6 +142,60 @@ export async function PUT(
     console.error("Error updating trip:", error);
     return NextResponse.json(
       { error: "Failed to update trip. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/trips/:id
+ * Deletes a trip and all associated data.
+ * Only trip owners can delete the trip.
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    // 1. Authenticate user
+    const authHeader = request.headers.get("authorization");
+    const auth = await getAuthTokenFromHeader(authHeader);
+
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    // Verify user exists in database
+    await requireAuth(auth.uid);
+
+    const { id: tripId } = await params;
+
+    // 2. Check if user is trip owner
+    const isOwner = await isTripOwner(auth.uid, tripId);
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: "Only trip owners can delete trips" },
+        { status: 403 }
+      );
+    }
+
+    // 3. Delete the trip
+    await deleteTrip(tripId, auth.uid);
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Trip deleted successfully"
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting trip:", error);
+    return NextResponse.json(
+      { error: "Failed to delete trip. Please try again." },
       { status: 500 }
     );
   }

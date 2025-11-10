@@ -930,3 +930,40 @@ async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
       console.log(`[triggerMilestoneChecks] No automatic action defined for milestone: ${milestoneTitle}`);
   }
 }
+
+/**
+ * Deletes a trip and all associated data.
+ * This will cascade delete related records like members, spends, timeline items, etc.
+ * Logs the deletion as an event.
+ */
+export async function deleteTrip(tripId: string, userId: string) {
+  // Verify the trip exists
+  const trip = await prisma.trip.findUnique({
+    where: { id: tripId },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+        },
+      },
+    },
+  });
+
+  if (!trip) {
+    throw new Error("Trip not found");
+  }
+
+  // Log the deletion event before deleting
+  await logEvent("Trip", tripId, EventType.TRIP_DELETED, userId, {
+    tripName: trip.name,
+  });
+
+  // Delete the trip (cascade will handle related records)
+  await prisma.trip.delete({
+    where: { id: tripId },
+  });
+
+  return { success: true };
+}

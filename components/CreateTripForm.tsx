@@ -18,7 +18,7 @@ interface ListTemplate {
 }
 
 interface CreateTripFormProps {
-  onSuccess?: (tripId: string) => void;
+  onSuccess?: (tripId: string, hadTemplate: boolean) => void;
   onCancel?: () => void;
 }
 
@@ -136,7 +136,7 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
 
       // Success - redirect to trip page or call callback
       if (onSuccess) {
-        onSuccess(tripId);
+        onSuccess(tripId, selectedTemplateId !== null);
       } else {
         router.push(`/trips/${tripId}`);
       }
