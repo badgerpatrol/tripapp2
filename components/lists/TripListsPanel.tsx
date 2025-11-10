@@ -49,9 +49,10 @@ interface TripListsPanelProps {
   tripId: string;
   onOpenInviteDialog?: () => void;
   onOpenCreateChoice?: () => void;
+  inWorkflowMode?: boolean;
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, inWorkflowMode = false }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +94,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice 
       }
 
       const data = await response.json();
-      setLists(data.instances || []);
+      const fetchedLists = data.instances || [];
+      setLists(fetchedLists);
+
+      // In workflow mode, expand all lists by default
+      if (inWorkflowMode && fetchedLists.length > 0 && !expandedListId) {
+        setExpandedListId(fetchedLists[0].id);
+      }
     } catch (err: any) {
       console.error("Error fetching lists:", err);
       setError(err.message);
@@ -266,23 +273,25 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice 
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           📋 Lists
         </h2>
-        <div className="flex gap-2">
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-            className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-          >
-            <option value="ALL">All</option>
-            <option value="TODO">TODO</option>
-            <option value="KIT">Kit</option>
-          </select>
-          <Button
-            onClick={() => alert("Add list from template - Coming soon!")}
-            className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            + Add List
-          </Button>
-        </div>
+        {!inWorkflowMode && (
+          <div className="flex gap-2">
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            >
+              <option value="ALL">All</option>
+              <option value="TODO">TODO</option>
+              <option value="KIT">Kit</option>
+            </select>
+            <Button
+              onClick={() => alert("Add list from template - Coming soon!")}
+              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              + Add List
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Loading */}

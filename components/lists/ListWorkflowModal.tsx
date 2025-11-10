@@ -41,6 +41,7 @@ export function ListWorkflowModal({
             tripId={tripId}
             onOpenInviteDialog={onOpenInviteDialog}
             onOpenCreateChoice={onOpenCreateChoice}
+            inWorkflowMode={true}
           />
         </div>
 
