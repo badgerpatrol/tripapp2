@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
+import { AddListDialog } from "./AddListDialog";
 
 interface TodoItem {
   id: string;
@@ -64,6 +65,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [confirmCompletionItem, setConfirmCompletionItem] = useState<{itemId: string; label: string} | null>(null);
+  const [isAddListDialogOpen, setIsAddListDialogOpen] = useState(false);
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -252,7 +254,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               <option value="KIT">Kit</option>
             </select>
             <Button
-              onClick={() => alert("Add list from template - Coming soon!")}
+              onClick={() => setIsAddListDialogOpen(true)}
               className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               + Add List
@@ -485,6 +487,17 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           </div>
         </div>
       )}
+
+      {/* Add List Dialog */}
+      <AddListDialog
+        isOpen={isAddListDialogOpen}
+        onClose={() => setIsAddListDialogOpen(false)}
+        tripId={tripId}
+        onSuccess={() => {
+          setIsAddListDialogOpen(false);
+          fetchLists(); // Refresh the lists after adding
+        }}
+      />
     </div>
   );
 }
