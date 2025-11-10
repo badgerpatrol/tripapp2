@@ -102,6 +102,22 @@ enum NotificationStatus {
   ARCHIVED
 }
 
+enum Visibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum ListType {
+  TODO
+  KIT
+}
+
+enum TodoActionType {
+  CREATE_CHOICE
+  SET_MILESTONE
+  INVITE_USERS
+}
+
 enum EventType {
   USER_CREATED
   USER_UPDATED
@@ -137,6 +153,22 @@ enum EventType {
   CHOICE_SELECTION_CREATED
   CHOICE_SELECTION_UPDATED
   CHOICE_SELECTION_DELETED
+  LIST_TEMPLATE_CREATED
+  LIST_TEMPLATE_UPDATED
+  LIST_TEMPLATE_DELETED
+  LIST_TEMPLATE_PUBLISHED
+  LIST_TEMPLATE_UNPUBLISHED
+  LIST_TEMPLATE_FORKED
+  LIST_TEMPLATE_COPIED_TO_TRIP
+  LIST_INSTANCE_CREATED
+  LIST_INSTANCE_REPLACED
+  LIST_INSTANCE_MERGED
+  LIST_INSTANCE_DELETED
+  LIST_ITEM_TOGGLED
+  LIST_ITEM_ADDED
+  LIST_ITEM_REMOVED
+  LIST_ITEM_EDITED
+  LIST_ITEM_ACTION_LAUNCHED
 }
 
 // ============================================================================
@@ -713,4 +745,124 @@ model ChoiceActivity {
   @@index([actorId])
   @@index([createdAt])
   @@map("choice_activities")
+}
+
+// ============================================================================
+// LISTS PLATFORM (TODO & KIT lists)
+// ============================================================================
+
+model ListTemplate {
+  id                   String     @id @default(cuid())
+  ownerId              String
+  title                String
+  description          String?
+  type                 ListType
+  visibility           Visibility @default(PRIVATE)
+  publishedAt          DateTime?
+  forkedFromTemplateId String?
+  tags                 String[]   @default([])
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  // Per-type item relations
+  todoItems TodoItemTemplate[]
+  kitItems  KitItemTemplate[]
+
+  @@index([ownerId, visibility])
+  @@index([visibility, type, title])
+  @@index([forkedFromTemplateId])
+  @@map("list_templates")
+}
+
+model ListInstance {
+  id               String   @id @default(cuid())
+  tripId           String
+  type             ListType
+  sourceTemplateId String?
+  title            String
+  description      String?
+  createdBy        String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Per-type item relations
+  todoItems TodoItemInstance[]
+  kitItems  KitItemInstance[]
+
+  @@index([tripId, type, title])
+  @@map("list_instances")
+}
+
+/********** TODO type items **********/
+model TodoItemTemplate {
+  id         String          @id @default(cuid())
+  templateId String
+  label      String
+  notes      String?
+  actionType TodoActionType?
+  actionData Json?
+  orderIndex Int             @default(0)
+
+  template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("todo_item_templates")
+}
+
+model TodoItemInstance {
+  id         String          @id @default(cuid())
+  listId     String
+  label      String
+  notes      String?
+  isDone     Boolean         @default(false)
+  doneBy     String?
+  doneAt     DateTime?
+  actionType TodoActionType?
+  actionData Json?
+  orderIndex Int             @default(0)
+
+  list ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@map("todo_item_instances")
+}
+
+/********** KIT type items **********/
+model KitItemTemplate {
+  id          String  @id @default(cuid())
+  templateId  String
+  label       String
+  notes       String?
+  quantity    Float   @default(1) // can be fractional
+  perPerson   Boolean @default(false)
+  required    Boolean @default(true)
+  weightGrams Int?
+  category    String?
+  orderIndex  Int     @default(0)
+
+  template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("kit_item_templates")
+}
+
+model KitItemInstance {
+  id          String    @id @default(cuid())
+  listId      String
+  label       String
+  notes       String?
+  quantity    Float     @default(1)
+  perPerson   Boolean   @default(false)
+  required    Boolean   @default(true)
+  weightGrams Int?
+  category    String?
+  isPacked    Boolean   @default(false)
+  packedBy    String?
+  packedAt    DateTime?
+  orderIndex  Int       @default(0)
+
+  list ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@map("kit_item_instances")
 }

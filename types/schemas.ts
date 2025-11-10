@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility } from "@/lib/generated/prisma";
+import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility, Visibility, ListType, TodoActionType } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth Schemas
@@ -629,3 +629,122 @@ export type UsersReportResponse = z.infer<typeof UsersReportResponseSchema>;
 export type ChoiceActivityResponse = z.infer<typeof ChoiceActivityResponseSchema>;
 export type CreateSpendFromChoiceInput = z.infer<typeof CreateSpendFromChoiceSchema>;
 export type GetChoicesQuery = z.infer<typeof GetChoicesQuerySchema>;
+
+// ============================================================================
+// Lists Platform Schemas
+// ============================================================================
+
+// Re-export enums as Zod schemas for validation
+export const VisibilitySchema = z.nativeEnum(Visibility);
+export const ListTypeSchema = z.nativeEnum(ListType);
+export const TodoActionTypeSchema = z.nativeEnum(TodoActionType);
+
+export const TodoItemTemplateInput = z.object({
+  label: z.string().min(1, "Label is required"),
+  notes: z.string().optional(),
+  actionType: TodoActionTypeSchema.optional(),
+  actionData: z.any().optional(),
+  orderIndex: z.number().int().nonnegative().default(0)
+}).strict();
+
+export const KitItemTemplateInput = z.object({
+  label: z.string().min(1, "Label is required"),
+  notes: z.string().optional(),
+  quantity: z.number().positive().default(1),
+  perPerson: z.boolean().default(false),
+  required: z.boolean().default(true),
+  weightGrams: z.number().int().positive().optional(),
+  category: z.string().optional(),
+  orderIndex: z.number().int().nonnegative().default(0)
+}).strict();
+
+export const ListTemplateCreate = z.object({
+  type: ListTypeSchema,
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  visibility: VisibilitySchema.default("PRIVATE"),
+  tags: z.array(z.string()).max(12).optional(),
+  // Discriminated items by type:
+  todoItems: z.array(TodoItemTemplateInput).optional(),
+  kitItems: z.array(KitItemTemplateInput).optional()
+})
+.refine(v => (v.type==="TODO" && v.todoItems) || (v.type==="KIT" && v.kitItems), {
+  message: "Provide items for the selected list type."
+})
+.strict();
+
+export const ListTemplateUpdate = ListTemplateCreate.partial();
+
+export const TodoMergeMode = z.enum(["REPLACE","MERGE_ADD","MERGE_ADD_ALLOW_DUPES"]);
+
+export const CopyToTripSchema = z.object({
+  tripId: z.string().min(1, "Trip ID is required"),
+  mode: z.enum(["REPLACE","MERGE_ADD","MERGE_ADD_ALLOW_DUPES","NEW_INSTANCE"]).default("NEW_INSTANCE")
+});
+
+export const ForkTemplateSchema = z.object({
+  newTitle: z.string().min(1, "New title is required").optional()
+});
+
+export const PublishTemplateSchema = z.object({
+  visibility: VisibilitySchema,
+  tags: z.array(z.string()).max(12).optional()
+});
+
+export const CreateAdHocListSchema = z.object({
+  tripId: z.string().min(1, "Trip ID is required"),
+  type: ListTypeSchema,
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  todoItems: z.array(TodoItemTemplateInput).optional(),
+  kitItems: z.array(KitItemTemplateInput).optional()
+})
+.refine(v => (v.type==="TODO" && v.todoItems) || (v.type==="KIT" && v.kitItems), {
+  message: "Provide items for the selected list type."
+})
+.strict();
+
+export const ToggleItemStateSchema = z.object({
+  state: z.boolean()
+});
+
+export const BrowsePublicTemplatesQuerySchema = z.object({
+  query: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  type: ListTypeSchema.optional()
+});
+
+export const ListTripInstancesQuerySchema = z.object({
+  type: ListTypeSchema.optional()
+});
+
+// ============================================================================
+// Type exports for Lists
+// ============================================================================
+
+export type TodoItemTemplateInputType = z.infer<typeof TodoItemTemplateInput>;
+export type KitItemTemplateInputType = z.infer<typeof KitItemTemplateInput>;
+export type ListTemplateCreateInput = z.infer<typeof ListTemplateCreate>;
+export type ListTemplateUpdateInput = z.infer<typeof ListTemplateUpdate>;
+export type TodoMergeModeType = z.infer<typeof TodoMergeMode>;
+export type CopyToTripInput = z.infer<typeof CopyToTripSchema>;
+export type ForkTemplateInput = z.infer<typeof ForkTemplateSchema>;
+export type PublishTemplateInput = z.infer<typeof PublishTemplateSchema>;
+export type CreateAdHocListInput = z.infer<typeof CreateAdHocListSchema>;
+export type ToggleItemStateInput = z.infer<typeof ToggleItemStateSchema>;
+export type BrowsePublicTemplatesQuery = z.infer<typeof BrowsePublicTemplatesQuerySchema>;
+export type ListTripInstancesQuery = z.infer<typeof ListTripInstancesQuerySchema>;
+
+// ============================================================================
+// Guards and Utility Functions
+// ============================================================================
+
+export type DeepLink = { route: string; params: Record<string, string> };
+
+export function canViewTemplate(userId: string, tpl: { ownerId: string; visibility: "PRIVATE" | "PUBLIC" }) {
+  return tpl.visibility === "PUBLIC" || tpl.ownerId === userId;
+}
+
+export function canEditTemplate(userId: string, tpl: { ownerId: string }) {
+  return tpl.ownerId === userId;
+}
