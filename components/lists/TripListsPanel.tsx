@@ -49,10 +49,12 @@ interface TripListsPanelProps {
   tripId: string;
   onOpenInviteDialog?: () => void;
   onOpenCreateChoice?: () => void;
+  onActionComplete?: (itemId: string, label: string) => void;
+  onRefreshLists?: () => void;
   inWorkflowMode?: boolean;
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, inWorkflowMode = false }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onActionComplete, onRefreshLists, inWorkflowMode = false }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -160,14 +162,17 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         case "INVITE_USERS":
           if (onOpenInviteDialog) {
             onOpenInviteDialog();
-            // After the dialog is opened, show confirmation dialog when it closes
-            setConfirmCompletionItem({ itemId: item.id, label: item.label });
+          }
+          if (onActionComplete) {
+            onActionComplete(item.id, item.label);
           }
           break;
         case "CREATE_CHOICE":
           if (onOpenCreateChoice) {
             onOpenCreateChoice();
-            setConfirmCompletionItem({ itemId: item.id, label: item.label });
+          }
+          if (onActionComplete) {
+            onActionComplete(item.id, item.label);
           }
           break;
         case "SET_MILESTONE":
@@ -193,6 +198,10 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     if (complete) {
       // Mark the item as done
       await handleToggleItem("TODO", confirmCompletionItem.itemId, false);
+      // Notify parent to refresh if needed
+      if (onRefreshLists) {
+        onRefreshLists();
+      }
     }
 
     setConfirmCompletionItem(null);
@@ -487,7 +496,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
 
       {/* Milestone Creation Dialog */}
       {milestoneDialog?.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Create Milestone
@@ -551,7 +560,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
 
       {/* Completion Confirmation Dialog */}
       {confirmCompletionItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Mark Task as Complete?
