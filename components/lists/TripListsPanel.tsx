@@ -53,9 +53,10 @@ interface TripListsPanelProps {
   onActionComplete?: (itemId: string, label: string) => void;
   onRefreshLists?: () => void;
   inWorkflowMode?: boolean;
+  onOpenList?: (listId: string, listTitle: string) => void;
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +64,9 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [confirmCompletionItem, setConfirmCompletionItem] = useState<{itemId: string; label: string} | null>(null);
+
+  // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
+  const shouldExpandInline = inWorkflowMode;
 
   useEffect(() => {
     if (user) {
@@ -300,7 +304,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               >
                 {/* List Header */}
                 <button
-                  onClick={() => setExpandedListId(isExpanded ? null : list.id)}
+                  onClick={() => {
+                    if (shouldExpandInline) {
+                      setExpandedListId(isExpanded ? null : list.id);
+                    } else if (onOpenList) {
+                      onOpenList(list.id, list.title);
+                    }
+                  }}
                   className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -345,8 +355,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   </div>
                 </button>
 
-                {/* Expanded Items */}
-                {isExpanded && (
+                {/* Expanded Items - only in workflow mode */}
+                {isExpanded && shouldExpandInline && (
                   <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/20">
                     {list.type === "TODO" ? (
                       <div className="space-y-2">

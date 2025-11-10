@@ -25,6 +25,7 @@ import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
+import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
 
 interface TripDetail {
   id: string;
@@ -143,6 +144,11 @@ export default function TripDetailPage() {
   const [isChoiceReportsDialogOpen, setIsChoiceReportsDialogOpen] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("details");
+
+  // List workflow modal state
+  const [isListWorkflowModalOpen, setIsListWorkflowModalOpen] = useState(false);
+  const [listWorkflowTitle, setListWorkflowTitle] = useState("");
+  const [listWorkflowDescription, setListWorkflowDescription] = useState("");
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -1599,6 +1605,11 @@ export default function TripDetailPage() {
             tripId={trip.id}
             onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
             onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
+            onOpenList={(listId, listTitle) => {
+              setListWorkflowTitle("Get Things Done");
+              setListWorkflowDescription(`Work on your ${listTitle} list`);
+              setIsListWorkflowModalOpen(true);
+            }}
           />
         )}
         
@@ -2814,6 +2825,17 @@ export default function TripDetailPage() {
           }}
         />
       )}
+
+      {/* List Workflow Modal */}
+      <ListWorkflowModal
+        tripId={trip?.id || ""}
+        tripName={trip?.name || ""}
+        isOpen={isListWorkflowModalOpen}
+        onClose={() => setIsListWorkflowModalOpen(false)}
+        title={listWorkflowTitle}
+        description={listWorkflowDescription}
+        currentMembers={trip?.participants || []}
+      />
     </div>
   );
 }

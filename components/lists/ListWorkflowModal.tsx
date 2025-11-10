@@ -13,6 +13,8 @@ interface ListWorkflowModalProps {
   tripName: string;
   isOpen: boolean;
   onClose: () => void;
+  title?: string;
+  description?: string;
   currentMembers?: Array<{
     id: string;
     role: string;
@@ -30,6 +32,8 @@ export function ListWorkflowModal({
   tripName,
   isOpen,
   onClose,
+  title = "Get Started with Your Trip",
+  description = "Work through your to-do list to prepare for your trip",
   currentMembers = [],
 }: ListWorkflowModalProps) {
   const { user } = useAuth();
@@ -120,10 +124,10 @@ export function ListWorkflowModal({
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              Get Started with Your Trip
+              {title}
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Work through your to-do list to prepare for your trip
+              {description}
             </p>
           </div>
         </div>
@@ -138,6 +142,7 @@ export function ListWorkflowModal({
             onOpenMilestoneDialog={(itemId, itemLabel) => {
               setIsMilestoneDialogOpen(true);
               setMilestoneTitle(itemLabel); // Pre-fill with task label
+              setPendingCompletion({itemId, label: itemLabel});
             }}
             onActionComplete={(itemId, label) => setPendingCompletion({itemId, label})}
             onRefreshLists={() => setRefreshKey(prev => prev + 1)}
