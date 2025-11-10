@@ -150,6 +150,7 @@ export default function TripDetailPage() {
   const [listWorkflowTitle, setListWorkflowTitle] = useState("");
   const [listWorkflowDescription, setListWorkflowDescription] = useState("");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [listsRefreshKey, setListsRefreshKey] = useState(0);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -1603,6 +1604,7 @@ export default function TripDetailPage() {
         {/* Lists Section (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (
           <TripListsPanel
+            key={listsRefreshKey}
             tripId={trip.id}
             onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
             onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
@@ -2836,6 +2838,8 @@ export default function TripDetailPage() {
         onClose={() => {
           setIsListWorkflowModalOpen(false);
           setSelectedListId(null);
+          // Refresh the main lists panel to show updated counts/progress
+          setListsRefreshKey(prev => prev + 1);
         }}
         title={listWorkflowTitle}
         description={listWorkflowDescription}

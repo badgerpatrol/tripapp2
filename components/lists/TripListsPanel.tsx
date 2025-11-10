@@ -141,8 +141,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         throw new Error("Failed to toggle item");
       }
 
-      // Refresh lists
+      // Refresh lists locally
       await fetchLists();
+
+      // Notify parent component to refresh if callback exists
+      if (onRefreshLists) {
+        onRefreshLists();
+      }
     } catch (err) {
       console.error("Error toggling item:", err);
     }
