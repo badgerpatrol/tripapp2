@@ -804,6 +804,7 @@ model TodoItemTemplate {
   notes      String?
   actionType TodoActionType?
   actionData Json?
+  parameters Json?
   orderIndex Int             @default(0)
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
@@ -822,6 +823,7 @@ model TodoItemInstance {
   doneAt     DateTime?
   actionType TodoActionType?
   actionData Json?
+  parameters Json?
   orderIndex Int             @default(0)
 
   list ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)

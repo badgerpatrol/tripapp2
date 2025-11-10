@@ -15,6 +15,7 @@ interface TodoItem {
   doneAt: string | null;
   actionType: TodoActionType | null;
   actionData: any | null;
+  parameters: Record<string, any> | null;
   orderIndex: number;
 }
 
@@ -192,7 +193,9 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           break;
         case "SET_MILESTONE":
           if (onOpenMilestoneDialog) {
-            onOpenMilestoneDialog(item.id, item.label);
+            // Use milestone name from parameters if available, otherwise fall back to item label
+            const milestoneName = item.parameters?.milestoneName || item.label;
+            onOpenMilestoneDialog(item.id, milestoneName);
           }
           if (onActionComplete) {
             onActionComplete(item.id, item.label);

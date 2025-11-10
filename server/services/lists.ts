@@ -47,6 +47,7 @@ export async function createTemplate(
         notes: item.notes,
         actionType: item.actionType,
         actionData: item.actionData,
+        parameters: item.parameters,
         orderIndex: item.orderIndex ?? idx,
       })),
     });
@@ -230,6 +231,7 @@ export async function updateTemplate(
             notes: item.notes,
             actionType: item.actionType,
             actionData: item.actionData as any,
+            parameters: item.parameters as any,
             orderIndex: item.orderIndex ?? idx,
           })),
         });
@@ -591,6 +593,7 @@ export async function createInstanceAdHoc(
         notes: item.notes,
         actionType: item.actionType,
         actionData: item.actionData,
+        parameters: item.parameters,
         orderIndex: item.orderIndex ?? idx,
         isDone: false,
       })),
