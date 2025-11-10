@@ -24,6 +24,7 @@ import ChoiceReportsDialog from "./ChoiceReportsDialog";
 import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
+import { TripListsPanel } from "@/components/lists/TripListsPanel";
 
 interface TripDetail {
   id: string;
@@ -164,6 +165,7 @@ export default function TripDetailPage() {
     settlement: boolean;
     members: boolean;
     timeline: boolean;
+    lists: boolean;
   }>({
     rsvp: false,
     balance: false,
@@ -172,6 +174,7 @@ export default function TripDetailPage() {
     settlement: false,
     members: false,
     timeline: false,
+    lists: false,
   });
 
   // Filters collapse state
@@ -196,6 +199,7 @@ export default function TripDetailPage() {
       settlement: false,
       members: false,
       timeline: false,
+      lists: false,
     });
   };
 
@@ -208,6 +212,7 @@ export default function TripDetailPage() {
       settlement: true,
       members: true,
       timeline: true,
+      lists: true,
     });
   };
 
@@ -2437,6 +2442,11 @@ export default function TripDetailPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Lists Section (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && (
+          <TripListsPanel tripId={trip.id} />
         )}
         </div>
       </div>
