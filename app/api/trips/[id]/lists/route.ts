@@ -30,7 +30,7 @@ export async function GET(
     });
 
     if (!queryValidation.success) {
-      const firstError = queryValidation.error.errors[0];
+      const firstError = queryValidation.error.issues[0];
       return NextResponse.json(
         { error: firstError?.message || "Invalid query parameters" },
         { status: 400 }

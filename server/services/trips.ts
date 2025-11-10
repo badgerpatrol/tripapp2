@@ -763,6 +763,65 @@ export async function checkAndAutoCloseRsvp(tripId: string) {
  * Updates a timeline item's date and triggers milestone checks
  * Only OWNER and ADMIN can update timeline items
  */
+export async function createTimelineItem(
+  tripId: string,
+  userId: string,
+  data: {
+    title: string;
+    description?: string;
+    date?: Date | null;
+  }
+) {
+  // Verify user is a member of the trip
+  const membership = await prisma.tripMember.findFirst({
+    where: {
+      tripId,
+      userId,
+      deletedAt: null,
+    },
+  });
+
+  if (!membership) {
+    throw new Error("You are not a member of this trip");
+  }
+
+  // Get the highest order number for existing timeline items
+  const lastItem = await prisma.timelineItem.findFirst({
+    where: {
+      tripId,
+      deletedAt: null,
+    },
+    orderBy: {
+      order: "desc",
+    },
+  });
+
+  const nextOrder = lastItem ? lastItem.order + 1 : 0;
+
+  // Create the timeline item
+  const timelineItem = await prisma.timelineItem.create({
+    data: {
+      tripId,
+      title: data.title,
+      description: data.description,
+      date: data.date,
+      order: nextOrder,
+      createdById: userId,
+      isCompleted: false,
+    },
+  });
+
+  await logEvent(
+    "TimelineItem",
+    timelineItem.id,
+    EventType.MILESTONE_CREATED,
+    userId,
+    { tripId, title: data.title }
+  );
+
+  return timelineItem;
+}
+
 export async function updateTimelineItemDate(
   tripId: string,
   itemId: string,
@@ -870,4 +929,41 @@ async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
     default:
       console.log(`[triggerMilestoneChecks] No automatic action defined for milestone: ${milestoneTitle}`);
   }
+}
+
+/**
+ * Deletes a trip and all associated data.
+ * This will cascade delete related records like members, spends, timeline items, etc.
+ * Logs the deletion as an event.
+ */
+export async function deleteTrip(tripId: string, userId: string) {
+  // Verify the trip exists
+  const trip = await prisma.trip.findUnique({
+    where: { id: tripId },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+        },
+      },
+    },
+  });
+
+  if (!trip) {
+    throw new Error("Trip not found");
+  }
+
+  // Log the deletion event before deleting
+  await logEvent("Trip", tripId, EventType.TRIP_DELETED, userId, {
+    tripName: trip.name,
+  });
+
+  // Delete the trip (cascade will handle related records)
+  await prisma.trip.delete({
+    where: { id: tripId },
+  });
+
+  return { success: true };
 }

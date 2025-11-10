@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { CreateTripSchema, type CreateTripInput } from "@/types/schemas";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 
+interface ListTemplate {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  listType: string;
+  todoItems?: any[];
+  kitItems?: any[];
+}
+
 interface CreateTripFormProps {
-  onSuccess?: (tripId: string) => void;
+  onSuccess?: (tripId: string, hadTemplate: boolean) => void;
   onCancel?: () => void;
 }
 
@@ -24,6 +34,29 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Template selection state
+  const [templates, setTemplates] = useState<ListTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+
+  // Load trip templates
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        const response = await fetch("/api/lists/templates/trip-templates");
+        if (response.ok) {
+          const data = await response.json();
+          setTemplates(data.templates || []);
+        }
+      } catch (err) {
+        console.error("Failed to load templates:", err);
+      } finally {
+        setTemplatesLoading(false);
+      }
+    }
+    loadTemplates();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,11 +104,41 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
         throw new Error(result.error || "Failed to create trip");
       }
 
+      const tripId = result.trip.id;
+
+      // If a template was selected, copy it to the trip
+      if (selectedTemplateId) {
+        try {
+          const copyResponse = await fetch(
+            `/api/lists/templates/${selectedTemplateId}/copy-to-trip`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${idToken}`,
+              },
+              body: JSON.stringify({
+                tripId,
+                mode: "NEW_INSTANCE",
+              }),
+            }
+          );
+
+          if (!copyResponse.ok) {
+            console.error("Failed to copy template to trip");
+            // Don't throw error - trip was created successfully
+          }
+        } catch (err) {
+          console.error("Error copying template:", err);
+          // Don't throw error - trip was created successfully
+        }
+      }
+
       // Success - redirect to trip page or call callback
       if (onSuccess) {
-        onSuccess(result.trip.id);
+        onSuccess(tripId, selectedTemplateId !== null);
       } else {
-        router.push(`/trips/${result.trip.id}`);
+        router.push(`/trips/${tripId}`);
       }
     } catch (err) {
       console.error("Error creating trip:", err);
@@ -92,6 +155,97 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           {error}
         </div>
       )}
+
+      {/* Template Selection */}
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Choose a starting point
+        </label>
+
+        {templatesLoading ? (
+          <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 text-sm">
+            Loading templates...
+          </div>
+        ) : (
+          <div className="relative w-full overflow-hidden">
+            <div
+              className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
+              }}
+            >
+              {/* "Do your own thing" default option */}
+              <button
+                type="button"
+                onClick={() => setSelectedTemplateId(null)}
+                className={`flex-shrink-0 w-[200px] snap-center transition-all ${
+                  selectedTemplateId === null
+                    ? "ring-2 ring-blue-500 dark:ring-blue-400"
+                    : ""
+                }`}
+              >
+                <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 border-2 border-zinc-200 dark:border-zinc-700 h-full min-h-[120px] flex flex-col justify-center items-center">
+                  <div className="text-3xl mb-2">✨</div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 text-center">
+                    Do Your Own Thing
+                  </h3>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 text-center mt-1">
+                    Start from scratch
+                  </p>
+                </div>
+              </button>
+
+              {/* Template options */}
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => setSelectedTemplateId(template.id)}
+                  className={`flex-shrink-0 w-[200px] snap-center transition-all ${
+                    selectedTemplateId === template.id
+                      ? "ring-2 ring-blue-500 dark:ring-blue-400"
+                      : ""
+                  }`}
+                >
+                  <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 border-2 border-zinc-200 dark:border-zinc-700 h-full min-h-[120px] flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <span
+                          className={`px-2 py-0.5 text-xs font-medium rounded ${
+                            template.listType === "TODO"
+                              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                              : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                          }`}
+                        >
+                          {template.listType === "TODO" ? "To-Do" : "Kit"}
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 text-left line-clamp-2">
+                        {template.title}
+                      </h3>
+                    </div>
+                    {template.description && (
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 text-left line-clamp-2 mt-2">
+                        {template.description}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Scroll hint gradients */}
+            {templates.length > 0 && (
+              <>
+                <div className="absolute top-0 left-0 bottom-0 w-6 bg-gradient-to-r from-zinc-50 dark:from-zinc-900 to-transparent pointer-events-none" />
+                <div className="absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-zinc-50 dark:from-zinc-900 to-transparent pointer-events-none" />
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Trip Name */}
       <Field label="Trip Name" htmlFor="name" required>

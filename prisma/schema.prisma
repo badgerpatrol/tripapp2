@@ -141,6 +141,7 @@ enum EventType {
   PAYMENT_RECORDED
   CHECKLIST_CREATED
   CHECKLIST_ITEM_COMPLETED
+  MILESTONE_CREATED
   CHOICE_CREATED
   CHOICE_UPDATED
   CHOICE_CLOSED
@@ -761,6 +762,7 @@ model ListTemplate {
   publishedAt          DateTime?
   forkedFromTemplateId String?
   tags                 String[]   @default([])
+  isTripTemplate       Boolean    @default(false)
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -771,6 +773,7 @@ model ListTemplate {
   @@index([ownerId, visibility])
   @@index([visibility, type, title])
   @@index([forkedFromTemplateId])
+  @@index([isTripTemplate])
   @@map("list_templates")
 }
 

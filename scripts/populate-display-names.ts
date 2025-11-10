@@ -31,7 +31,7 @@ async function main() {
   const usersWithoutNames = await prisma.user.findMany({
     where: {
       OR: [
-        { displayName: null },
+        { displayName: { equals: null as any } },
         { displayName: "" }
       ]
     },

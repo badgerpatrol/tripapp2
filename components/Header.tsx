@@ -6,11 +6,7 @@ import { auth } from "@/lib/firebase/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-interface HeaderProps {
-  showBackButton?: boolean;
-}
-
-export default function Header({ showBackButton = false }: HeaderProps) {
+export default function Header() {
   const { user } = useAuth();
   const router = useRouter();
 
@@ -33,29 +29,10 @@ export default function Header({ showBackButton = false }: HeaderProps) {
         <div className="flex justify-between items-center gap-2 min-w-0">
           {/* Left side - Logo */}
           <div className="flex items-center flex-shrink-0 min-w-0">
-            <a href="/trips" className="text-sm sm:text-base md:text-xl font-bold text-zinc-900 dark:text-zinc-100 whitespace-nowrap truncate">
+            <span className="text-sm sm:text-base md:text-xl font-bold text-zinc-900 dark:text-zinc-100 whitespace-nowrap truncate">
               TripPlanner
-            </a>
+            </span>
           </div>
-
-          {/* Center - Back to Trips button */}
-          {showBackButton && (
-            <div className="flex-shrink-0">
-              <Button
-                variant="primary"
-                size="sm"
-                className="text-xs sm:text-sm"
-                onClick={() => router.push("/trips")}
-                leftIcon={
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                }
-              >
-                <span className="whitespace-nowrap">Trips</span>
-              </Button>
-            </div>
-          )}
 
           {/* Right side - Logout button only */}
           <div className="flex items-center flex-shrink-0">

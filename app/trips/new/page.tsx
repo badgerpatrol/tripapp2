@@ -1,12 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import CreateTripForm from "@/components/CreateTripForm";
+import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
 
 export default function NewTripPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    tripId: string | null;
+    shouldNavigate: boolean;
+  }>({
+    isOpen: false,
+    tripId: null,
+    shouldNavigate: false,
+  });
 
   // Show loading state while checking auth
   if (loading) {
@@ -58,8 +69,14 @@ export default function NewTripPage() {
         {/* Form Card */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8">
           <CreateTripForm
-            onSuccess={(tripId) => {
-              router.push(`/trips/${tripId}`);
+            onSuccess={(tripId, hadTemplate) => {
+              if (hadTemplate) {
+                // Open the modal first, navigate when it closes
+                setModalState({ isOpen: true, tripId, shouldNavigate: true });
+              } else {
+                // No template selected, just navigate
+                router.push(`/trips/${tripId}`);
+              }
             }}
             onCancel={() => router.back()}
           />
@@ -77,6 +94,22 @@ export default function NewTripPage() {
           </ul>
         </div>
       </div>
+
+      {/* List Workflow Modal */}
+      {modalState.tripId && (
+        <ListWorkflowModal
+          tripId={modalState.tripId}
+          isOpen={modalState.isOpen}
+          onClose={() => {
+            const tripId = modalState.tripId;
+            setModalState({ isOpen: false, tripId: null, shouldNavigate: false });
+            // Navigate after modal closes if needed
+            if (modalState.shouldNavigate && tripId) {
+              router.push(`/trips/${tripId}`);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

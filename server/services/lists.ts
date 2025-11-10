@@ -34,6 +34,7 @@ export async function createTemplate(
       type: payload.type,
       visibility: payload.visibility ?? "PRIVATE",
       tags: payload.tags ?? [],
+      isTripTemplate: payload.isTripTemplate ?? false,
     },
   });
 
@@ -128,6 +129,31 @@ export async function browsePublicTemplates(query: BrowsePublicTemplatesQuery) {
 }
 
 /**
+ * Browse trip templates (templates with "Tripplan" tag)
+ * Note: Returns templates regardless of visibility if they have the Tripplan tag
+ */
+export async function browseTripTemplates() {
+  const templates = await prisma.listTemplate.findMany({
+    where: {
+      tags: {
+        has: "Tripplan",
+      },
+    },
+    include: {
+      todoItems: {
+        orderBy: { orderIndex: "asc" },
+      },
+      kitItems: {
+        orderBy: { orderIndex: "asc" },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return templates;
+}
+
+/**
  * Get a single template by ID
  */
 export async function getTemplate(actorId: string, templateId: string) {
@@ -174,14 +200,65 @@ export async function updateTemplate(
     throw new Error("Forbidden: Cannot edit this template");
   }
 
-  const updated = await prisma.listTemplate.update({
-    where: { id: templateId },
-    data: {
-      title: payload.title,
-      description: payload.description,
-      visibility: payload.visibility,
-      tags: payload.tags,
-    },
+  // Use a transaction to update template and items atomically
+  const updated = await prisma.$transaction(async (tx) => {
+    // Update the template metadata
+    const updatedTemplate = await tx.listTemplate.update({
+      where: { id: templateId },
+      data: {
+        title: payload.title,
+        description: payload.description,
+        visibility: payload.visibility,
+        tags: payload.tags,
+        isTripTemplate: payload.isTripTemplate,
+      },
+    });
+
+    // If items are provided, replace all items
+    if (payload.todoItems && template.type === "TODO") {
+      // Delete all existing items
+      await tx.todoItemTemplate.deleteMany({
+        where: { templateId },
+      });
+
+      // Create new items
+      if (payload.todoItems.length > 0) {
+        await tx.todoItemTemplate.createMany({
+          data: payload.todoItems.map((item, idx) => ({
+            templateId,
+            label: item.label,
+            notes: item.notes,
+            actionType: item.actionType,
+            actionData: item.actionData as any,
+            orderIndex: item.orderIndex ?? idx,
+          })),
+        });
+      }
+    } else if (payload.kitItems && template.type === "KIT") {
+      // Delete all existing items
+      await tx.kitItemTemplate.deleteMany({
+        where: { templateId },
+      });
+
+      // Create new items
+      if (payload.kitItems.length > 0) {
+        await tx.kitItemTemplate.createMany({
+          data: payload.kitItems.map((item, idx) => ({
+            templateId,
+            label: item.label,
+            notes: item.notes,
+            quantity: item.quantity ?? 1,
+            perPerson: item.perPerson ?? false,
+            required: item.required ?? true,
+            weightGrams: item.weightGrams,
+            category: item.category,
+            orderIndex: item.orderIndex ?? idx,
+          })),
+        });
+      }
+    }
+
+    return updatedTemplate;
   });
 
   await logEvent(
@@ -281,7 +358,7 @@ export async function forkPublicTemplate(
         label: item.label,
         notes: item.notes,
         actionType: item.actionType,
-        actionData: item.actionData,
+        actionData: item.actionData as any,
         orderIndex: item.orderIndex,
       })),
     });

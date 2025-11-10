@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface EditTripDialogProps {
   trip: {
@@ -24,6 +25,7 @@ export default function EditTripDialog({
   onSuccess,
 }: EditTripDialogProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: trip.name,
     description: trip.description || "",
@@ -32,6 +34,8 @@ export default function EditTripDialog({
     endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -115,6 +119,46 @@ export default function EditTripDialog({
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDelete = async () => {
+    setError(null);
+    setIsDeleting(true);
+
+    try {
+      if (!user) {
+        throw new Error("You must be logged in to delete a trip");
+      }
+
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`/api/trips/${trip.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error || `Failed to delete trip (${response.status})`
+        );
+      }
+
+      // Success! Navigate to trips list
+      router.push("/trips");
+    } catch (err) {
+      console.error("Error deleting trip:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to delete trip. Please try again."
+      );
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -283,22 +327,83 @@ export default function EditTripDialog({
               </div>
             </div>
 
+            {/* Delete Confirmation */}
+            {showDeleteConfirm && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex gap-3">
+                  <svg
+                    className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-900 dark:text-red-100">
+                      Are you sure you want to delete this trip?
+                    </p>
+                    <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                      This action cannot be undone. All trip data including
+                      spends, timeline, and member information will be
+                      permanently deleted.
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={isDeleting}
+                        className="tap-target px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="tap-target px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isDeleting ? "Deleting..." : "Delete Trip"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col gap-3 pt-4">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={isSubmitting || isDeleting}
+                  className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isDeleting}
+                  className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+
+              {/* Delete Button */}
               <button
                 type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isSubmitting || isDeleting || showDeleteConfirm}
+                className="tap-target w-full px-6 py-3 rounded-lg border-2 border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Saving..." : "Save Changes"}
+                Delete Trip
               </button>
             </div>
           </form>

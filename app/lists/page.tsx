@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
-import { ForkTemplateDialog } from "@/components/lists/ForkTemplateDialog";
-import { CopyToTripDialog } from "@/components/lists/CopyToTripDialog";
-import { CreateTemplateDialog } from "@/components/lists/CreateTemplateDialog";
 
 interface ListTemplate {
   id: string;
@@ -39,6 +36,7 @@ interface ListTemplate {
 type Tab = "my-templates" | "public-gallery";
 
 export default function ListsPage() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("my-templates");
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
@@ -48,17 +46,6 @@ export default function ListsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  // Dialog states
-  const [forkDialog, setForkDialog] = useState<{ isOpen: boolean; template: ListTemplate | null }>({
-    isOpen: false,
-    template: null,
-  });
-  const [copyDialog, setCopyDialog] = useState<{ isOpen: boolean; template: ListTemplate | null }>({
-    isOpen: false,
-    template: null,
-  });
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -139,19 +126,6 @@ export default function ListsPage() {
     }
   };
 
-  const handleForkSuccess = () => {
-    setToast({ message: "Template forked successfully!", type: "success" });
-    setActiveTab("my-templates");
-  };
-
-  const handleCopySuccess = () => {
-    setToast({ message: "Template copied to trip!", type: "success" });
-  };
-
-  const handleCreateSuccess = () => {
-    setToast({ message: "Template created successfully!", type: "success" });
-    fetchMyTemplates();
-  };
 
   const getTypeIcon = (type: ListType) => {
     return type === "TODO" ? "✓" : "🎒";
@@ -172,8 +146,7 @@ export default function ListsPage() {
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <Header />
-        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
+        <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
             <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
@@ -185,8 +158,6 @@ export default function ListsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <Header />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -200,12 +171,6 @@ export default function ListsPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button
-                onClick={() => window.location.href = "/trips"}
-                className="bg-zinc-600 hover:bg-zinc-700 text-white"
-              >
-                ← Trips
-              </Button>
               <Button
                 onClick={() => window.location.href = "/lists/create-todo"}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -330,7 +295,8 @@ export default function ListsPage() {
             {templates.map((template) => (
               <div
                 key={template.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200 dark:border-gray-700"
+                onClick={() => router.push(`/lists/${template.id}`)}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200 dark:border-gray-700 cursor-pointer"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
@@ -368,7 +334,7 @@ export default function ListsPage() {
 
                 {/* Tags */}
                 {template.tags && template.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2">
                     {template.tags.slice(0, 3).map((tag) => (
                       <span
                         key={tag}
@@ -384,71 +350,11 @@ export default function ListsPage() {
                     )}
                   </div>
                 )}
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  {activeTab === "my-templates" ? (
-                    <>
-                      <Button
-                        onClick={() => alert("Edit template - Coming soon!")}
-                        className="flex-1 text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700 dark:bg-indigo-900 dark:hover:bg-indigo-800 dark:text-indigo-200"
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        onClick={() => setCopyDialog({ isOpen: true, template })}
-                        className="flex-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-200"
-                      >
-                        Use
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        onClick={() => setForkDialog({ isOpen: true, template })}
-                        className="flex-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
-                      >
-                        Fork
-                      </Button>
-                      <Button
-                        onClick={() => setCopyDialog({ isOpen: true, template })}
-                        className="flex-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-                      >
-                        Use
-                      </Button>
-                    </>
-                  )}
-                </div>
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {/* Dialogs */}
-      {forkDialog.template && (
-        <ForkTemplateDialog
-          isOpen={forkDialog.isOpen}
-          onClose={() => setForkDialog({ isOpen: false, template: null })}
-          template={forkDialog.template}
-          onSuccess={handleForkSuccess}
-        />
-      )}
-
-      {copyDialog.template && (
-        <CopyToTripDialog
-          isOpen={copyDialog.isOpen}
-          onClose={() => setCopyDialog({ isOpen: false, template: null })}
-          template={copyDialog.template}
-          onSuccess={handleCopySuccess}
-        />
-      )}
-
-      <CreateTemplateDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        onSuccess={handleCreateSuccess}
-      />
     </div>
   );
 }

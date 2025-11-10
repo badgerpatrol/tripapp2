@@ -664,6 +664,7 @@ export const ListTemplateCreate = z.object({
   description: z.string().optional(),
   visibility: VisibilitySchema.default("PRIVATE"),
   tags: z.array(z.string()).max(12).optional(),
+  isTripTemplate: z.boolean().default(false),
   // Discriminated items by type:
   todoItems: z.array(TodoItemTemplateInput).optional(),
   kitItems: z.array(KitItemTemplateInput).optional()
@@ -673,7 +674,25 @@ export const ListTemplateCreate = z.object({
 })
 .strict();
 
-export const ListTemplateUpdate = ListTemplateCreate.partial();
+// For updating, allow id in item schemas
+export const TodoItemTemplateUpdateInput = TodoItemTemplateInput.extend({
+  id: z.string().optional(), // If provided, update existing; if not, create new
+}).strict();
+
+export const KitItemTemplateUpdateInput = KitItemTemplateInput.extend({
+  id: z.string().optional(),
+}).strict();
+
+export const ListTemplateUpdate = z.object({
+  title: z.string().min(1, "Title is required").optional(),
+  description: z.string().optional(),
+  visibility: VisibilitySchema.optional(),
+  tags: z.array(z.string()).max(12).optional(),
+  isTripTemplate: z.boolean().optional(),
+  // When updating items, we replace all items
+  todoItems: z.array(TodoItemTemplateUpdateInput).optional(),
+  kitItems: z.array(KitItemTemplateUpdateInput).optional()
+}).strict();
 
 export const TodoMergeMode = z.enum(["REPLACE","MERGE_ADD","MERGE_ADD_ALLOW_DUPES"]);
 
