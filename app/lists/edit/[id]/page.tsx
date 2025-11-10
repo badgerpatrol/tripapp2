@@ -329,7 +329,7 @@ export default function EditListPage() {
               <Button
                 type="button"
                 onClick={addItem}
-                className="text-sm px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 disabled={saving}
               >
                 + Add Task
@@ -446,14 +446,14 @@ export default function EditListPage() {
             <Button
               type="button"
               onClick={() => router.push("/lists")}
-              className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
+              className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100 font-medium"
               disabled={saving}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
               disabled={saving}
             >
               {saving ? "Saving..." : "Save Changes"}

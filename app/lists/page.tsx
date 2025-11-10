@@ -427,20 +427,20 @@ export default function ListsPage() {
                       <div className="flex gap-2">
                         <Button
                           onClick={() => window.location.href = `/lists/edit/${template.id}`}
-                          className="flex-1 text-sm bg-indigo-100 hover:bg-indigo-200 text-indigo-700 dark:bg-indigo-900 dark:hover:bg-indigo-800 dark:text-indigo-200"
+                          className="flex-1 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium"
                         >
                           Edit
                         </Button>
                         <Button
                           onClick={() => setCopyDialog({ isOpen: true, template })}
-                          className="flex-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-200"
+                          className="flex-1 text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
                         >
                           Use
                         </Button>
                       </div>
                       <Button
                         onClick={() => setDeleteConfirm({ isOpen: true, template })}
-                        className="w-full text-sm bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-300"
+                        className="w-full text-sm bg-red-600 hover:bg-red-700 text-white font-medium"
                       >
                         Delete
                       </Button>
@@ -449,17 +449,17 @@ export default function ListsPage() {
                     <>
                       <Button
                         onClick={() => setForkDialog({ isOpen: true, template })}
-                        className="flex-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+                        className="flex-1 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium"
                       >
                         Fork
                       </Button>
                       <Button
                         onClick={() => setCopyDialog({ isOpen: true, template })}
-                        className="flex-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+                        className="flex-1 text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
                       >
                         Use
                       </Button>
-                    </>
+</>
                   )}
                 </div>
               </div>
