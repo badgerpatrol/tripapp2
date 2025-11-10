@@ -66,6 +66,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [confirmCompletionItem, setConfirmCompletionItem] = useState<{itemId: string; label: string} | null>(null);
   const [isAddListDialogOpen, setIsAddListDialogOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{listId: string; listTitle: string} | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -209,6 +211,35 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     setConfirmCompletionItem(null);
   };
 
+  const handleDeleteList = async () => {
+    if (!user || !deleteConfirmation) return;
+
+    setDeleting(true);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/lists/instances/${deleteConfirmation.listId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete list");
+      }
+
+      // Close confirmation and refresh lists
+      setDeleteConfirmation(null);
+      await fetchLists();
+    } catch (err) {
+      console.error("Error deleting list:", err);
+      alert("Failed to delete list. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const getActionButtonText = (actionType: TodoActionType): string => {
     switch (actionType) {
       case "INVITE_USERS":
@@ -305,29 +336,30 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                 className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
               >
                 {/* List Header */}
-                <button
-                  onClick={() => {
-                    if (shouldExpandInline) {
-                      setExpandedListId(isExpanded ? null : list.id);
-                    } else if (onOpenList) {
-                      onOpenList(list.id, list.title);
-                    }
-                  }}
-                  className="w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{getTypeIcon(list.type)}</span>
-                    <div className="text-left">
-                      <h3 className="font-medium text-gray-900 dark:text-white">
-                        {list.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {completedCount} / {totalCount} {list.type === "TODO" ? "done" : "packed"}
-                      </p>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => {
+                      if (shouldExpandInline) {
+                        setExpandedListId(isExpanded ? null : list.id);
+                      } else if (onOpenList) {
+                        onOpenList(list.id, list.title);
+                      }
+                    }}
+                    className="flex-1 p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{getTypeIcon(list.type)}</span>
+                      <div className="text-left">
+                        <h3 className="font-medium text-gray-900 dark:text-white">
+                          {list.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {completedCount} / {totalCount} {list.type === "TODO" ? "done" : "packed"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                     {/* Progress Bar */}
                     <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                       <div
@@ -356,6 +388,33 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     </svg>
                   </div>
                 </button>
+
+                {/* Delete Button */}
+                {!inWorkflowMode && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteConfirmation({ listId: list.id, listTitle: list.title });
+                    }}
+                    className="p-4 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group"
+                    title="Delete list"
+                  >
+                    <svg
+                      className="w-5 h-5 text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
                 {/* Expanded Items - only in workflow mode */}
                 {isExpanded && shouldExpandInline && (
@@ -482,6 +541,36 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 Yes, Mark Complete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmation && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Delete List?
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to delete "<strong>{deleteConfirmation.listTitle}</strong>"? This will permanently remove the list and all its items from this trip. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                onClick={() => setDeleteConfirmation(null)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteList}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete List"}
               </Button>
             </div>
           </div>
