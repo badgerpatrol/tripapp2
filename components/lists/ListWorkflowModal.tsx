@@ -15,6 +15,7 @@ interface ListWorkflowModalProps {
   onClose: () => void;
   title?: string;
   description?: string;
+  selectedListId?: string; // ID of a specific list to display
   currentMembers?: Array<{
     id: string;
     role: string;
@@ -34,6 +35,7 @@ export function ListWorkflowModal({
   onClose,
   title = "Get Started with Your Trip",
   description = "Work through your to-do list to prepare for your trip",
+  selectedListId,
   currentMembers = [],
 }: ListWorkflowModalProps) {
   const { user } = useAuth();
@@ -147,6 +149,7 @@ export function ListWorkflowModal({
             onActionComplete={(itemId, label) => setPendingCompletion({itemId, label})}
             onRefreshLists={() => setRefreshKey(prev => prev + 1)}
             inWorkflowMode={true}
+            selectedListId={selectedListId}
           />
         </div>
 

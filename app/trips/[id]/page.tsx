@@ -149,6 +149,7 @@ export default function TripDetailPage() {
   const [isListWorkflowModalOpen, setIsListWorkflowModalOpen] = useState(false);
   const [listWorkflowTitle, setListWorkflowTitle] = useState("");
   const [listWorkflowDescription, setListWorkflowDescription] = useState("");
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -1606,8 +1607,9 @@ export default function TripDetailPage() {
             onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
             onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
             onOpenList={(listId, listTitle) => {
-              setListWorkflowTitle("Get Things Done");
-              setListWorkflowDescription(`Work on your ${listTitle} list`);
+              setSelectedListId(listId);
+              setListWorkflowTitle("Get things done");
+              setListWorkflowDescription(`Complete tasks in ${listTitle}`);
               setIsListWorkflowModalOpen(true);
             }}
           />
@@ -2831,9 +2833,13 @@ export default function TripDetailPage() {
         tripId={trip?.id || ""}
         tripName={trip?.name || ""}
         isOpen={isListWorkflowModalOpen}
-        onClose={() => setIsListWorkflowModalOpen(false)}
+        onClose={() => {
+          setIsListWorkflowModalOpen(false);
+          setSelectedListId(null);
+        }}
         title={listWorkflowTitle}
         description={listWorkflowDescription}
+        selectedListId={selectedListId || undefined}
         currentMembers={trip?.participants || []}
       />
     </div>

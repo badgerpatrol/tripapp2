@@ -55,9 +55,10 @@ interface TripListsPanelProps {
   onRefreshLists?: () => void;
   inWorkflowMode?: boolean;
   onOpenList?: (listId: string, listTitle: string) => void;
+  selectedListId?: string; // ID of a specific list to show (hides others and container title)
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,9 +105,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       const fetchedLists = data.instances || [];
       setLists(fetchedLists);
 
-      // In workflow mode, expand all lists by default
+      // In workflow mode, expand the selected list or the first list by default
       if (inWorkflowMode && fetchedLists.length > 0 && !expandedListId) {
-        setExpandedListId(fetchedLists[0].id);
+        if (selectedListId) {
+          setExpandedListId(selectedListId);
+        } else {
+          setExpandedListId(fetchedLists[0].id);
+        }
       }
     } catch (err: any) {
       console.error("Error fetching lists:", err);
@@ -266,33 +271,43 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const todoLists = lists.filter((l) => l.type === "TODO");
   const kitLists = lists.filter((l) => l.type === "KIT");
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          📋 Lists
-        </h2>
-        {!inWorkflowMode && (
-          <div className="flex gap-2">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            >
-              <option value="ALL">All</option>
-              <option value="TODO">TODO</option>
-              <option value="KIT">Kit</option>
-            </select>
-            <Button
-              onClick={() => setIsAddListDialogOpen(true)}
-              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              + Add List
-            </Button>
-          </div>
-        )}
-      </div>
+  // If a specific list is selected, filter to show only that list
+  const displayedLists = selectedListId
+    ? lists.filter(list => list.id === selectedListId)
+    : lists;
+
+  // When showing a single list, hide the container wrapper
+  const showContainer = !selectedListId;
+
+  const content = (
+    <>
+      {/* Header - only show when displaying all lists */}
+      {showContainer && (
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            📋 Lists
+          </h2>
+          {!inWorkflowMode && (
+            <div className="flex gap-2">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                <option value="ALL">All</option>
+                <option value="TODO">TODO</option>
+                <option value="KIT">Kit</option>
+              </select>
+              <Button
+                onClick={() => setIsAddListDialogOpen(true)}
+                className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                + Add List
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -309,7 +324,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       )}
 
       {/* Empty State */}
-      {!loading && !error && lists.length === 0 && (
+      {!loading && !error && displayedLists.length === 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500 dark:text-gray-400">
             No lists yet. Add a template to get started!
@@ -318,9 +333,9 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       )}
 
       {/* Lists */}
-      {!loading && lists.length > 0 && (
+      {!loading && displayedLists.length > 0 && (
         <div className="space-y-4">
-          {lists.map((list) => {
+          {displayedLists.map((list) => {
             const isExpanded = expandedListId === list.id;
             const items = list.type === "TODO" ? list.todoItems || [] : list.kitItems || [];
             const completedCount =
@@ -370,22 +385,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                       />
                     </div>
 
-                    {/* Expand Icon */}
-                    <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform ${
-                        isExpanded ? "rotate-180" : ""
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+
                   </div>
                 </button>
 
@@ -587,6 +587,14 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           fetchLists(); // Refresh the lists after adding
         }}
       />
+    </>
+  );
+
+  return showContainer ? (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+      {content}
     </div>
+  ) : (
+    content
   );
 }
