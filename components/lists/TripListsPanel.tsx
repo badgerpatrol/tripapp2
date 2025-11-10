@@ -49,12 +49,13 @@ interface TripListsPanelProps {
   tripId: string;
   onOpenInviteDialog?: () => void;
   onOpenCreateChoice?: () => void;
+  onOpenMilestoneDialog?: (itemId: string, itemLabel: string) => void;
   onActionComplete?: (itemId: string, label: string) => void;
   onRefreshLists?: () => void;
   inWorkflowMode?: boolean;
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onActionComplete, onRefreshLists, inWorkflowMode = false }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,10 +63,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [confirmCompletionItem, setConfirmCompletionItem] = useState<{itemId: string; label: string} | null>(null);
-  const [milestoneDialog, setMilestoneDialog] = useState<{isOpen: boolean; itemId: string; itemLabel: string} | null>(null);
-  const [milestoneTitle, setMilestoneTitle] = useState("");
-  const [milestoneDate, setMilestoneDate] = useState("");
-  const [creatingMilestone, setCreatingMilestone] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -176,13 +173,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           }
           break;
         case "SET_MILESTONE":
-          // Open milestone creation dialog
-          setMilestoneDialog({
-            isOpen: true,
-            itemId: item.id,
-            itemLabel: item.label,
-          });
-          setMilestoneTitle(item.label); // Pre-fill with task label
+          if (onOpenMilestoneDialog) {
+            onOpenMilestoneDialog(item.id, item.label);
+          }
+          if (onActionComplete) {
+            onActionComplete(item.id, item.label);
+          }
           break;
         default:
           break;
@@ -205,48 +201,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     }
 
     setConfirmCompletionItem(null);
-  };
-
-  const handleCreateMilestone = async () => {
-    if (!user || !milestoneDialog || !milestoneTitle.trim()) return;
-
-    setCreatingMilestone(true);
-
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch(`/api/trips/${tripId}/timeline`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: milestoneTitle.trim(),
-          date: milestoneDate || null,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create milestone");
-      }
-
-      // Ask if they want to mark the task as complete
-      setConfirmCompletionItem({
-        itemId: milestoneDialog.itemId,
-        label: milestoneDialog.itemLabel,
-      });
-
-      // Close milestone dialog
-      setMilestoneDialog(null);
-      setMilestoneTitle("");
-      setMilestoneDate("");
-    } catch (err: any) {
-      console.error("Error creating milestone:", err);
-      alert(err.message || "Failed to create milestone");
-    } finally {
-      setCreatingMilestone(false);
-    }
   };
 
   const getActionButtonText = (actionType: TodoActionType): string => {
@@ -491,70 +445,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Milestone Creation Dialog */}
-      {milestoneDialog?.isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Create Milestone
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Add a milestone to the trip timeline
-            </p>
-
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Milestone Title *
-                </label>
-                <input
-                  type="text"
-                  value={milestoneTitle}
-                  onChange={(e) => setMilestoneTitle(e.target.value)}
-                  placeholder="e.g., Book flights"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                  disabled={creatingMilestone}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Due Date (optional)
-                </label>
-                <input
-                  type="date"
-                  value={milestoneDate}
-                  onChange={(e) => setMilestoneDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                  disabled={creatingMilestone}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                onClick={() => {
-                  setMilestoneDialog(null);
-                  setMilestoneTitle("");
-                  setMilestoneDate("");
-                }}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
-                disabled={creatingMilestone}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateMilestone}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
-                disabled={creatingMilestone || !milestoneTitle.trim()}
-              >
-                {creatingMilestone ? "Creating..." : "Create Milestone"}
-              </Button>
-            </div>
-          </div>
         </div>
       )}
 
