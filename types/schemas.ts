@@ -664,6 +664,7 @@ export const ListTemplateCreate = z.object({
   description: z.string().optional(),
   visibility: VisibilitySchema.default("PRIVATE"),
   tags: z.array(z.string()).max(12).optional(),
+  isTripTemplate: z.boolean().default(false),
   // Discriminated items by type:
   todoItems: z.array(TodoItemTemplateInput).optional(),
   kitItems: z.array(KitItemTemplateInput).optional()
@@ -687,6 +688,7 @@ export const ListTemplateUpdate = z.object({
   description: z.string().optional(),
   visibility: VisibilitySchema.optional(),
   tags: z.array(z.string()).max(12).optional(),
+  isTripTemplate: z.boolean().optional(),
   // When updating items, we replace all items
   todoItems: z.array(TodoItemTemplateUpdateInput).optional(),
   kitItems: z.array(KitItemTemplateUpdateInput).optional()

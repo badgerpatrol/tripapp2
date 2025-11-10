@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
-import { ForkTemplateDialog } from "@/components/lists/ForkTemplateDialog";
-import { CopyToTripDialog } from "@/components/lists/CopyToTripDialog";
-import { CreateTemplateDialog } from "@/components/lists/CreateTemplateDialog";
 
 interface ListTemplate {
   id: string;
@@ -39,6 +36,7 @@ interface ListTemplate {
 type Tab = "my-templates" | "public-gallery";
 
 export default function ListsPage() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("my-templates");
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
@@ -48,22 +46,6 @@ export default function ListsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  // Dialog states
-  const [forkDialog, setForkDialog] = useState<{ isOpen: boolean; template: ListTemplate | null }>({
-    isOpen: false,
-    template: null,
-  });
-  const [copyDialog, setCopyDialog] = useState<{ isOpen: boolean; template: ListTemplate | null }>({
-    isOpen: false,
-    template: null,
-  });
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; template: ListTemplate | null }>({
-    isOpen: false,
-    template: null,
-  });
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -144,49 +126,6 @@ export default function ListsPage() {
     }
   };
 
-  const handleForkSuccess = () => {
-    setToast({ message: "Template forked successfully!", type: "success" });
-    setActiveTab("my-templates");
-  };
-
-  const handleCopySuccess = () => {
-    setToast({ message: "Template copied to trip!", type: "success" });
-  };
-
-  const handleCreateSuccess = () => {
-    setToast({ message: "Template created successfully!", type: "success" });
-    fetchMyTemplates();
-  };
-
-  const handleDelete = async (template: ListTemplate) => {
-    if (!user) return;
-
-    setDeleting(true);
-    setError(null);
-
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch(`/api/lists/templates/${template.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete template");
-      }
-
-      setToast({ message: "Template deleted successfully!", type: "success" });
-      setDeleteConfirm({ isOpen: false, template: null });
-      fetchMyTemplates();
-    } catch (err: any) {
-      console.error("Error deleting template:", err);
-      setError(err.message);
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   const getTypeIcon = (type: ListType) => {
     return type === "TODO" ? "✓" : "🎒";
@@ -356,7 +295,8 @@ export default function ListsPage() {
             {templates.map((template) => (
               <div
                 key={template.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200 dark:border-gray-700"
+                onClick={() => router.push(`/lists/${template.id}`)}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200 dark:border-gray-700 cursor-pointer"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
@@ -394,7 +334,7 @@ export default function ListsPage() {
 
                 {/* Tags */}
                 {template.tags && template.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-2">
                     {template.tags.slice(0, 3).map((tag) => (
                       <span
                         key={tag}
@@ -410,119 +350,11 @@ export default function ListsPage() {
                     )}
                   </div>
                 )}
-
-                {/* Actions */}
-                <div className="flex flex-col gap-2">
-                  {activeTab === "my-templates" ? (
-                    <>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => window.location.href = `/lists/edit/${template.id}`}
-                          className="flex-1 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          onClick={() => setCopyDialog({ isOpen: true, template })}
-                          className="flex-1 text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
-                        >
-                          Use
-                        </Button>
-                      </div>
-                      <Button
-                        onClick={() => setDeleteConfirm({ isOpen: true, template })}
-                        className="w-full text-sm bg-red-600 hover:bg-red-700 text-white font-medium"
-                      >
-                        Delete
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        onClick={() => setForkDialog({ isOpen: true, template })}
-                        className="flex-1 text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                      >
-                        Fork
-                      </Button>
-                      <Button
-                        onClick={() => setCopyDialog({ isOpen: true, template })}
-                        className="flex-1 text-sm bg-green-600 hover:bg-green-700 text-white font-medium"
-                      >
-                        Use
-                      </Button>
-</>
-                  )}
-                </div>
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {/* Dialogs */}
-      {forkDialog.template && (
-        <ForkTemplateDialog
-          isOpen={forkDialog.isOpen}
-          onClose={() => setForkDialog({ isOpen: false, template: null })}
-          template={forkDialog.template}
-          onSuccess={handleForkSuccess}
-        />
-      )}
-
-      {copyDialog.template && (
-        <CopyToTripDialog
-          isOpen={copyDialog.isOpen}
-          onClose={() => setCopyDialog({ isOpen: false, template: null })}
-          template={copyDialog.template}
-          onSuccess={handleCopySuccess}
-        />
-      )}
-
-      <CreateTemplateDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        onSuccess={handleCreateSuccess}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      {deleteConfirm.isOpen && deleteConfirm.template && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Delete Template
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Are you sure you want to delete "{deleteConfirm.template.title}"? This action cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                onClick={() => setDeleteConfirm({ isOpen: false, template: null })}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => handleDelete(deleteConfirm.template!)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

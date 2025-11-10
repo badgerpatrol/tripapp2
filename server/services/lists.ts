@@ -34,6 +34,7 @@ export async function createTemplate(
       type: payload.type,
       visibility: payload.visibility ?? "PRIVATE",
       tags: payload.tags ?? [],
+      isTripTemplate: payload.isTripTemplate ?? false,
     },
   });
 
@@ -128,6 +129,31 @@ export async function browsePublicTemplates(query: BrowsePublicTemplatesQuery) {
 }
 
 /**
+ * Browse trip templates (templates with "Tripplan" tag)
+ * Note: Returns templates regardless of visibility if they have the Tripplan tag
+ */
+export async function browseTripTemplates() {
+  const templates = await prisma.listTemplate.findMany({
+    where: {
+      tags: {
+        has: "Tripplan",
+      },
+    },
+    include: {
+      todoItems: {
+        orderBy: { orderIndex: "asc" },
+      },
+      kitItems: {
+        orderBy: { orderIndex: "asc" },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return templates;
+}
+
+/**
  * Get a single template by ID
  */
 export async function getTemplate(actorId: string, templateId: string) {
@@ -184,6 +210,7 @@ export async function updateTemplate(
         description: payload.description,
         visibility: payload.visibility,
         tags: payload.tags,
+        isTripTemplate: payload.isTripTemplate,
       },
     });
 

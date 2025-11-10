@@ -1592,7 +1592,16 @@ export default function TripDetailPage() {
 
           </div>
         </div>
-
+        
+        {/* Lists Section (for accepted members) */}
+        {trip.userRsvpStatus === "ACCEPTED" && (
+          <TripListsPanel
+            tripId={trip.id}
+            onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
+            onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
+          />
+        )}
+        
         {/*
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 mb-6">
           <div className="flex items-center justify-center gap-3">
@@ -2443,14 +2452,7 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Lists Section (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (
-          <TripListsPanel
-            tripId={trip.id}
-            onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
-            onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
-          />
-        )}
+        
         </div>
       </div>
 

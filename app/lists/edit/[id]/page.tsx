@@ -180,8 +180,8 @@ export default function EditListPage() {
         throw new Error(data.error || "Failed to update TODO list");
       }
 
-      // Redirect to lists page
-      router.push("/lists");
+      // Redirect to list view page
+      router.push(`/lists/${templateId}`);
     } catch (err: any) {
       console.error("Error updating TODO list:", err);
       setError(err.message);
@@ -227,7 +227,7 @@ export default function EditListPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <button
-              onClick={() => router.push("/lists")}
+              onClick={() => router.push(`/lists/${templateId}`)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,7 +445,7 @@ export default function EditListPage() {
           <div className="flex gap-4 justify-end">
             <Button
               type="button"
-              onClick={() => router.push("/lists")}
+              onClick={() => router.push(`/lists/${templateId}`)}
               className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100 font-medium"
               disabled={saving}
             >
