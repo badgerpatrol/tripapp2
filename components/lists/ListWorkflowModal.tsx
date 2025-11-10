@@ -16,6 +16,7 @@ interface ListWorkflowModalProps {
   title?: string;
   description?: string;
   selectedListId?: string; // ID of a specific list to display
+  onMilestoneCreated?: () => void; // Callback when a milestone is created
   currentMembers?: Array<{
     id: string;
     role: string;
@@ -36,6 +37,7 @@ export function ListWorkflowModal({
   title = "Get Started with Your Trip",
   description = "Work through your to-do list to prepare for your trip",
   selectedListId,
+  onMilestoneCreated,
   currentMembers = [],
 }: ListWorkflowModalProps) {
   const { user } = useAuth();
@@ -104,6 +106,11 @@ export function ListWorkflowModal({
       setIsMilestoneDialogOpen(false);
       setMilestoneTitle("");
       setMilestoneDate("");
+
+      // Notify parent to refresh trip data (including timeline/milestones)
+      if (onMilestoneCreated) {
+        onMilestoneCreated();
+      }
 
       // Show completion confirmation if there's a pending item
       if (pendingCompletion) {

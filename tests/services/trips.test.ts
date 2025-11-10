@@ -123,10 +123,6 @@ describe("Trip Service", () => {
       expect(startItem).toBeDefined();
       expect(endItem).toBeDefined();
 
-      // Should have spending window
-      const spendingStart = timelineItems.find((item) =>
-        item.title.includes("Spending Window Opens")
-      );
       const spendingEnd = timelineItems.find((item) =>
         item.title.includes("Spending Window Closes")
       );

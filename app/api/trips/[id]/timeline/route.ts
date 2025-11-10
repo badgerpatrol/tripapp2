@@ -65,7 +65,8 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
 
-    if (error.message === "You are not a member of this trip") {
+    if (error.message === "You are not a member of this trip" ||
+        error.message === "Only trip organizers can create timeline items") {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
