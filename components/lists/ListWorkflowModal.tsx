@@ -6,6 +6,7 @@ import { TripListsPanel } from "./TripListsPanel";
 import { Button } from "@/components/ui/button";
 import InviteUsersDialog from "@/app/trips/[id]/InviteUsersDialog";
 import CreateChoiceDialog from "@/app/trips/[id]/CreateChoiceDialog";
+import ManageChoiceDialog from "@/app/trips/[id]/ManageChoiceDialog";
 
 interface ListWorkflowModalProps {
   tripId: string;
@@ -34,6 +35,9 @@ export function ListWorkflowModal({
   const { user } = useAuth();
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isCreateChoiceDialogOpen, setIsCreateChoiceDialogOpen] = useState(false);
+  const [isManageChoiceDialogOpen, setIsManageChoiceDialogOpen] = useState(false);
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+  const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("items");
   const [isMilestoneDialogOpen, setIsMilestoneDialogOpen] = useState(false);
   const [milestoneTitle, setMilestoneTitle] = useState("");
   const [milestoneDate, setMilestoneDate] = useState("");
@@ -178,13 +182,32 @@ export function ListWorkflowModal({
         tripId={tripId}
         isOpen={isCreateChoiceDialogOpen}
         onClose={() => setIsCreateChoiceDialogOpen(false)}
-        onSuccess={() => {
+        onSuccess={(newChoiceId: string) => {
           setIsCreateChoiceDialogOpen(false);
+          // Open the manage choice dialog to add items
+          setSelectedChoiceId(newChoiceId);
+          setManageChoiceInitialTab("items");
+          setIsManageChoiceDialogOpen(true);
+        }}
+      />
+
+      {/* Manage Choice Dialog */}
+      <ManageChoiceDialog
+        isOpen={isManageChoiceDialogOpen}
+        onClose={() => {
+          setIsManageChoiceDialogOpen(false);
+          setSelectedChoiceId(null);
           // Show completion confirmation if there's a pending item
           if (pendingCompletion) {
             setShowConfirmation(true);
           }
         }}
+        choiceId={selectedChoiceId}
+        onSuccess={() => {
+          // Refresh the lists
+          setRefreshKey(prev => prev + 1);
+        }}
+        initialTab={manageChoiceInitialTab}
       />
 
       {/* Milestone Creation Dialog */}
