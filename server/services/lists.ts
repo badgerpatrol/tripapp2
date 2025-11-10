@@ -174,14 +174,64 @@ export async function updateTemplate(
     throw new Error("Forbidden: Cannot edit this template");
   }
 
-  const updated = await prisma.listTemplate.update({
-    where: { id: templateId },
-    data: {
-      title: payload.title,
-      description: payload.description,
-      visibility: payload.visibility,
-      tags: payload.tags,
-    },
+  // Use a transaction to update template and items atomically
+  const updated = await prisma.$transaction(async (tx) => {
+    // Update the template metadata
+    const updatedTemplate = await tx.listTemplate.update({
+      where: { id: templateId },
+      data: {
+        title: payload.title,
+        description: payload.description,
+        visibility: payload.visibility,
+        tags: payload.tags,
+      },
+    });
+
+    // If items are provided, replace all items
+    if (payload.todoItems && template.type === "TODO") {
+      // Delete all existing items
+      await tx.todoItemTemplate.deleteMany({
+        where: { templateId },
+      });
+
+      // Create new items
+      if (payload.todoItems.length > 0) {
+        await tx.todoItemTemplate.createMany({
+          data: payload.todoItems.map((item, idx) => ({
+            templateId,
+            label: item.label,
+            notes: item.notes,
+            actionType: item.actionType,
+            actionData: item.actionData as any,
+            orderIndex: item.orderIndex ?? idx,
+          })),
+        });
+      }
+    } else if (payload.kitItems && template.type === "KIT") {
+      // Delete all existing items
+      await tx.kitItemTemplate.deleteMany({
+        where: { templateId },
+      });
+
+      // Create new items
+      if (payload.kitItems.length > 0) {
+        await tx.kitItemTemplate.createMany({
+          data: payload.kitItems.map((item, idx) => ({
+            templateId,
+            label: item.label,
+            notes: item.notes,
+            quantity: item.quantity ?? 1,
+            perPerson: item.perPerson ?? false,
+            required: item.required ?? true,
+            weightGrams: item.weightGrams,
+            category: item.category,
+            orderIndex: item.orderIndex ?? idx,
+          })),
+        });
+      }
+    }
+
+    return updatedTemplate;
   });
 
   await logEvent(
@@ -281,7 +331,7 @@ export async function forkPublicTemplate(
         label: item.label,
         notes: item.notes,
         actionType: item.actionType,
-        actionData: item.actionData,
+        actionData: item.actionData as any,
         orderIndex: item.orderIndex,
       })),
     });

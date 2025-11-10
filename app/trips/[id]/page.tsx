@@ -2446,7 +2446,11 @@ export default function TripDetailPage() {
 
         {/* Lists Section (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (
-          <TripListsPanel tripId={trip.id} />
+          <TripListsPanel
+            tripId={trip.id}
+            onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
+            onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
+          />
         )}
         </div>
       </div>

@@ -35,7 +35,7 @@ export default async function SequenceRunPage({ params, searchParams }: PageProp
 
       await updateRunPayload(run.id, { tripId });
       if (nextStep.runStep) {
-        await completeStep(nextStep.runStep.id, { tripId });
+        await completeStep((nextStep.runStep as { id: string }).id, { tripId });
       }
 
       // Redirect to clean URL
