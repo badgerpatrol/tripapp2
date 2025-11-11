@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility, Visibility, ListType, TodoActionType } from "@/lib/generated/prisma";
+import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility, Visibility, ListType, TodoActionType, GroupMemberRole } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth Schemas
@@ -190,8 +190,21 @@ export const TripOverviewMemberSchema = TripOverviewInviteeSchema.extend({
 // ============================================================================
 
 export const InviteUsersSchema = z.object({
-  emails: z.array(z.string().email("Invalid email address")).min(1, "At least one email is required"),
-});
+  emails: z.array(z.string().email("Invalid email address")).optional(),
+  userIds: z.array(z.string()).optional(),
+  groupIds: z.array(z.string()).optional(), // Groups used for filtering
+}).refine(
+  (data) => {
+    // At least one of emails or userIds must be provided
+    return (
+      (data.emails && data.emails.length > 0) ||
+      (data.userIds && data.userIds.length > 0)
+    );
+  },
+  {
+    message: "At least one email or userId is required",
+  }
+);
 
 export const UpdateRsvpSchema = z.object({
   rsvpStatus: z.enum(["ACCEPTED", "DECLINED", "MAYBE"]),
@@ -754,6 +767,120 @@ export type CreateAdHocListInput = z.infer<typeof CreateAdHocListSchema>;
 export type ToggleItemStateInput = z.infer<typeof ToggleItemStateSchema>;
 export type BrowsePublicTemplatesQuery = z.infer<typeof BrowsePublicTemplatesQuerySchema>;
 export type ListTripInstancesQuery = z.infer<typeof ListTripInstancesQuerySchema>;
+
+// ============================================================================
+// Group Schemas
+// ============================================================================
+
+export const GroupCreateSchema = z.object({
+  name: z.string().min(1, "Group name is required").max(100, "Group name is too long"),
+  description: z.string().max(500, "Description is too long").optional(),
+});
+
+export const GroupUpdateSchema = z.object({
+  name: z.string().min(1, "Group name is required").max(100, "Group name is too long").optional(),
+  description: z.string().max(500, "Description is too long").optional().nullable(),
+});
+
+export const GroupMemberCreateSchema = z.object({
+  userId: z.string().min(1, "User ID is required"),
+  role: z.nativeEnum(GroupMemberRole).optional().default("MEMBER"),
+});
+
+export const DiscoverableUsersQuerySchema = z.object({
+  groupIds: z.array(z.string()).min(1, "At least one group ID is required"),
+  tripId: z.string().optional(), // To exclude existing trip members
+});
+
+export const DiscoverableUserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string().nullable(),
+  photoURL: z.string().nullable(),
+});
+
+export const GroupResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  ownerId: z.string(),
+  memberCount: z.number().optional(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
+export const GroupMemberResponseSchema = z.object({
+  id: z.string(),
+  groupId: z.string(),
+  userId: z.string(),
+  role: z.nativeEnum(GroupMemberRole),
+  joinedAt: z.coerce.date(),
+  user: z.object({
+    id: z.string(),
+    email: z.string(),
+    displayName: z.string().nullable(),
+    photoURL: z.string().nullable(),
+  }).optional(),
+});
+
+export const GroupDetailResponseSchema = GroupResponseSchema.extend({
+  members: z.array(GroupMemberResponseSchema).optional(),
+});
+
+export const CreateGroupResponseSchema = z.object({
+  success: z.boolean(),
+  group: GroupResponseSchema,
+});
+
+export const UpdateGroupResponseSchema = z.object({
+  success: z.boolean(),
+  group: GroupResponseSchema,
+});
+
+export const DeleteGroupResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
+export const ListGroupsResponseSchema = z.object({
+  success: z.boolean(),
+  groups: z.array(GroupResponseSchema),
+});
+
+export const GetGroupResponseSchema = z.object({
+  success: z.boolean(),
+  group: GroupDetailResponseSchema,
+});
+
+export const ListGroupMembersResponseSchema = z.object({
+  success: z.boolean(),
+  members: z.array(GroupMemberResponseSchema),
+});
+
+export const AddGroupMemberResponseSchema = z.object({
+  success: z.boolean(),
+  member: GroupMemberResponseSchema,
+});
+
+export const RemoveGroupMemberResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
+export const DiscoverableUsersResponseSchema = z.object({
+  success: z.boolean(),
+  users: z.array(DiscoverableUserSchema),
+});
+
+// Type exports
+export type GroupCreate = z.infer<typeof GroupCreateSchema>;
+export type GroupUpdate = z.infer<typeof GroupUpdateSchema>;
+export type GroupMemberCreate = z.infer<typeof GroupMemberCreateSchema>;
+export type DiscoverableUsersQuery = z.infer<typeof DiscoverableUsersQuerySchema>;
+export type DiscoverableUser = z.infer<typeof DiscoverableUserSchema>;
+export type GroupResponse = z.infer<typeof GroupResponseSchema>;
+export type GroupMemberResponse = z.infer<typeof GroupMemberResponseSchema>;
+export type GroupDetailResponse = z.infer<typeof GroupDetailResponseSchema>;
 
 // ============================================================================
 // Guards and Utility Functions

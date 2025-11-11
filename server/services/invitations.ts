@@ -2,42 +2,98 @@ import { prisma } from "@/lib/prisma";
 import { RsvpStatus, TripMemberRole, EventType, NotificationType, NotificationStatus } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
 import { createBatchNotifications } from "./notifications";
+import { getDiscoverableUsers } from "./groups";
 
 /**
- * Invites users to a trip by email.
+ * Invites users to a trip by email or userId.
+ * When using userIds with groupIds, validates that users are in the caller's discoverable set.
  * Creates TripMember rows with RSVP=PENDING and sends in-app notifications.
  *
  * @param tripId - The ID of the trip
- * @param emails - Array of email addresses to invite
+ * @param inviteData - Object containing emails, userIds, and optional groupIds
  * @param invitedById - The user ID of the person sending the invitations
- * @returns Object containing invited users, already members, and not found emails
+ * @returns Object containing invited users, already members, and not found emails/users
  */
 export async function inviteUsersToTrip(
   tripId: string,
-  emails: string[],
+  inviteData: {
+    emails?: string[];
+    userIds?: string[];
+    groupIds?: string[];
+  },
   invitedById: string
 ) {
-  // Normalize emails to lowercase for consistent lookups
-  const normalizedEmails = emails.map(e => e.toLowerCase().trim());
+  let users: Array<{ id: string; email: string; displayName: string | null; photoURL: string | null }> = [];
 
-  // Look up users by email
-  const users = await prisma.user.findMany({
-    where: {
-      email: {
-        in: normalizedEmails,
+  // Handle invitations by userId (with group filtering)
+  if (inviteData.userIds && inviteData.userIds.length > 0) {
+    // If groupIds are provided, validate that all userIds are in the discoverable set
+    if (inviteData.groupIds && inviteData.groupIds.length > 0) {
+      const discoverableUsers = await getDiscoverableUsers(
+        invitedById,
+        inviteData.groupIds,
+        tripId
+      );
+      const discoverableUserIds = new Set(discoverableUsers.map(u => u.id));
+
+      // Validate all userIds are discoverable
+      for (const userId of inviteData.userIds) {
+        if (!discoverableUserIds.has(userId)) {
+          throw new Error(
+            `User ${userId} is not in your selected groups or is already a trip member`
+          );
+        }
+      }
+    }
+
+    // Fetch users by ID
+    const fetchedUsers = await prisma.user.findMany({
+      where: {
+        id: {
+          in: inviteData.userIds,
+        },
+        deletedAt: null,
       },
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-      photoURL: true,
-    },
-  });
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        photoURL: true,
+      },
+    });
 
-  // Create a map of email -> user
-  const usersByEmail = new Map(users.map(u => [u.email.toLowerCase(), u]));
+    users = fetchedUsers;
+  }
+  // Handle invitations by email (legacy support)
+  else if (inviteData.emails && inviteData.emails.length > 0) {
+    // Normalize emails to lowercase for consistent lookups
+    const normalizedEmails = inviteData.emails.map(e => e.toLowerCase().trim());
+
+    users = await prisma.user.findMany({
+      where: {
+        email: {
+          in: normalizedEmails,
+        },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        photoURL: true,
+      },
+    });
+  }
+
+  if (users.length === 0) {
+    return {
+      invited: [],
+      alreadyMembers: [],
+      notFound: inviteData.emails?.map(email => ({ email, status: "not_found" as const })) ||
+                inviteData.userIds?.map(userId => ({ userId, status: "not_found" as const })) ||
+                [],
+    };
+  }
 
   // Find existing members (both active and soft-deleted)
   const existingMembers = await prisma.tripMember.findMany({
@@ -112,10 +168,22 @@ export async function inviteUsersToTrip(
     return true;
   });
 
-  // Find emails that don't have registered users
-  for (const email of normalizedEmails) {
-    if (!usersByEmail.has(email)) {
-      notFound.push({ email, status: "not_found" });
+  // Find emails/userIds that don't have registered users
+  if (inviteData.emails) {
+    const usersByEmail = new Map(users.map(u => [u.email.toLowerCase(), u]));
+    const normalizedEmails = inviteData.emails.map(e => e.toLowerCase().trim());
+    for (const email of normalizedEmails) {
+      if (!usersByEmail.has(email)) {
+        notFound.push({ email, status: "not_found" });
+      }
+    }
+  } else if (inviteData.userIds) {
+    const userIds = new Set(users.map(u => u.id));
+    for (const userId of inviteData.userIds) {
+      if (!userIds.has(userId)) {
+        // Use email field for backward compatibility with return type
+        notFound.push({ email: userId, status: "not_found" });
+      }
     }
   }
 

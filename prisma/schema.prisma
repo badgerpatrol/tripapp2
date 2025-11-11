@@ -123,6 +123,11 @@ enum MilestoneTriggerType {
   DEADLINE
 }
 
+enum GroupMemberRole {
+  ADMIN
+  MEMBER
+}
+
 enum EventType {
   USER_CREATED
   USER_UPDATED
@@ -177,6 +182,11 @@ enum EventType {
   LIST_ITEM_ACTION_LAUNCHED
   CHOICE_MENU_SCANNED
   CHOICE_ITEMS_BULK_ADD
+  GROUP_CREATED
+  GROUP_UPDATED
+  GROUP_DELETED
+  GROUP_MEMBER_ADDED
+  GROUP_MEMBER_REMOVED
 }
 
 // ============================================================================
@@ -222,6 +232,9 @@ model User {
   choiceSelections   ChoiceSelection[]
 
   passkeys           Passkey[]
+
+  groupsOwned        Group[]           @relation("GroupOwner")
+  groupMemberships   GroupMember[]
 
   @@index([email])
   @@map("users")
@@ -884,4 +897,39 @@ model KitItemInstance {
 
   @@index([listId])
   @@map("kit_item_instances")
+}
+
+// ============================================================================
+// GROUPS - User-managed contact lists for invitation filtering
+// ============================================================================
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner   User          @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members GroupMember[]
+
+  @@index([ownerId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String          @id @default(uuid())
+  groupId  String
+  userId   String
+  role     GroupMemberRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_members")
 }

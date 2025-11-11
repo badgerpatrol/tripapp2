@@ -219,3 +219,113 @@ export async function isAdmin(userId: string): Promise<boolean> {
 export async function isSuperAdmin(userId: string): Promise<boolean> {
   return hasUserRole(userId, UserRole.SUPERADMIN);
 }
+
+// ============================================================================
+// Group Authorization Helpers
+// ============================================================================
+
+/**
+ * Verifies that a user is a member of a group.
+ * Throws an error if the user is not a member.
+ */
+export async function requireGroupMember(userId: string, groupId: string) {
+  await requireAuth(userId);
+
+  const membership = await prisma.groupMember.findUnique({
+    where: {
+      groupId_userId: {
+        groupId,
+        userId,
+      },
+    },
+  });
+
+  if (!membership) {
+    throw new Error("Forbidden: You are not a member of this group");
+  }
+
+  return membership;
+}
+
+/**
+ * Verifies that a user is an admin of a group (either owner or admin member).
+ * Throws an error if the user doesn't have admin rights.
+ */
+export async function requireGroupAdmin(userId: string, groupId: string) {
+  await requireAuth(userId);
+
+  // Check if user is the owner
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    select: { ownerId: true },
+  });
+
+  if (!group) {
+    throw new Error("Group not found");
+  }
+
+  if (group.ownerId === userId) {
+    return true; // Owner has admin rights
+  }
+
+  // Check if user is an admin member
+  const membership = await prisma.groupMember.findUnique({
+    where: {
+      groupId_userId: {
+        groupId,
+        userId,
+      },
+    },
+  });
+
+  if (!membership || membership.role !== "ADMIN") {
+    throw new Error("Forbidden: Admin rights required for this action");
+  }
+
+  return true;
+}
+
+/**
+ * Checks if a user is an admin of a group (owner or admin member).
+ */
+export async function isGroupAdmin(
+  userId: string,
+  groupId: string
+): Promise<boolean> {
+  try {
+    await requireGroupAdmin(userId, groupId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Verifies that the caller belongs to all specified groups.
+ * Used to prevent users from querying members of groups they don't belong to.
+ */
+export async function requireCallerBelongsToAll(
+  userId: string,
+  groupIds: string[]
+) {
+  await requireAuth(userId);
+
+  for (const groupId of groupIds) {
+    const membership = await prisma.groupMember.findUnique({
+      where: {
+        groupId_userId: {
+          groupId,
+          userId,
+        },
+      },
+    });
+
+    if (!membership) {
+      throw new Error(
+        `Forbidden: You are not a member of group ${groupId}`
+      );
+    }
+  }
+
+  return true;
+}
