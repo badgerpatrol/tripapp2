@@ -50,7 +50,7 @@ interface ListInstance {
 interface TripListsPanelProps {
   tripId: string;
   onOpenInviteDialog?: () => void;
-  onOpenCreateChoice?: () => void;
+  onOpenCreateChoice?: (choiceName?: string) => void;
   onOpenMilestoneDialog?: (itemId: string, itemLabel: string) => void;
   onActionComplete?: (itemId: string, label: string) => void;
   onRefreshLists?: () => void;
@@ -185,7 +185,9 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           break;
         case "CREATE_CHOICE":
           if (onOpenCreateChoice) {
-            onOpenCreateChoice();
+            // Use choice name from parameters if available
+            const choiceName = item.parameters?.choiceName || "";
+            onOpenCreateChoice(choiceName);
           }
           if (onActionComplete) {
             onActionComplete(item.id, item.label);

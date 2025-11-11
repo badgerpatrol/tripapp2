@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 interface CreateChoiceDialogProps {
@@ -8,6 +8,7 @@ interface CreateChoiceDialogProps {
   onClose: () => void;
   tripId: string;
   onSuccess: (choiceId: string) => void;
+  initialName?: string;
 }
 
 export default function CreateChoiceDialog({
@@ -15,18 +16,26 @@ export default function CreateChoiceDialog({
   onClose,
   tripId,
   onSuccess,
+  initialName = "",
 }: CreateChoiceDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    name: "",
+    name: initialName,
     description: "",
     datetime: "",
     place: "",
     visibility: "TRIP" as "TRIP" | "PRIVATE",
   });
+
+  // Update form name when initialName prop changes
+  useEffect(() => {
+    if (initialName) {
+      setFormData(prev => ({ ...prev, name: initialName }));
+    }
+  }, [initialName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +100,7 @@ export default function CreateChoiceDialog({
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              Create Menu Choice
+              Create Choice
             </h2>
             <button
               onClick={onClose}
@@ -120,7 +129,7 @@ export default function CreateChoiceDialog({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Lunch Restaurant Choice"
+                placeholder="e.g., Lunch Menu"
               />
             </div>
 
@@ -158,7 +167,7 @@ export default function CreateChoiceDialog({
                 value={formData.place}
                 onChange={(e) => setFormData({ ...formData, place: e.target.value })}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Mario's Italian Restaurant"
+                placeholder="e.g., The Moghul"
               />
             </div>
 

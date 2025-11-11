@@ -149,6 +149,7 @@ export default function TripDetailPage() {
   const [isChoiceReportsDialogOpen, setIsChoiceReportsDialogOpen] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("details");
+  const [createChoiceInitialName, setCreateChoiceInitialName] = useState("");
 
   // List workflow modal state
   const [isListWorkflowModalOpen, setIsListWorkflowModalOpen] = useState(false);
@@ -1675,7 +1676,13 @@ export default function TripDetailPage() {
             key={listsRefreshKey}
             tripId={trip.id}
             onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
-            onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
+            onOpenCreateChoice={(choiceName) => {
+              setIsCreateChoiceDialogOpen(true);
+              if (choiceName) {
+                // Store the choice name to pass to the dialog
+                setCreateChoiceInitialName(choiceName);
+              }
+            }}
             onOpenList={(listId, listTitle) => {
               setSelectedListId(listId);
               setListWorkflowTitle("Get things done");
@@ -2915,12 +2922,17 @@ export default function TripDetailPage() {
       <CreateChoiceDialog
         tripId={trip.id}
         isOpen={isCreateChoiceDialogOpen}
-        onClose={() => setIsCreateChoiceDialogOpen(false)}
+        onClose={() => {
+          setIsCreateChoiceDialogOpen(false);
+          setCreateChoiceInitialName(""); // Reset initial name
+        }}
+        initialName={createChoiceInitialName}
         onSuccess={(newChoiceId: string) => {
           fetchChoices();
           setSelectedChoiceId(newChoiceId);
           setManageChoiceInitialTab("items");
           setIsManageChoiceDialogOpen(true);
+          setCreateChoiceInitialName(""); // Reset initial name
         }}
       />
 
@@ -3010,6 +3022,7 @@ export default function TripDetailPage() {
           setListsRefreshKey(prev => prev + 1);
         }}
         onMilestoneCreated={handleEditSuccess}
+        onChoiceCreated={fetchChoices}
         title={listWorkflowTitle}
         description={listWorkflowDescription}
         selectedListId={selectedListId || undefined}

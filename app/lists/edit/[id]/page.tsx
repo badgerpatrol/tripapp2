@@ -120,6 +120,12 @@ export default function EditListPage() {
             if (!updated.parameters.milestoneName) {
               updated.parameters.milestoneName = '';
             }
+          } else if (value === 'CREATE_CHOICE') {
+            // Initialize with choiceName parameter if not present
+            updated.parameters = updated.parameters || {};
+            if (!updated.parameters.choiceName) {
+              updated.parameters.choiceName = '';
+            }
           } else if (value === null || value === '') {
             // Clear parameters when action is removed
             updated.parameters = null;
@@ -476,6 +482,28 @@ export default function EditListPage() {
                           />
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             The name of the milestone to create (optional)
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Choice Name Parameter */}
+                      {item.actionType === "CREATE_CHOICE" && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            Choice Name
+                          </label>
+                          <input
+                            type="text"
+                            value={item.parameters?.choiceName || ""}
+                            onChange={(e) =>
+                              updateParameter(item.id, "choiceName", e.target.value)
+                            }
+                            placeholder="Enter choice name"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                            disabled={saving}
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            The name of the choice to create (optional)
                           </p>
                         </div>
                       )}

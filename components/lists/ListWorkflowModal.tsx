@@ -17,6 +17,7 @@ interface ListWorkflowModalProps {
   description?: string;
   selectedListId?: string; // ID of a specific list to display
   onMilestoneCreated?: () => void; // Callback when a milestone is created
+  onChoiceCreated?: () => void; // Callback when a choice is created
   currentMembers?: Array<{
     id: string;
     role: string;
@@ -38,6 +39,7 @@ export function ListWorkflowModal({
   description = "Work through your to-do list to prepare for your trip",
   selectedListId,
   onMilestoneCreated,
+  onChoiceCreated,
   currentMembers = [],
 }: ListWorkflowModalProps) {
   const { user } = useAuth();
@@ -50,6 +52,7 @@ export function ListWorkflowModal({
   const [milestoneTitle, setMilestoneTitle] = useState("");
   const [milestoneDate, setMilestoneDate] = useState("");
   const [creatingMilestone, setCreatingMilestone] = useState(false);
+  const [choiceName, setChoiceName] = useState("");
   const [pendingCompletion, setPendingCompletion] = useState<{itemId: string; label: string} | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -147,7 +150,10 @@ export function ListWorkflowModal({
             key={refreshKey}
             tripId={tripId}
             onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
-            onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
+            onOpenCreateChoice={(name) => {
+              setIsCreateChoiceDialogOpen(true);
+              setChoiceName(name || ""); // Pre-fill with choice name from parameters
+            }}
             onOpenMilestoneDialog={(itemId, itemLabel) => {
               setIsMilestoneDialogOpen(true);
               setMilestoneTitle(itemLabel); // Pre-fill with task label
@@ -197,8 +203,14 @@ export function ListWorkflowModal({
         tripId={tripId}
         isOpen={isCreateChoiceDialogOpen}
         onClose={() => setIsCreateChoiceDialogOpen(false)}
+        initialName={choiceName}
         onSuccess={(newChoiceId: string) => {
           setIsCreateChoiceDialogOpen(false);
+          setChoiceName(""); // Reset choice name
+          // Notify parent to refresh trip data (including choices)
+          if (onChoiceCreated) {
+            onChoiceCreated();
+          }
           // Open the manage choice dialog to add items
           setSelectedChoiceId(newChoiceId);
           setManageChoiceInitialTab("items");
