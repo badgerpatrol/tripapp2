@@ -49,6 +49,10 @@ export default function ManageChoiceDialog({
   const [detailsDirty, setDetailsDirty] = useState(false);
   const [statusDirty, setStatusDirty] = useState(false);
 
+  // Track linked spend
+  const [hasLinkedSpend, setHasLinkedSpend] = useState(false);
+  const [linkedSpendId, setLinkedSpendId] = useState<string | null>(null);
+
   // New item form
   const [newItem, setNewItem] = useState({
     name: "",
@@ -82,6 +86,12 @@ export default function ManageChoiceDialog({
       });
       const data = await response.json();
 
+      // Fetch linked spend status
+      const spendResponse = await fetch(`/api/choices/${choiceId}/linked-spend`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      const spendData = await spendResponse.json();
+
       setChoice(data.choice);
       setItems(data.items);
       setName(data.choice.name);
@@ -89,6 +99,8 @@ export default function ManageChoiceDialog({
       setPlace(data.choice.place || "");
       setStatus(data.choice.status);
       setDeadline(data.choice.deadline ? new Date(data.choice.deadline).toISOString().slice(0, 16) : "");
+      setHasLinkedSpend(spendData.hasSpend || false);
+      setLinkedSpendId(spendData.spendId || null);
       setDetailsDirty(false);
       setStatusDirty(false);
     } catch (err: any) {
@@ -132,7 +144,51 @@ export default function ManageChoiceDialog({
     }
   };
 
-  const handleUpdateStatus = async () => {
+  const handleToggleStatus = async () => {
+    if (!user || !choiceId) return;
+
+    // Prevent toggling if there's a linked spend and trying to open
+    if (hasLinkedSpend && status === "CLOSED") {
+      setError("Cannot reopen choice: A spend has been auto-generated. Delete the spend first.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const newStatus = status === "OPEN" ? "CLOSED" : "OPEN";
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/choices/${choiceId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          deadline: deadline ? new Date(deadline).toISOString() : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update status");
+      }
+
+      setStatus(newStatus);
+      setStatusDirty(false);
+      await fetchChoice();
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateDeadline = async () => {
     if (!user || !choiceId) return;
 
     setSaving(true);
@@ -152,12 +208,14 @@ export default function ManageChoiceDialog({
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update status");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update deadline");
+      }
 
       setStatusDirty(false);
       await fetchChoice();
       onSuccess();
-      onClose();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -498,18 +556,33 @@ export default function ManageChoiceDialog({
               {tab === "status" && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Status</label>
-                    <select
-                      value={status}
-                      onChange={(e) => {
-                        setStatus(e.target.value);
-                        setStatusDirty(true);
-                      }}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                    <label className="block text-sm font-medium mb-3">Choice Status</label>
+                    <button
+                      onClick={handleToggleStatus}
+                      disabled={saving || (hasLinkedSpend && status === "CLOSED")}
+                      className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+                        hasLinkedSpend && status === "CLOSED"
+                          ? "bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+                          : status === "OPEN"
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-zinc-500 hover:bg-zinc-600 text-white"
+                      } ${saving ? "opacity-50 cursor-wait" : ""}`}
                     >
-                      <option value="OPEN">Open - Accept selections</option>
-                      <option value="CLOSED">Closed - No new selections</option>
-                    </select>
+                      {saving ? (
+                        "Updating..."
+                      ) : hasLinkedSpend && status === "CLOSED" ? (
+                        "Spend Ready"
+                      ) : status === "OPEN" ? (
+                        "Open - Click to Close"
+                      ) : (
+                        "Closed - Click to Reopen"
+                      )}
+                    </button>
+                    {hasLinkedSpend && status === "CLOSED" && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                        A spend has been auto-generated from this choice. Delete the spend to reopen.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Deadline (optional)</label>
@@ -522,14 +595,16 @@ export default function ManageChoiceDialog({
                       }}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
                     />
+                    {statusDirty && (
+                      <button
+                        onClick={handleUpdateDeadline}
+                        disabled={saving}
+                        className="w-full mt-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white font-medium"
+                      >
+                        {saving ? "Saving..." : "Update Deadline"}
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={handleUpdateStatus}
-                    disabled={saving}
-                    className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white font-medium"
-                  >
-                    {saving ? "Saving..." : "Save Status"}
-                  </button>
                 </div>
               )}
             </>

@@ -79,12 +79,13 @@ export async function POST(
     // Use transaction to update both milestone and related status atomically
     const result = await prisma.$transaction(async (tx) => {
       // Update the milestone
+      // Keep triggerType=MANUAL even when uncompleting to prevent auto-triggering
       const updatedItem = await tx.timelineItem.update({
         where: { id: itemId },
         data: {
           isCompleted: newCompletionState,
           completedAt: newCompletionState ? now : null,
-          triggerType: newCompletionState ? MilestoneTriggerType.MANUAL : null,
+          triggerType: MilestoneTriggerType.MANUAL, // Always MANUAL when user toggles
         },
       });
 
@@ -143,6 +144,33 @@ export async function POST(
       } else if (timelineItem.title.startsWith("Choice:") && timelineItem.choiceId) {
         // Toggle choice status
         const newChoiceStatus = newCompletionState ? ChoiceStatus.CLOSED : ChoiceStatus.OPEN;
+
+        // Check if trying to reopen a choice that has a linked spend
+        if (newChoiceStatus === ChoiceStatus.OPEN) {
+          const spendActivity = await tx.choiceActivity.findFirst({
+            where: {
+              choiceId: timelineItem.choiceId,
+              action: "spend_created",
+            },
+            orderBy: { createdAt: "desc" },
+            select: { payload: true },
+          });
+
+          if (spendActivity?.payload) {
+            const spendId = (spendActivity.payload as { spendId?: string }).spendId;
+            if (spendId) {
+              const spend = await tx.spend.findUnique({
+                where: { id: spendId },
+                select: { id: true, deletedAt: true },
+              });
+
+              if (spend && !spend.deletedAt) {
+                throw new Error("Cannot reopen choice: A spend has been auto-generated from this choice. Delete the spend first to reopen the choice.");
+              }
+            }
+          }
+        }
+
         await tx.choice.update({
           where: { id: timelineItem.choiceId },
           data: { status: newChoiceStatus },

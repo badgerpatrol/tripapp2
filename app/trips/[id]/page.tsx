@@ -3058,6 +3058,7 @@ export default function TripDetailPage() {
         <ChoiceReportsDialog
           choiceId={selectedChoiceId}
           choiceName={choices.find(c => c.id === selectedChoiceId)?.name || "Choice"}
+          choiceStatus={choices.find(c => c.id === selectedChoiceId)?.status || "OPEN"}
           tripId={trip?.id || ""}
           isOpen={isChoiceReportsDialogOpen}
           onClose={() => {
