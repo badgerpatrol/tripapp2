@@ -9,6 +9,7 @@ interface ChoiceReportsDialogProps {
   choiceId: string | null;
   choiceName: string;
   tripId: string;
+  choiceStatus: string;
   onOpenSpend: (spendId: string) => void;
 }
 
@@ -18,6 +19,7 @@ export default function ChoiceReportsDialog({
   choiceId,
   choiceName,
   tripId,
+  choiceStatus,
   onOpenSpend,
 }: ChoiceReportsDialogProps) {
   const { user } = useAuth();
@@ -228,7 +230,7 @@ export default function ChoiceReportsDialog({
                   >
                     📊 Export to CSV
                   </button>
-                  {itemsReport.grandTotalPrice > 0 && (
+                  {itemsReport.grandTotalPrice > 0 && choiceStatus === "CLOSED" && (
                     hasLinkedSpend ? (
                       <button
                         onClick={handleGoToSpend}
@@ -292,7 +294,7 @@ export default function ChoiceReportsDialog({
                   >
                     📊 Export to CSV
                   </button>
-                  {usersReport.grandTotalPrice > 0 && (
+                  {usersReport.grandTotalPrice > 0 && choiceStatus === "CLOSED" && (
                     hasLinkedSpend ? (
                       <button
                         onClick={handleGoToSpend}
