@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import MenuScanSheet from "./MenuScanSheet";
+import MenuUrlSheet from "./MenuUrlSheet";
 
 interface ChoiceItem {
   id: string;
@@ -18,6 +20,8 @@ interface ManageChoiceDialogProps {
   isOpen: boolean;
   onClose: () => void;
   choiceId: string | null;
+  tripId: string;
+  tripCurrency: string;
   onSuccess: () => void;
   initialTab?: "details" | "items" | "status";
 }
@@ -26,6 +30,8 @@ export default function ManageChoiceDialog({
   isOpen,
   onClose,
   choiceId,
+  tripId,
+  tripCurrency,
   onSuccess,
   initialTab = "details",
 }: ManageChoiceDialogProps) {
@@ -36,7 +42,20 @@ export default function ManageChoiceDialog({
   const [choice, setChoice] = useState<any>(null);
   const [items, setItems] = useState<ChoiceItem[]>([]);
   const [showAddItem, setShowAddItem] = useState(false);
+  const [showMenuScan, setShowMenuScan] = useState(false);
+  const [showMenuUrl, setShowMenuUrl] = useState(false);
   const [tab, setTab] = useState<"details" | "items" | "status">(initialTab);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    price: "",
+    maxPerUser: "",
+    maxTotal: "",
+    allergens: "",
+    tags: "",
+  });
 
   // Form states
   const [name, setName] = useState("");
@@ -278,6 +297,112 @@ export default function ManageChoiceDialog({
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (!user || selectedItems.size === 0) return;
+    if (!confirm(`Deactivate ${selectedItems.size} item(s)?`)) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Delete all selected items
+      await Promise.all(
+        Array.from(selectedItems).map(itemId =>
+          fetch(`/api/choice-items/${itemId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${idToken}` },
+          })
+        )
+      );
+
+      setSelectedItems(new Set());
+      await fetchChoice();
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleToggleSelectItem = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedItems.size === items.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(items.map(item => item.id)));
+    }
+  };
+
+  const handleStartEdit = (item: ChoiceItem) => {
+    setEditingItem(item.id);
+    setEditForm({
+      name: item.name,
+      description: item.description || "",
+      price: item.price !== null ? String(item.price) : "",
+      maxPerUser: item.maxPerUser !== null ? String(item.maxPerUser) : "",
+      maxTotal: item.maxTotal !== null ? String(item.maxTotal) : "",
+      allergens: item.allergens ? item.allergens.join(", ") : "",
+      tags: item.tags ? item.tags.join(", ") : "",
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setEditForm({
+      name: "",
+      description: "",
+      price: "",
+      maxPerUser: "",
+      maxTotal: "",
+      allergens: "",
+      tags: "",
+    });
+  };
+
+  const handleUpdateItem = async () => {
+    if (!user || !editingItem) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/choice-items/${editingItem}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          name: editForm.name,
+          description: editForm.description || undefined,
+          price: editForm.price ? parseFloat(editForm.price) : undefined,
+          maxPerUser: editForm.maxPerUser ? parseInt(editForm.maxPerUser) : undefined,
+          maxTotal: editForm.maxTotal ? parseInt(editForm.maxTotal) : undefined,
+          allergens: editForm.allergens ? editForm.allergens.split(",").map(a => a.trim()) : undefined,
+          tags: editForm.tags ? editForm.tags.split(",").map(t => t.trim()) : undefined,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update item");
+
+      handleCancelEdit();
+      await fetchChoice();
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!user || !choiceId || !confirm("Delete this choice? This will permanently delete all menu items and selections. This action cannot be undone.")) return;
 
@@ -473,22 +598,144 @@ export default function ManageChoiceDialog({
               {/* Items Tab */}
               {tab === "items" && (
                 <div className="space-y-4">
+                  {/* Select All Checkbox and Bulk Delete */}
+                  {items.length > 0 && (
+                    <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={items.length > 0 && selectedItems.size === items.length}
+                          onChange={handleToggleSelectAll}
+                          className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                          Select All ({selectedItems.size} selected)
+                        </span>
+                      </label>
+                      {selectedItems.size > 0 && (
+                        <button
+                          onClick={handleBulkDelete}
+                          className="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
+                        >
+                          Delete Selected ({selectedItems.size})
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {items.map(item => (
-                    <div key={item.id} className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 flex items-start justify-between">
-                      <div>
-                        <div className="font-medium">{item.name}</div>
-                        {item.price && <div className="text-sm text-zinc-600">${Number(item.price).toFixed(2)}</div>}
-                        {item.description && <div className="text-sm text-zinc-500 mt-1">{item.description}</div>}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="text-red-600 hover:text-red-700 p-1"
-                        title="Deactivate"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                    <div key={item.id}>
+                      {editingItem === item.id ? (
+                        // Edit Mode
+                        <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3 bg-blue-50 dark:bg-blue-900/10">
+                          <input
+                            type="text"
+                            placeholder="Item name *"
+                            value={editForm.name}
+                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Description"
+                            value={editForm.description}
+                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Price"
+                            value={editForm.price}
+                            onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number"
+                              placeholder="Max per user"
+                              value={editForm.maxPerUser}
+                              onChange={(e) => setEditForm({ ...editForm, maxPerUser: e.target.value })}
+                              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                            />
+                            <input
+                              type="number"
+                              placeholder="Max total"
+                              value={editForm.maxTotal}
+                              onChange={(e) => setEditForm({ ...editForm, maxTotal: e.target.value })}
+                              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Allergens (comma separated)"
+                            value={editForm.allergens}
+                            onChange={(e) => setEditForm({ ...editForm, allergens: e.target.value })}
+                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Tags (comma separated)"
+                            value={editForm.tags}
+                            onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleCancelEdit}
+                              className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handleUpdateItem}
+                              disabled={!editForm.name || saving}
+                              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white rounded-lg font-medium"
+                            >
+                              {saving ? "Saving..." : "Save"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // View Mode
+                        <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(item.id)}
+                            onChange={() => handleToggleSelectItem(item.id)}
+                            className="w-4 h-4 mt-1 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium">{item.name}</div>
+                            {item.price && <div className="text-sm text-zinc-600 dark:text-zinc-400">${Number(item.price).toFixed(2)}</div>}
+                            {item.description && <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{item.description}</div>}
+                            {item.maxPerUser && <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Max per user: {item.maxPerUser}</div>}
+                            {item.maxTotal && <div className="text-xs text-zinc-500 dark:text-zinc-400">Max total: {item.maxTotal}</div>}
+                            {item.allergens && item.allergens.length > 0 && (
+                              <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                Allergens: {item.allergens.join(", ")}
+                              </div>
+                            )}
+                            {item.tags && item.tags.length > 0 && (
+                              <div className="flex gap-1 mt-2 flex-wrap">
+                                {item.tags.map((tag, idx) => (
+                                  <span key={idx} className="px-2 py-0.5 text-xs rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleStartEdit(item)}
+                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                            title="Edit"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
 
@@ -532,12 +779,33 @@ export default function ManageChoiceDialog({
                       </div>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setShowAddItem(true)}
-                      className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors"
-                    >
-                      + Add Menu Item
-                    </button>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => setShowAddItem(true)}
+                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                      >
+                        + Add Menu Item
+                      </button>
+                      <button
+                        onClick={() => setShowMenuScan(true)}
+                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Scan Menu
+                      </button>
+                      <button
+                        onClick={() => setShowMenuUrl(true)}
+                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        Read from URL
+                      </button>
+                    </div>
                   )}
 
                   <div className="pt-4">
@@ -611,6 +879,36 @@ export default function ManageChoiceDialog({
           )}
         </div>
       </div>
+
+      {/* Menu Scan Sheet */}
+      {choiceId && (
+        <MenuScanSheet
+          tripId={tripId}
+          choiceId={choiceId}
+          tripCurrency={tripCurrency}
+          isOpen={showMenuScan}
+          onClose={() => setShowMenuScan(false)}
+          onItemsAdded={() => {
+            setShowMenuScan(false);
+            fetchChoice(); // Reload items after scanning
+          }}
+        />
+      )}
+
+      {/* Menu URL Sheet */}
+      {choiceId && (
+        <MenuUrlSheet
+          tripId={tripId}
+          choiceId={choiceId}
+          tripCurrency={tripCurrency}
+          isOpen={showMenuUrl}
+          onClose={() => setShowMenuUrl(false)}
+          onItemsAdded={() => {
+            setShowMenuUrl(false);
+            fetchChoice(); // Reload items after URL parsing
+          }}
+        />
+      )}
     </div>
   );
 }

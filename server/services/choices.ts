@@ -32,6 +32,8 @@ export interface CreateChoiceItemData {
   name: string;
   description?: string;
   price?: number;
+  course?: string;
+  sortIndex?: number;
   tags?: string[];
   maxPerUser?: number;
   maxTotal?: number;
@@ -506,6 +508,8 @@ export async function createChoiceItem(
       name: data.name,
       description: data.description,
       price: data.price ? new Decimal(data.price) : null,
+      course: data.course,
+      sortIndex: data.sortIndex ?? 0,
       tags: data.tags as any || null,
       maxPerUser: data.maxPerUser,
       maxTotal: data.maxTotal,
@@ -528,6 +532,65 @@ export async function createChoiceItem(
   });
 
   return item;
+}
+
+/**
+ * A4b. Bulk Create Menu Items for a Choice
+ * Used when scanning menus or importing multiple items at once
+ */
+export async function bulkCreateChoiceItems(
+  choiceId: string,
+  userId: string,
+  items: CreateChoiceItemData[]
+) {
+  // Get choice to verify it exists and get tripId
+  const choice = await prisma.choice.findUnique({
+    where: { id: choiceId },
+    select: { tripId: true, archivedAt: true },
+  });
+
+  if (!choice) {
+    throw new Error("Choice not found");
+  }
+
+  if (choice.archivedAt) {
+    throw new Error("Cannot add items to archived choice");
+  }
+
+  // Use transaction to create all items atomically
+  const createdItems = await prisma.$transaction(async (tx) => {
+    const results = [];
+
+    for (const itemData of items) {
+      const item = await tx.choiceItem.create({
+        data: {
+          choiceId,
+          name: itemData.name,
+          description: itemData.description,
+          price: itemData.price ? new Decimal(itemData.price) : null,
+          course: itemData.course,
+          sortIndex: itemData.sortIndex ?? 0,
+          tags: itemData.tags as any || null,
+          maxPerUser: itemData.maxPerUser,
+          maxTotal: itemData.maxTotal,
+          allergens: itemData.allergens as any || null,
+          isActive: itemData.isActive !== undefined ? itemData.isActive : true,
+        },
+      });
+      results.push(item);
+    }
+
+    return results;
+  });
+
+  // Log event for bulk creation
+  await logEvent("ChoiceItem", choiceId, EventType.CHOICE_ITEMS_BULK_ADD, userId, {
+    tripId: choice.tripId,
+    choiceId,
+    itemCount: createdItems.length,
+  });
+
+  return createdItems;
 }
 
 /**
