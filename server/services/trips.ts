@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { TripMemberRole, TripStatus, EventType } from "@/lib/generated/prisma";
+import { TripMemberRole, TripStatus, EventType, MilestoneTriggerType } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
 import type { CreateTripInput, UpdateTripInput } from "@/types/schemas";
 
@@ -626,6 +626,7 @@ export async function getTripOverviewForMember(
       date: t.date,
       isCompleted: t.isCompleted,
       completedAt: t.completedAt,
+      triggerType: t.triggerType,
       order: t.order,
     })),
     spends: trip.spends.map((s) => {
@@ -736,15 +737,17 @@ export async function checkAndAutoCloseRsvp(tripId: string) {
           rsvpStatus: "CLOSED",
         },
       }),
-      // Mark milestone as completed
+      // Mark milestone as completed with DEADLINE trigger
       prisma.timelineItem.update({
         where: { id: rsvpDeadline.id },
         data: {
           isCompleted: true,
           completedAt: now,
+          triggerType: MilestoneTriggerType.DEADLINE,
         },
       }),
     ]);
+    console.log(`[checkAndAutoCloseRsvp] Auto-closed RSVP for trip ${tripId} - deadline reached`);
   }
 }
 
@@ -884,6 +887,155 @@ export async function updateTimelineItemDate(
 }
 
 /**
+ * Checks if choice deadline has passed and automatically closes the choice if needed.
+ * Similar to checkAndAutoCloseRsvp but for choice deadlines.
+ *
+ * Uses milestone completion tracking:
+ * - Only triggers if the milestone is NOT completed (isCompleted = false)
+ * - Marks the milestone as completed when closing choice
+ */
+export async function checkAndAutoCloseChoice(choiceId: string) {
+  const choice = await prisma.choice.findUnique({
+    where: { id: choiceId, archivedAt: null },
+    include: {
+      timelineItems: {
+        where: {
+          deletedAt: null,
+        },
+      },
+    },
+  });
+
+  console.log(`[checkAndAutoCloseChoice] Choice ${choiceId}: status = ${choice?.status}`);
+
+  if (!choice) {
+    console.log(`[checkAndAutoCloseChoice] Choice not found`);
+    return;
+  }
+
+  // Only check if choice is currently open
+  if (choice.status !== "OPEN") {
+    console.log(`[checkAndAutoCloseChoice] Choice not OPEN (${choice.status}), skipping`);
+    return;
+  }
+
+  // Find the milestone for this choice
+  const choiceMilestone = choice.timelineItems[0];
+
+  if (!choiceMilestone?.date) {
+    console.log(`[checkAndAutoCloseChoice] No milestone/deadline found for choice`);
+    return;
+  }
+
+  console.log(`[checkAndAutoCloseChoice] Choice deadline: ${choiceMilestone.date}, isCompleted: ${choiceMilestone.isCompleted}`);
+
+  // If milestone is already completed, don't trigger again
+  if (choiceMilestone.isCompleted) {
+    console.log(`[checkAndAutoCloseChoice] Milestone already completed, skipping auto-close`);
+    return;
+  }
+
+  const deadlineDate = new Date(choiceMilestone.date);
+  const now = new Date();
+
+  // If deadline has passed and milestone is not completed, close choice and mark milestone complete
+  if (deadlineDate < now) {
+    await prisma.$transaction([
+      // Close choice
+      prisma.choice.update({
+        where: { id: choiceId },
+        data: {
+          status: "CLOSED",
+        },
+      }),
+      // Mark milestone as completed with DEADLINE trigger
+      prisma.timelineItem.update({
+        where: { id: choiceMilestone.id },
+        data: {
+          isCompleted: true,
+          completedAt: now,
+          triggerType: MilestoneTriggerType.DEADLINE,
+        },
+      }),
+    ]);
+    console.log(`[checkAndAutoCloseChoice] Auto-closed choice ${choiceId} - deadline reached`);
+  }
+}
+
+/**
+ * Checks if spending deadline has passed and automatically closes spending if needed.
+ * Similar to checkAndAutoCloseRsvp but for spending window.
+ */
+export async function checkAndAutoCloseSpending(tripId: string) {
+  const trip = await prisma.trip.findUnique({
+    where: { id: tripId, deletedAt: null },
+    include: {
+      timelineItems: {
+        where: {
+          title: "Spending Window Closes",
+          deletedAt: null,
+        },
+      },
+    },
+  });
+
+  console.log(`[checkAndAutoCloseSpending] Trip ${tripId}: spendStatus = ${trip?.spendStatus}`);
+
+  if (!trip) {
+    console.log(`[checkAndAutoCloseSpending] Trip not found`);
+    return;
+  }
+
+  // Only check if spending is currently open
+  if (trip.spendStatus !== "OPEN") {
+    console.log(`[checkAndAutoCloseSpending] Spending not OPEN (${trip.spendStatus}), skipping`);
+    return;
+  }
+
+  // Find the spending deadline milestone
+  const spendDeadline = trip.timelineItems[0];
+
+  if (!spendDeadline?.date) {
+    console.log(`[checkAndAutoCloseSpending] No spending deadline found`);
+    return;
+  }
+
+  console.log(`[checkAndAutoCloseSpending] Spending deadline: ${spendDeadline.date}, isCompleted: ${spendDeadline.isCompleted}`);
+
+  // If milestone is already completed, don't trigger again
+  if (spendDeadline.isCompleted) {
+    console.log(`[checkAndAutoCloseSpending] Milestone already completed, skipping auto-close`);
+    return;
+  }
+
+  const deadlineDate = new Date(spendDeadline.date);
+  const now = new Date();
+
+  // If deadline has passed and milestone is not completed, close spending and mark milestone complete
+  if (deadlineDate < now) {
+    await prisma.$transaction([
+      // Close spending
+      prisma.trip.update({
+        where: { id: tripId },
+        data: {
+          spendStatus: "CLOSED",
+        },
+      }),
+      // Mark milestone as completed with DEADLINE trigger
+      prisma.timelineItem.update({
+        where: { id: spendDeadline.id },
+        data: {
+          isCompleted: true,
+          completedAt: now,
+          triggerType: MilestoneTriggerType.DEADLINE,
+        },
+      }),
+    ]);
+    console.log(`[checkAndAutoCloseSpending] Auto-closed spending for trip ${tripId} - deadline reached`);
+  }
+}
+
+/**
  * Triggers milestone checks after a timeline item date is updated
  * This allows the system to automatically take actions if a deadline has passed
  */
@@ -896,8 +1048,7 @@ async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
       break;
 
     case "Spending Window Closes":
-      // TODO: Implement checkAndAutoCloseSpending(tripId) when spending auto-close is needed
-      console.log(`[triggerMilestoneChecks] Spending Window Closes check - placeholder for future implementation`);
+      await checkAndAutoCloseSpending(tripId);
       break;
 
     case "Settlement Deadline":
@@ -916,7 +1067,23 @@ async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
       break;
 
     default:
-      console.log(`[triggerMilestoneChecks] No automatic action defined for milestone: ${milestoneTitle}`);
+      // Check if it's a choice-specific milestone (starts with "Choice:")
+      if (milestoneTitle.startsWith("Choice:")) {
+        // Find the choice by the milestone
+        const milestone = await prisma.timelineItem.findFirst({
+          where: {
+            tripId,
+            title: milestoneTitle,
+            deletedAt: null,
+          },
+        });
+
+        if (milestone?.choiceId) {
+          await checkAndAutoCloseChoice(milestone.choiceId);
+        }
+      } else {
+        console.log(`[triggerMilestoneChecks] No automatic action defined for milestone: ${milestoneTitle}`);
+      }
   }
 }
 

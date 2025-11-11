@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
 import { prisma } from "@/lib/prisma";
-import { SpendStatus, TripMemberRole } from "@/lib/generated/prisma";
+import { SpendStatus, TripMemberRole, MilestoneTriggerType } from "@/lib/generated/prisma";
 import { calculateTripBalances } from "@/server/services/settlements";
 
 /**
@@ -101,6 +101,7 @@ export async function POST(
     }
 
     // Update trip spend status and handle settlements
+    const now = new Date();
     const updatedTrip = await prisma.$transaction(async (tx) => {
       // If closing, create settlement plan
       if (newStatus === SpendStatus.CLOSED && trip.spendStatus === SpendStatus.OPEN && settlementPlan) {
@@ -139,6 +140,41 @@ export async function POST(
             deletedAt: null,
           },
         });
+      }
+
+      // Handle Spending milestone based on status change
+      const spendMilestone = await tx.timelineItem.findFirst({
+        where: {
+          tripId,
+          title: "Spending Window Closes",
+          deletedAt: null,
+        },
+      });
+
+      if (spendMilestone) {
+        if (newStatus === SpendStatus.CLOSED && !spendMilestone.isCompleted) {
+          // Closing spending - mark milestone as completed
+          await tx.timelineItem.update({
+            where: { id: spendMilestone.id },
+            data: {
+              isCompleted: true,
+              completedAt: now,
+              triggerType: MilestoneTriggerType.MANUAL,
+            },
+          });
+          console.log(`[spend-status] Marked Spending Window Closes milestone as completed (MANUAL) for trip ${tripId}`);
+        } else if (newStatus === SpendStatus.OPEN && spendMilestone.isCompleted) {
+          // Reopening spending - reset milestone to uncompleted
+          await tx.timelineItem.update({
+            where: { id: spendMilestone.id },
+            data: {
+              isCompleted: false,
+              completedAt: null,
+              triggerType: null,
+            },
+          });
+          console.log(`[spend-status] Reset Spending Window Closes milestone to uncompleted for trip ${tripId}`);
+        }
       }
 
       // Update trip status

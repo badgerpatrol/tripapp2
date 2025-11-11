@@ -63,6 +63,7 @@ interface TripDetail {
     date: string | null;
     isCompleted: boolean;
     completedAt: string | null;
+    triggerType: string | null;
     order: number;
   }>;
   spends?: Array<{
@@ -2575,6 +2576,11 @@ export default function TripDetailPage() {
                       {!isEditing && item.date && (
                         <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mt-1">
                           {formatDate(item.date)}
+                        </p>
+                      )}
+                      {item.isCompleted && item.triggerType && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                          {item.triggerType === 'MANUAL' ? '✓ Closed manually' : '⏰ Closed automatically (deadline reached)'}
                         </p>
                       )}
                       {isEditing && (
