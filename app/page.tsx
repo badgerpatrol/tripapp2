@@ -156,18 +156,6 @@ export default function Home() {
             </div>
             <div className="flex gap-3">
               <Button
-                variant="secondary"
-                onClick={() => router.push("/lists")}
-              >
-                Lists
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => router.push("/groups")}
-              >
-                Groups
-              </Button>
-              <Button
                 variant="primary"
                 onClick={() => router.push("/trips/new")}
                 leftIcon={

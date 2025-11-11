@@ -14,6 +14,7 @@ export default function Navigation() {
 
   const isHomePage = pathname === "/";
   const isListsPage = pathname?.startsWith("/lists");
+  const isGroupsPage = pathname?.startsWith("/groups");
 
   return (
     <nav className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm">
@@ -41,6 +42,18 @@ export default function Navigation() {
             }`}
           >
             Lists
+          </button>
+
+          {/* Groups Button */}
+          <button
+            onClick={() => router.push("/groups")}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              isGroupsPage
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+            }`}
+          >
+            Groups
           </button>
         </div>
       </div>
