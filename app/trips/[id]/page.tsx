@@ -137,6 +137,7 @@ export default function TripDetailPage() {
   const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
   const [editingTimelineDate, setEditingTimelineDate] = useState<string>("");
   const [deletingTimelineItemId, setDeletingTimelineItemId] = useState<string | null>(null);
+  const [togglingTimelineItemId, setTogglingTimelineItemId] = useState<string | null>(null);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
   const [newMilestoneDescription, setNewMilestoneDescription] = useState("");
@@ -1538,6 +1539,34 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleToggleTimelineItem = async (itemId: string) => {
+    if (!user) return;
+
+    try {
+      setTogglingTimelineItemId(itemId);
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/timeline/${itemId}/toggle`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to toggle milestone");
+      }
+
+      // Success - refresh the trip data
+      handleEditSuccess();
+    } catch (error) {
+      console.error("Error toggling milestone:", error);
+      alert(error instanceof Error ? error.message : "Failed to toggle milestone");
+    } finally {
+      setTogglingTimelineItemId(null);
+    }
+  };
+
   const handleDeleteTimelineItem = async (itemId: string) => {
     if (!user) return;
 
@@ -2565,19 +2594,43 @@ export default function TripDetailPage() {
                         : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
                     }`}
                   >
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                        item.isCompleted
-                          ? "bg-green-500 text-white"
-                          : "bg-zinc-300 dark:bg-zinc-600"
-                      }`}
-                    >
-                      {item.isCompleted && (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
+                    {canInvite ? (
+                      <button
+                        onClick={() => handleToggleTimelineItem(item.id)}
+                        disabled={togglingTimelineItemId === item.id}
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                          item.isCompleted
+                            ? "bg-green-500 text-white hover:bg-green-600"
+                            : "bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400 dark:hover:bg-zinc-500"
+                        }`}
+                        title={item.isCompleted ? "Mark as incomplete" : "Mark as complete"}
+                      >
+                        {togglingTimelineItemId === item.id ? (
+                          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : item.isCompleted ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : null}
+                      </button>
+                    ) : (
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          item.isCompleted
+                            ? "bg-green-500 text-white"
+                            : "bg-zinc-300 dark:bg-zinc-600"
+                        }`}
+                      >
+                        {item.isCompleted && (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                    )}
                     <div className="flex-1">
                       <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
                       {!isEditing && item.date && (
