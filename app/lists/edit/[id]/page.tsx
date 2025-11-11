@@ -13,6 +13,7 @@ interface TodoItem {
   notes: string;
   actionType: TodoActionType | null;
   actionData: Record<string, any> | null;
+  parameters: Record<string, any> | null;
   orderIndex: number;
 }
 
@@ -94,6 +95,7 @@ export default function EditListPage() {
         notes: "",
         actionType: null,
         actionData: null,
+        parameters: null,
         orderIndex: items.length
       },
     ]);
@@ -105,9 +107,48 @@ export default function EditListPage() {
 
   const updateItem = (id: string, field: keyof TodoItem, value: any) => {
     setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
+      items.map((item) => {
+        if (item.id !== id) return item;
+
+        const updated = { ...item, [field]: value };
+
+        // When actionType changes, initialize or clear parameters
+        if (field === 'actionType') {
+          if (value === 'SET_MILESTONE') {
+            // Initialize with milestoneName parameter if not present
+            updated.parameters = updated.parameters || {};
+            if (!updated.parameters.milestoneName) {
+              updated.parameters.milestoneName = '';
+            }
+          } else if (value === 'CREATE_CHOICE') {
+            // Initialize with choiceName parameter if not present
+            updated.parameters = updated.parameters || {};
+            if (!updated.parameters.choiceName) {
+              updated.parameters.choiceName = '';
+            }
+          } else if (value === null || value === '') {
+            // Clear parameters when action is removed
+            updated.parameters = null;
+          }
+        }
+
+        return updated;
+      })
+    );
+  };
+
+  const updateParameter = (itemId: string, paramName: string, value: any) => {
+    setItems(
+      items.map((item) => {
+        if (item.id !== itemId) return item;
+        return {
+          ...item,
+          parameters: {
+            ...(item.parameters || {}),
+            [paramName]: value
+          }
+        };
+      })
     );
   };
 
@@ -162,6 +203,7 @@ export default function EditListPage() {
           notes: item.notes.trim() || undefined,
           actionType: item.actionType || undefined,
           actionData: item.actionData || undefined,
+          parameters: item.parameters || undefined,
           orderIndex: idx,
         })),
       };
@@ -421,6 +463,50 @@ export default function EditListPage() {
                           </p>
                         )}
                       </div>
+
+                      {/* Milestone Name Parameter */}
+                      {item.actionType === "SET_MILESTONE" && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            Milestone Name
+                          </label>
+                          <input
+                            type="text"
+                            value={item.parameters?.milestoneName || ""}
+                            onChange={(e) =>
+                              updateParameter(item.id, "milestoneName", e.target.value)
+                            }
+                            placeholder="Enter milestone name"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                            disabled={saving}
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            The name of the milestone to create (optional)
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Choice Name Parameter */}
+                      {item.actionType === "CREATE_CHOICE" && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            Choice Name
+                          </label>
+                          <input
+                            type="text"
+                            value={item.parameters?.choiceName || ""}
+                            onChange={(e) =>
+                              updateParameter(item.id, "choiceName", e.target.value)
+                            }
+                            placeholder="Enter choice name"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                            disabled={saving}
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            The name of the choice to create (optional)
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Delete Button */}

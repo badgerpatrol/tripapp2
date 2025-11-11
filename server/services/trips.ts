@@ -56,16 +56,6 @@ async function createDefaultTimelineItems(
     createdById: userId,
   });
 
-  // 3. Spending Window Start
-  timelineItems.push({
-    tripId,
-    title: "Spending Window Opens",
-    description: "Begin tracking trip expenses",
-    date: spendingWindowStart,
-    isCompleted: false,
-    order: 2,
-    createdById: userId,
-  });
 
   // 4. Trip Start
   if (startDate) {
@@ -211,7 +201,6 @@ async function updateDependentTimelineItems(
   // Map of timeline item titles to their new dates
   const dateUpdates: Record<string, Date | null> = {
     "RSVP Deadline": rsvpDeadline,
-    "Spending Window Opens": spendingWindowStart,
     "Spending Window Closes": spendingWindowEnd,
     "Settlement Deadline": settlementDeadline,
   };
@@ -760,8 +749,8 @@ export async function checkAndAutoCloseRsvp(tripId: string) {
 }
 
 /**
- * Updates a timeline item's date and triggers milestone checks
- * Only OWNER and ADMIN can update timeline items
+ * Creates a new timeline item.
+ * Only OWNER and ADMIN can create timeline items.
  */
 export async function createTimelineItem(
   tripId: string,
@@ -783,6 +772,11 @@ export async function createTimelineItem(
 
   if (!membership) {
     throw new Error("You are not a member of this trip");
+  }
+
+  // Only OWNER and ADMIN can create timeline items
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    throw new Error("Only trip organizers can create timeline items");
   }
 
   // Get the highest order number for existing timeline items
@@ -911,11 +905,6 @@ async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
       console.log(`[triggerMilestoneChecks] Settlement Deadline check - placeholder for future implementation`);
       break;
 
-    case "Spending Window Opens":
-      // TODO: Implement checkAndAutoOpenSpending(tripId) if auto-opening is needed
-      console.log(`[triggerMilestoneChecks] Spending Window Opens check - placeholder for future implementation`);
-      break;
-
     case "Trip Starts":
       // TODO: Implement checkTripStart(tripId) for any start-of-trip actions
       console.log(`[triggerMilestoneChecks] Trip Starts check - placeholder for future implementation`);
@@ -929,6 +918,70 @@ async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
     default:
       console.log(`[triggerMilestoneChecks] No automatic action defined for milestone: ${milestoneTitle}`);
   }
+}
+
+/**
+ * Deletes a timeline item (soft delete).
+ * Only OWNER and ADMIN can delete timeline items.
+ */
+export async function deleteTimelineItem(
+  tripId: string,
+  itemId: string,
+  userId: string
+) {
+  // Verify user is a member of the trip
+  const membership = await prisma.tripMember.findFirst({
+    where: {
+      tripId,
+      userId,
+      deletedAt: null,
+    },
+  });
+
+  if (!membership) {
+    throw new Error("You are not a member of this trip");
+  }
+
+  // Only OWNER and ADMIN can delete timeline items
+  if (membership.role !== "OWNER" && membership.role !== "ADMIN") {
+    throw new Error("Only trip organizers can delete timeline items");
+  }
+
+  // Get the timeline item to verify it belongs to this trip
+  const timelineItem = await prisma.timelineItem.findFirst({
+    where: {
+      id: itemId,
+      tripId,
+      deletedAt: null,
+    },
+  });
+
+  if (!timelineItem) {
+    throw new Error("Timeline item not found");
+  }
+
+  // Soft delete the timeline item
+  const deletedItem = await prisma.timelineItem.update({
+    where: { id: itemId },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+
+  // Log the deletion event
+  await logEvent(
+    "TimelineItem",
+    itemId,
+    EventType.MILESTONE_CREATED, // Note: There's no MILESTONE_DELETED event type, using closest match
+    userId,
+    {
+      tripId,
+      title: timelineItem.title,
+      action: "deleted",
+    }
+  );
+
+  return deletedItem;
 }
 
 /**

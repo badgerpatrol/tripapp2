@@ -1,10 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import CreateTripForm from "@/components/CreateTripForm";
 import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
+
+interface TripData {
+  id: string;
+  name: string;
+  participants: Array<{
+    id: string;
+    role: string;
+    rsvpStatus: string;
+    user: {
+      id: string;
+      email: string;
+      displayName: string | null;
+    };
+  }>;
+}
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -18,6 +33,34 @@ export default function NewTripPage() {
     tripId: null,
     shouldNavigate: false,
   });
+  const [tripData, setTripData] = useState<TripData | null>(null);
+
+  // Fetch trip data when modal opens
+  useEffect(() => {
+    const fetchTrip = async () => {
+      if (!modalState.tripId || !user) return;
+
+      try {
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/trips/${modalState.tripId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setTripData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching trip:", err);
+      }
+    };
+
+    if (modalState.isOpen && modalState.tripId) {
+      fetchTrip();
+    }
+  }, [modalState.isOpen, modalState.tripId, user]);
 
   // Show loading state while checking auth
   if (loading) {
@@ -96,18 +139,21 @@ export default function NewTripPage() {
       </div>
 
       {/* List Workflow Modal */}
-      {modalState.tripId && (
+      {modalState.tripId && tripData && (
         <ListWorkflowModal
           tripId={modalState.tripId}
+          tripName={tripData.name}
           isOpen={modalState.isOpen}
           onClose={() => {
             const tripId = modalState.tripId;
             setModalState({ isOpen: false, tripId: null, shouldNavigate: false });
+            setTripData(null);
             // Navigate after modal closes if needed
             if (modalState.shouldNavigate && tripId) {
               router.push(`/trips/${tripId}`);
             }
           }}
+          currentMembers={tripData.participants}
         />
       )}
     </div>

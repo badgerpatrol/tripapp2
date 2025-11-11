@@ -644,6 +644,7 @@ export const TodoItemTemplateInput = z.object({
   notes: z.string().optional(),
   actionType: TodoActionTypeSchema.optional(),
   actionData: z.any().optional(),
+  parameters: z.record(z.string(), z.any()).optional(),
   orderIndex: z.number().int().nonnegative().default(0)
 }).strict();
 

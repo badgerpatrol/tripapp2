@@ -25,6 +25,7 @@ import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
+import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
 
 interface TripDetail {
   id: string;
@@ -134,6 +135,11 @@ export default function TripDetailPage() {
   const [isDeletingSpend, setIsDeletingSpend] = useState(false);
   const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
   const [editingTimelineDate, setEditingTimelineDate] = useState<string>("");
+  const [deletingTimelineItemId, setDeletingTimelineItemId] = useState<string | null>(null);
+  const [isAddingMilestone, setIsAddingMilestone] = useState(false);
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
+  const [newMilestoneDescription, setNewMilestoneDescription] = useState("");
+  const [newMilestoneDate, setNewMilestoneDate] = useState("");
 
   // Choices state
   const [choices, setChoices] = useState<any[]>([]);
@@ -143,6 +149,14 @@ export default function TripDetailPage() {
   const [isChoiceReportsDialogOpen, setIsChoiceReportsDialogOpen] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("details");
+  const [createChoiceInitialName, setCreateChoiceInitialName] = useState("");
+
+  // List workflow modal state
+  const [isListWorkflowModalOpen, setIsListWorkflowModalOpen] = useState(false);
+  const [listWorkflowTitle, setListWorkflowTitle] = useState("");
+  const [listWorkflowDescription, setListWorkflowDescription] = useState("");
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [listsRefreshKey, setListsRefreshKey] = useState(0);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -300,6 +314,19 @@ export default function TripDetailPage() {
           tripData.totalUnassigned = totalUnassigned;
         } else {
           tripData.totalUnassigned = 0;
+        }
+
+        // Sort timeline items by date in ascending order
+        if (tripData.timeline && tripData.timeline.length > 0) {
+          tripData.timeline.sort((a: any, b: any) => {
+            // Items with no date go to the end
+            if (!a.date && !b.date) return 0;
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+
+            // Compare dates in ascending order
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          });
         }
 
         setTrip(tripData);
@@ -1510,6 +1537,69 @@ export default function TripDetailPage() {
     }
   };
 
+  const handleDeleteTimelineItem = async (itemId: string) => {
+    if (!user) return;
+
+    try {
+      setDeletingTimelineItemId(itemId);
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/timeline/${itemId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to delete milestone");
+      }
+
+      // Success - refresh the trip data
+      handleEditSuccess();
+    } catch (err) {
+      console.error("Error deleting timeline item:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete milestone");
+    } finally {
+      setDeletingTimelineItemId(null);
+    }
+  };
+
+  const handleAddMilestone = async () => {
+    if (!user || !newMilestoneTitle.trim()) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/timeline`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          title: newMilestoneTitle.trim(),
+          description: newMilestoneDescription.trim() || undefined,
+          date: newMilestoneDate || null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to create milestone");
+      }
+
+      // Success - reset form and refresh the trip data
+      setIsAddingMilestone(false);
+      setNewMilestoneTitle("");
+      setNewMilestoneDescription("");
+      setNewMilestoneDate("");
+      handleEditSuccess();
+    } catch (err) {
+      console.error("Error creating milestone:", err);
+      alert(err instanceof Error ? err.message : "Failed to create milestone");
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
@@ -1596,9 +1686,22 @@ export default function TripDetailPage() {
         {/* Lists Section (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (
           <TripListsPanel
+            key={listsRefreshKey}
             tripId={trip.id}
             onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
-            onOpenCreateChoice={() => setIsCreateChoiceDialogOpen(true)}
+            onOpenCreateChoice={(choiceName) => {
+              setIsCreateChoiceDialogOpen(true);
+              if (choiceName) {
+                // Store the choice name to pass to the dialog
+                setCreateChoiceInitialName(choiceName);
+              }
+            }}
+            onOpenList={(listId, listTitle) => {
+              setSelectedListId(listId);
+              setListWorkflowTitle("Get things done");
+              setListWorkflowDescription(`Complete tasks in ${listTitle}`);
+              setIsListWorkflowModalOpen(true);
+            }}
           />
         )}
         
@@ -2363,6 +2466,81 @@ export default function TripDetailPage() {
                 </svg>
               </button>
             </div>
+            
+            {/* Add Milestone Form */}
+              {canInvite && (
+                <div className="mt-4">
+                  {!isAddingMilestone ? (
+                    <button
+                      onClick={() => setIsAddingMilestone(true)}
+                      className="tap-target w-full py-3 px-4 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Milestone
+                    </button>
+                  ) : (
+                    <div className="p-4 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                          Title <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={newMilestoneTitle}
+                          onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                          placeholder="e.g., Book Flights"
+                          className="w-full px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                          Description
+                        </label>
+                        <input
+                          type="text"
+                          value={newMilestoneDescription}
+                          onChange={(e) => setNewMilestoneDescription(e.target.value)}
+                          placeholder="Optional description"
+                          className="w-full px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          value={newMilestoneDate}
+                          onChange={(e) => setNewMilestoneDate(e.target.value)}
+                          className="w-full max-w-[200px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleAddMilestone}
+                          disabled={!newMilestoneTitle.trim()}
+                          className="tap-target flex-1 px-4 py-2 text-sm rounded bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
+                        >
+                          Add Milestone
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsAddingMilestone(false);
+                            setNewMilestoneTitle("");
+                            setNewMilestoneDescription("");
+                            setNewMilestoneDate("");
+                          }}
+                          className="tap-target flex-1 px-4 py-2 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
             {!collapsedSections.timeline && (
               <div className="space-y-3">
@@ -2431,28 +2609,53 @@ export default function TripDetailPage() {
                       )}
                     </div>
                     {!isEditing && canEdit && (
-                      <button
-                        onClick={() => {
-                          setEditingTimelineItemId(item.id);
-                          setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
-                        }}
-                        className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors self-start"
-                        title="Edit milestone date"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
+                      <div className="flex gap-1 self-start">
+                        <button
+                          onClick={() => {
+                            setEditingTimelineItemId(item.id);
+                            setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
+                          }}
+                          className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                          title="Edit milestone date"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete the milestone "${item.title}"?`)) {
+                              handleDeleteTimelineItem(item.id);
+                            }
+                          }}
+                          disabled={deletingTimelineItemId === item.id}
+                          className="tap-target p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete milestone"
+                        >
+                          {deletingTimelineItemId === item.id ? (
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
               })}
+
+              
               </div>
             )}
           </div>
         )}
 
-        
+
         </div>
       </div>
 
@@ -2732,12 +2935,17 @@ export default function TripDetailPage() {
       <CreateChoiceDialog
         tripId={trip.id}
         isOpen={isCreateChoiceDialogOpen}
-        onClose={() => setIsCreateChoiceDialogOpen(false)}
+        onClose={() => {
+          setIsCreateChoiceDialogOpen(false);
+          setCreateChoiceInitialName(""); // Reset initial name
+        }}
+        initialName={createChoiceInitialName}
         onSuccess={(newChoiceId: string) => {
           fetchChoices();
           setSelectedChoiceId(newChoiceId);
           setManageChoiceInitialTab("items");
           setIsManageChoiceDialogOpen(true);
+          setCreateChoiceInitialName(""); // Reset initial name
         }}
       />
 
@@ -2814,6 +3022,25 @@ export default function TripDetailPage() {
           }}
         />
       )}
+
+      {/* List Workflow Modal */}
+      <ListWorkflowModal
+        tripId={trip?.id || ""}
+        tripName={trip?.name || ""}
+        isOpen={isListWorkflowModalOpen}
+        onClose={() => {
+          setIsListWorkflowModalOpen(false);
+          setSelectedListId(null);
+          // Refresh the main lists panel to show updated counts/progress
+          setListsRefreshKey(prev => prev + 1);
+        }}
+        onMilestoneCreated={handleEditSuccess}
+        onChoiceCreated={fetchChoices}
+        title={listWorkflowTitle}
+        description={listWorkflowDescription}
+        selectedListId={selectedListId || undefined}
+        currentMembers={trip?.participants || []}
+      />
     </div>
   );
 }
