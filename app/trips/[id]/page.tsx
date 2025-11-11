@@ -316,6 +316,19 @@ export default function TripDetailPage() {
           tripData.totalUnassigned = 0;
         }
 
+        // Sort timeline items by date in ascending order
+        if (tripData.timeline && tripData.timeline.length > 0) {
+          tripData.timeline.sort((a: any, b: any) => {
+            // Items with no date go to the end
+            if (!a.date && !b.date) return 0;
+            if (!a.date) return 1;
+            if (!b.date) return -1;
+
+            // Compare dates in ascending order
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          });
+        }
+
         setTrip(tripData);
       } catch (err) {
         console.error("Error fetching trip:", err);
