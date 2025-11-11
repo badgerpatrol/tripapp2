@@ -79,12 +79,13 @@ export async function POST(
     // Use transaction to update both milestone and related status atomically
     const result = await prisma.$transaction(async (tx) => {
       // Update the milestone
+      // Keep triggerType=MANUAL even when uncompleting to prevent auto-triggering
       const updatedItem = await tx.timelineItem.update({
         where: { id: itemId },
         data: {
           isCompleted: newCompletionState,
           completedAt: newCompletionState ? now : null,
-          triggerType: newCompletionState ? MilestoneTriggerType.MANUAL : null,
+          triggerType: MilestoneTriggerType.MANUAL, // Always MANUAL when user toggles
         },
       });
 

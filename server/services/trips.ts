@@ -716,11 +716,17 @@ export async function checkAndAutoCloseRsvp(tripId: string) {
     return;
   }
 
-  console.log(`[checkAndAutoCloseRsvp] RSVP deadline: ${rsvpDeadline.date}, isCompleted: ${rsvpDeadline.isCompleted}`);
+  console.log(`[checkAndAutoCloseRsvp] RSVP deadline: ${rsvpDeadline.date}, isCompleted: ${rsvpDeadline.isCompleted}, triggerType: ${rsvpDeadline.triggerType}`);
 
-  // If milestone is already completed, don't trigger again
+  // If milestone is already completed or manually overridden, don't trigger again
   if (rsvpDeadline.isCompleted) {
     console.log(`[checkAndAutoCloseRsvp] Milestone already completed, skipping auto-close`);
+    return;
+  }
+
+  // If user manually touched this milestone (even to uncomplete it), respect their decision
+  if (rsvpDeadline.triggerType === MilestoneTriggerType.MANUAL) {
+    console.log(`[checkAndAutoCloseRsvp] Milestone manually overridden by user, skipping auto-close`);
     return;
   }
 
@@ -927,11 +933,17 @@ export async function checkAndAutoCloseChoice(choiceId: string) {
     return;
   }
 
-  console.log(`[checkAndAutoCloseChoice] Choice deadline: ${choiceMilestone.date}, isCompleted: ${choiceMilestone.isCompleted}`);
+  console.log(`[checkAndAutoCloseChoice] Choice deadline: ${choiceMilestone.date}, isCompleted: ${choiceMilestone.isCompleted}, triggerType: ${choiceMilestone.triggerType}`);
 
-  // If milestone is already completed, don't trigger again
+  // If milestone is already completed or manually overridden, don't trigger again
   if (choiceMilestone.isCompleted) {
     console.log(`[checkAndAutoCloseChoice] Milestone already completed, skipping auto-close`);
+    return;
+  }
+
+  // If user manually touched this milestone (even to uncomplete it), respect their decision
+  if (choiceMilestone.triggerType === MilestoneTriggerType.MANUAL) {
+    console.log(`[checkAndAutoCloseChoice] Milestone manually overridden by user, skipping auto-close`);
     return;
   }
 
@@ -1000,11 +1012,17 @@ export async function checkAndAutoCloseSpending(tripId: string) {
     return;
   }
 
-  console.log(`[checkAndAutoCloseSpending] Spending deadline: ${spendDeadline.date}, isCompleted: ${spendDeadline.isCompleted}`);
+  console.log(`[checkAndAutoCloseSpending] Spending deadline: ${spendDeadline.date}, isCompleted: ${spendDeadline.isCompleted}, triggerType: ${spendDeadline.triggerType}`);
 
-  // If milestone is already completed, don't trigger again
+  // If milestone is already completed or manually overridden, don't trigger again
   if (spendDeadline.isCompleted) {
     console.log(`[checkAndAutoCloseSpending] Milestone already completed, skipping auto-close`);
+    return;
+  }
+
+  // If user manually touched this milestone (even to uncomplete it), respect their decision
+  if (spendDeadline.triggerType === MilestoneTriggerType.MANUAL) {
+    console.log(`[checkAndAutoCloseSpending] Milestone manually overridden by user, skipping auto-close`);
     return;
   }
 
