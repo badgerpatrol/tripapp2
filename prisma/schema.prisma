@@ -175,6 +175,8 @@ enum EventType {
   LIST_ITEM_REMOVED
   LIST_ITEM_EDITED
   LIST_ITEM_ACTION_LAUNCHED
+  CHOICE_MENU_SCANNED
+  CHOICE_ITEMS_BULK_ADD
 }
 
 // ============================================================================
@@ -687,6 +689,8 @@ model ChoiceItem {
   name        String
   description String?
   price       Decimal?  @db.Decimal(19, 4)
+  course      String?   // Raw course value if present (e.g., "Starters", "Mains", "Desserts")
+  sortIndex   Int       @default(0) // For manual reordering or auto-ordering by course
   tags        Json?     // Array of strings
   maxPerUser  Int?
   maxTotal    Int?

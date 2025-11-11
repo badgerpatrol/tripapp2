@@ -11,6 +11,7 @@ import ManageChoiceDialog from "@/app/trips/[id]/ManageChoiceDialog";
 interface ListWorkflowModalProps {
   tripId: string;
   tripName: string;
+  tripCurrency?: string;
   isOpen: boolean;
   onClose: () => void;
   title?: string;
@@ -33,6 +34,7 @@ interface ListWorkflowModalProps {
 export function ListWorkflowModal({
   tripId,
   tripName,
+  tripCurrency = "GBP",
   isOpen,
   onClose,
   title = "Get Started with Your Trip",
@@ -230,6 +232,8 @@ export function ListWorkflowModal({
           }
         }}
         choiceId={selectedChoiceId}
+        tripId={tripId}
+        tripCurrency={tripCurrency}
         onSuccess={() => {
           // Refresh the lists
           setRefreshKey(prev => prev + 1);

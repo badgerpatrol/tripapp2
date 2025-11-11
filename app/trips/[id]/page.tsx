@@ -3036,9 +3036,11 @@ export default function TripDetailPage() {
       )}
 
       {/* Manage Choice Dialog */}
-      {selectedChoiceId && (
+      {selectedChoiceId && trip && (
         <ManageChoiceDialog
           choiceId={selectedChoiceId}
+          tripId={trip.id}
+          tripCurrency={trip.baseCurrency}
           isOpen={isManageChoiceDialogOpen}
           initialTab={manageChoiceInitialTab}
           onClose={() => {
