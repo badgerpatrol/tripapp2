@@ -202,6 +202,9 @@ export default function ChoiceDetailDialog({
 
       // Refresh data
       await fetchChoiceDetail();
+
+      // Close the dialog after successful save
+      onClose();
     } catch (err: any) {
       console.error("Error saving selections:", err);
       setError(err.message);
@@ -389,7 +392,7 @@ export default function ChoiceDetailDialog({
                   onClick={onClose}
                   className="flex-1 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
                 >
-                  Close
+                  Cancel
                 </button>
                 {!isClosed && (
                   <button

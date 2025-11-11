@@ -571,7 +571,7 @@ export default function ManageChoiceDialog({
                       {saving ? (
                         "Updating..."
                       ) : hasLinkedSpend && status === "CLOSED" ? (
-                        "Spend Ready"
+                        "Delete spend to reopen choice"
                       ) : status === "OPEN" ? (
                         "Open - Click to Close"
                       ) : (
