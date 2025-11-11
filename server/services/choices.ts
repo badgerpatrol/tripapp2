@@ -4,7 +4,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { ChoiceStatus, Prisma, EventType } from "@/lib/generated/prisma";
+import { ChoiceStatus, Prisma, EventType, MilestoneTriggerType } from "@/lib/generated/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
 import { logEvent } from "@/server/eventLog";
 
@@ -70,48 +70,85 @@ export interface CreateSelectionData {
 export async function createChoice(
   userId: string,
   tripId: string,
-  data: CreateChoiceData
+  data: CreateChoiceData & { deadline?: Date }
 ) {
-  const choice = await prisma.choice.create({
-    data: {
-      tripId,
-      name: data.name,
-      description: data.description,
-      datetime: data.datetime,
-      place: data.place,
-      visibility: data.visibility || "TRIP",
-      status: "OPEN",
-      createdById: userId,
-    },
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          email: true,
-          displayName: true,
-          photoURL: true,
+  // Use a transaction to create choice and milestone together
+  const result = await prisma.$transaction(async (tx) => {
+    const choice = await tx.choice.create({
+      data: {
+        tripId,
+        name: data.name,
+        description: data.description,
+        datetime: data.datetime,
+        place: data.place,
+        visibility: data.visibility || "TRIP",
+        status: "OPEN",
+        deadline: data.deadline,
+        createdById: userId,
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            photoURL: true,
+          },
         },
       },
-    },
+    });
+
+    // If deadline is provided, create a milestone for it
+    if (data.deadline) {
+      // Get the highest order number for existing timeline items
+      const lastItem = await tx.timelineItem.findFirst({
+        where: {
+          tripId,
+          deletedAt: null,
+        },
+        orderBy: {
+          order: "desc",
+        },
+      });
+
+      const nextOrder = lastItem ? lastItem.order + 1 : 0;
+
+      await tx.timelineItem.create({
+        data: {
+          tripId,
+          choiceId: choice.id,
+          title: `Choice: ${data.name}`,
+          description: `Deadline for choice "${data.name}"`,
+          date: data.deadline,
+          isCompleted: false,
+          order: nextOrder,
+          createdById: userId,
+        },
+      });
+      console.log(`[createChoice] Created milestone for choice "${data.name}" with deadline ${data.deadline}`);
+    }
+
+    // Create activity log
+    await tx.choiceActivity.create({
+      data: {
+        choiceId: choice.id,
+        actorId: userId,
+        action: "created",
+        payload: { name: data.name, deadline: data.deadline },
+      },
+    });
+
+    return choice;
   });
 
-  // Log event
-  await logEvent("Choice", choice.id, EventType.CHOICE_CREATED, userId, {
+  // Log event (outside transaction)
+  await logEvent("Choice", result.id, EventType.CHOICE_CREATED, userId, {
     tripId,
     name: data.name,
+    deadline: data.deadline,
   });
 
-  // Create activity log
-  await prisma.choiceActivity.create({
-    data: {
-      choiceId: choice.id,
-      actorId: userId,
-      action: "created",
-      payload: { name: data.name },
-    },
-  });
-
-  return choice;
+  return result;
 }
 
 /**
@@ -197,30 +234,114 @@ export async function updateChoiceStatus(
     throw new Error("Cannot update archived choice");
   }
 
-  const updateData: Prisma.ChoiceUpdateInput = { status };
-  if (deadline !== undefined) updateData.deadline = deadline;
+  const now = new Date();
 
-  const updated = await prisma.choice.update({
-    where: { id: choiceId },
-    data: updateData,
+  // Use transaction to update choice status and milestone together
+  const updated = await prisma.$transaction(async (tx) => {
+    const updateData: Prisma.ChoiceUpdateInput = { status };
+    if (deadline !== undefined) updateData.deadline = deadline;
+
+    const updatedChoice = await tx.choice.update({
+      where: { id: choiceId },
+      data: updateData,
+    });
+
+    // Find the milestone linked to this choice
+    const choiceMilestone = await tx.timelineItem.findFirst({
+      where: {
+        choiceId,
+        tripId: choice.tripId,
+        deletedAt: null,
+      },
+    });
+
+    // Handle choice milestone based on status change
+    if (choiceMilestone) {
+      if (status === "CLOSED" && !choiceMilestone.isCompleted) {
+        // Closing choice - mark milestone as completed
+        await tx.timelineItem.update({
+          where: { id: choiceMilestone.id },
+          data: {
+            isCompleted: true,
+            completedAt: now,
+            triggerType: MilestoneTriggerType.MANUAL,
+          },
+        });
+        console.log(`[updateChoiceStatus] Marked choice milestone as completed (MANUAL) for choice "${choice.name}"`);
+      } else if (status === "OPEN" && choiceMilestone.isCompleted) {
+        // Reopening choice - reset milestone to uncompleted
+        await tx.timelineItem.update({
+          where: { id: choiceMilestone.id },
+          data: {
+            isCompleted: false,
+            completedAt: null,
+            triggerType: null,
+          },
+        });
+        console.log(`[updateChoiceStatus] Reset choice milestone to uncompleted for choice "${choice.name}"`);
+      }
+    }
+
+    // If deadline is being set/updated and no milestone exists, create one
+    if (deadline !== undefined && deadline !== null && !choiceMilestone) {
+      // Get the highest order number for existing timeline items
+      const lastItem = await tx.timelineItem.findFirst({
+        where: {
+          tripId: choice.tripId,
+          deletedAt: null,
+        },
+        orderBy: {
+          order: "desc",
+        },
+      });
+
+      const nextOrder = lastItem ? lastItem.order + 1 : 0;
+
+      await tx.timelineItem.create({
+        data: {
+          tripId: choice.tripId,
+          choiceId,
+          title: `Choice: ${choice.name}`,
+          description: `Deadline for choice "${choice.name}"`,
+          date: deadline,
+          isCompleted: status === "CLOSED", // If already closed, mark milestone as completed
+          completedAt: status === "CLOSED" ? now : null,
+          triggerType: status === "CLOSED" ? MilestoneTriggerType.MANUAL : null,
+          order: nextOrder,
+          createdById: userId,
+        },
+      });
+      console.log(`[updateChoiceStatus] Created milestone for choice "${choice.name}" with deadline ${deadline}`);
+    }
+
+    // If deadline is being removed, delete the milestone
+    if (deadline === null && choiceMilestone) {
+      await tx.timelineItem.update({
+        where: { id: choiceMilestone.id },
+        data: { deletedAt: now },
+      });
+      console.log(`[updateChoiceStatus] Deleted milestone for choice "${choice.name}" - deadline removed`);
+    }
+
+    // Create activity log
+    await tx.choiceActivity.create({
+      data: {
+        choiceId,
+        actorId: userId,
+        action: status === "CLOSED" ? "closed" : "reopened",
+        payload: { status, deadline },
+      },
+    });
+
+    return updatedChoice;
   });
 
-  // Log event
+  // Log event (outside transaction)
   const eventType = status === "CLOSED" ? EventType.CHOICE_CLOSED : EventType.CHOICE_REOPENED;
   await logEvent("Choice", choiceId, eventType, userId, {
     tripId: choice.tripId,
     status,
     deadline,
-  });
-
-  // Create activity log
-  await prisma.choiceActivity.create({
-    data: {
-      choiceId,
-      actorId: userId,
-      action: status === "CLOSED" ? "closed" : "reopened",
-      payload: { status, deadline },
-    },
   });
 
   return updated;
@@ -238,25 +359,45 @@ export async function archiveChoice(choiceId: string, userId: string) {
     throw new Error("Choice not found");
   }
 
-  const archived = await prisma.choice.update({
-    where: { id: choiceId },
-    data: {
-      archivedAt: new Date(),
-    },
+  const now = new Date();
+
+  // Use transaction to archive choice and delete its milestone
+  const archived = await prisma.$transaction(async (tx) => {
+    const archivedChoice = await tx.choice.update({
+      where: { id: choiceId },
+      data: {
+        archivedAt: now,
+      },
+    });
+
+    // Delete the associated milestone (soft delete)
+    await tx.timelineItem.updateMany({
+      where: {
+        choiceId,
+        tripId: choice.tripId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+      },
+    });
+    console.log(`[archiveChoice] Deleted milestone for archived choice "${choice.name}"`);
+
+    // Create activity log
+    await tx.choiceActivity.create({
+      data: {
+        choiceId,
+        actorId: userId,
+        action: "archived",
+      },
+    });
+
+    return archivedChoice;
   });
 
-  // Log event
+  // Log event (outside transaction)
   await logEvent("Choice", choiceId, EventType.CHOICE_ARCHIVED, userId, {
     tripId: choice.tripId,
-  });
-
-  // Create activity log
-  await prisma.choiceActivity.create({
-    data: {
-      choiceId,
-      actorId: userId,
-      action: "archived",
-    },
   });
 
   return archived;

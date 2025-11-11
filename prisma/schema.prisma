@@ -118,6 +118,11 @@ enum TodoActionType {
   INVITE_USERS
 }
 
+enum MilestoneTriggerType {
+  MANUAL
+  DEADLINE
+}
+
 enum EventType {
   USER_CREATED
   USER_UPDATED
@@ -485,26 +490,30 @@ model Payment {
 // ============================================================================
 
 model TimelineItem {
-  id          String    @id @default(uuid())
+  id          String                 @id @default(uuid())
   tripId      String
   title       String
   description String?
   date        DateTime?
-  isCompleted Boolean   @default(false)
+  isCompleted Boolean                @default(false)
   completedAt DateTime?
-  order       Int       @default(0)
+  triggerType MilestoneTriggerType?  // How milestone was triggered (MANUAL or DEADLINE)
+  order       Int                    @default(0)
+  choiceId    String?                // Optional link to a Choice (for choice-specific deadlines)
   createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
   deletedAt   DateTime?
 
   // Relationships
-  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  createdBy User @relation(fields: [createdById], references: [id])
+  trip      Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+  choice    Choice? @relation(fields: [choiceId], references: [id], onDelete: Cascade)
 
   @@index([tripId])
   @@index([date])
   @@index([createdById])
+  @@index([choiceId])
   @@map("timeline_items")
 }
 
@@ -658,11 +667,12 @@ model Choice {
   archivedAt  DateTime?
 
   // Relationships
-  trip       Trip               @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  createdBy  User               @relation("ChoiceCreator", fields: [createdById], references: [id])
-  items      ChoiceItem[]
-  selections ChoiceSelection[]
-  activities ChoiceActivity[]
+  trip          Trip               @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy     User               @relation("ChoiceCreator", fields: [createdById], references: [id])
+  items         ChoiceItem[]
+  selections    ChoiceSelection[]
+  activities    ChoiceActivity[]
+  timelineItems TimelineItem[]
 
   @@index([tripId])
   @@index([createdById])

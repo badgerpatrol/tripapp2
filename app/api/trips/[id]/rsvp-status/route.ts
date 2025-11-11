@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
 import { prisma } from "@/lib/prisma";
-import { RsvpWindowStatus, TripMemberRole } from "@/lib/generated/prisma";
+import { RsvpWindowStatus, TripMemberRole, MilestoneTriggerType } from "@/lib/generated/prisma";
 
 /**
  * POST /api/trips/[id]/rsvp-status
@@ -72,15 +72,53 @@ export async function POST(
       newStatus = currentStatus === "OPEN" ? RsvpWindowStatus.CLOSED : RsvpWindowStatus.OPEN;
     }
 
-    // Update trip RSVP status
-    // NOTE: We do NOT reset the milestone when manually changing RSVP status.
-    // Milestone status (isCompleted) and RSVP status are independent:
-    // - Milestone tracks whether the deadline date has been processed (pending → done)
-    // - RSVP status controls whether RSVPs are allowed (OPEN ↔ CLOSED)
-    // Organizers can manually change RSVP status at any time, regardless of milestone state.
-    const updatedTrip = await prisma.trip.update({
-      where: { id: tripId },
-      data: { rsvpStatus: newStatus },
+    // Update trip RSVP status and mark milestone as completed when manually closing
+    const now = new Date();
+
+    // Use transaction to update both trip and milestone
+    const result = await prisma.$transaction(async (tx) => {
+      // Update trip RSVP status
+      const updatedTrip = await tx.trip.update({
+        where: { id: tripId },
+        data: { rsvpStatus: newStatus },
+      });
+
+      // Handle RSVP milestone based on status change
+      const rsvpMilestone = await tx.timelineItem.findFirst({
+        where: {
+          tripId,
+          title: "RSVP Deadline",
+          deletedAt: null,
+        },
+      });
+
+      if (rsvpMilestone) {
+        if (newStatus === RsvpWindowStatus.CLOSED && !rsvpMilestone.isCompleted) {
+          // Closing RSVP - mark milestone as completed
+          await tx.timelineItem.update({
+            where: { id: rsvpMilestone.id },
+            data: {
+              isCompleted: true,
+              completedAt: now,
+              triggerType: MilestoneTriggerType.MANUAL,
+            },
+          });
+          console.log(`[rsvp-status] Marked RSVP Deadline milestone as completed (MANUAL) for trip ${tripId}`);
+        } else if (newStatus === RsvpWindowStatus.OPEN && rsvpMilestone.isCompleted) {
+          // Reopening RSVP - reset milestone to uncompleted
+          await tx.timelineItem.update({
+            where: { id: rsvpMilestone.id },
+            data: {
+              isCompleted: false,
+              completedAt: null,
+              triggerType: null,
+            },
+          });
+          console.log(`[rsvp-status] Reset RSVP Deadline milestone to uncompleted for trip ${tripId}`);
+        }
+      }
+
+      return updatedTrip;
     });
 
     console.log(`[rsvp-status] Updated trip ${tripId} to status: ${newStatus}`);
@@ -88,8 +126,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       trip: {
-        id: updatedTrip.id,
-        rsvpStatus: updatedTrip.rsvpStatus,
+        id: result.id,
+        rsvpStatus: result.rsvpStatus,
       },
     });
   } catch (error) {
