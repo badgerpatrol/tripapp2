@@ -84,7 +84,7 @@ async function testRsvpFlow() {
     console.log("\n2. Inviting users to the trip...");
     const inviteResult = await inviteUsersToTrip(
       trip.id,
-      [testUsers[0].email, testUsers[1].email, testUsers[2].email],
+      { emails: [testUsers[0].email, testUsers[1].email, testUsers[2].email] },
       trip.createdById
     );
 

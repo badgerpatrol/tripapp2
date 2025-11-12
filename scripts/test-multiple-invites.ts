@@ -69,7 +69,7 @@ async function testMultipleInvites() {
     const emails = users.map(u => u.email);
     console.log(`   Emails: ${emails.join(", ")}`);
 
-    const result = await inviteUsersToTrip(trip.id, emails, trip.createdById);
+    const result = await inviteUsersToTrip(trip.id, { emails }, trip.createdById);
 
     console.log("\n4. Results:");
     console.log(`   ✓ Invited: ${result.invited.length}`);

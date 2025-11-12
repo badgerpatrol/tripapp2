@@ -336,10 +336,110 @@ async function main() {
     console.log(`  ⊘ 🎿 Basic Ski Kit template (already exists)`);
   }
 
+  // Seed demo groups (only if demo users exist)
+  console.log('\n👥 Creating demo groups...');
+
+  // Check if demo users exist (adjust these IDs based on your demo users)
+  const demoUsers = await prisma.user.findMany({
+    where: {
+      email: {
+        in: ['demo1@example.com', 'demo2@example.com', 'demo3@example.com'],
+      },
+    },
+    select: { id: true, email: true },
+  });
+
+  if (demoUsers.length >= 3) {
+    const [user1, user2, user3] = demoUsers;
+
+    // Group 1: "Ski Buddies" - owned by user1, includes user2 and user3
+    const skiBuddies = await prisma.group.findFirst({
+      where: { name: "Ski Buddies", ownerId: user1.id },
+    });
+
+    if (!skiBuddies) {
+      const group1 = await prisma.group.create({
+        data: {
+          name: "Ski Buddies",
+          description: "Friends who love skiing together",
+          ownerId: user1.id,
+        },
+      });
+
+      await prisma.groupMember.createMany({
+        data: [
+          { groupId: group1.id, userId: user1.id, role: "ADMIN" },
+          { groupId: group1.id, userId: user2.id, role: "MEMBER" },
+          { groupId: group1.id, userId: user3.id, role: "MEMBER" },
+        ],
+      });
+
+      console.log(`  ✓ 👥 Ski Buddies group (3 members)`);
+    } else {
+      console.log(`  ⊘ 👥 Ski Buddies group (already exists)`);
+    }
+
+    // Group 2: "Adventure Squad" - owned by user2, includes user1 and user3
+    const adventureSquad = await prisma.group.findFirst({
+      where: { name: "Adventure Squad", ownerId: user2.id },
+    });
+
+    if (!adventureSquad) {
+      const group2 = await prisma.group.create({
+        data: {
+          name: "Adventure Squad",
+          description: "Always ready for the next adventure",
+          ownerId: user2.id,
+        },
+      });
+
+      await prisma.groupMember.createMany({
+        data: [
+          { groupId: group2.id, userId: user2.id, role: "ADMIN" },
+          { groupId: group2.id, userId: user1.id, role: "MEMBER" },
+          { groupId: group2.id, userId: user3.id, role: "MEMBER" },
+        ],
+      });
+
+      console.log(`  ✓ 👥 Adventure Squad group (3 members)`);
+    } else {
+      console.log(`  ⊘ 👥 Adventure Squad group (already exists)`);
+    }
+
+    // Group 3: "Work Friends" - owned by user3, includes only user1 (distinct)
+    const workFriends = await prisma.group.findFirst({
+      where: { name: "Work Friends", ownerId: user3.id },
+    });
+
+    if (!workFriends) {
+      const group3 = await prisma.group.create({
+        data: {
+          name: "Work Friends",
+          description: "Colleagues and office mates",
+          ownerId: user3.id,
+        },
+      });
+
+      await prisma.groupMember.createMany({
+        data: [
+          { groupId: group3.id, userId: user3.id, role: "ADMIN" },
+          { groupId: group3.id, userId: user1.id, role: "MEMBER" },
+        ],
+      });
+
+      console.log(`  ✓ 👥 Work Friends group (2 members)`);
+    } else {
+      console.log(`  ⊘ 👥 Work Friends group (already exists)`);
+    }
+  } else {
+    console.log(`  ⊘ Skipping group creation (need 3+ demo users with emails demo1-3@example.com)`);
+  }
+
   console.log('\n✅ Seed complete!');
   console.log('\nCreated:');
   console.log(`  - ${categories.length} default categories`);
   console.log(`  - 2 public list templates (TODO + KIT)`);
+  console.log(`  - 3 demo groups (if demo users exist)`);
 }
 
 main()

@@ -45,7 +45,7 @@ async function testInviteFix() {
     // Test the invite function
     const result = await inviteUsersToTrip(
       trip.id,
-      [availUser.email],
+      { emails: [availUser.email] },
       trip.createdById
     );
 

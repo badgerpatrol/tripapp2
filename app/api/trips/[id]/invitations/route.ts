@@ -6,7 +6,8 @@ import { TripMemberRole } from "@/lib/generated/prisma";
 
 /**
  * POST /api/trips/:id/invitations
- * Invites users to a trip by email.
+ * Invites users to a trip by email or userId.
+ * When using userIds with groupIds, validates users are in the caller's discoverable set.
  * Creates TripMember rows with RSVP=PENDING and sends in-app notifications.
  *
  * Only OWNER or ADMIN can invite users.
@@ -56,10 +57,14 @@ export async function POST(
       );
     }
 
-    const { emails } = validationResult.data;
+    const { emails, userIds, groupIds } = validationResult.data;
 
     // 4. Invite users
-    const result = await inviteUsersToTrip(tripId, emails, auth.uid);
+    const result = await inviteUsersToTrip(
+      tripId,
+      { emails, userIds, groupIds },
+      auth.uid
+    );
 
     return NextResponse.json(
       {

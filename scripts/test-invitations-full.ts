@@ -89,7 +89,7 @@ async function testInvitationFlow() {
 
     console.log(`   Inviting: ${emailsToInvite.join(", ")}`);
 
-    const inviteResult = await inviteUsersToTrip(trip.id, emailsToInvite, trip.createdById);
+    const inviteResult = await inviteUsersToTrip(trip.id, { emails: emailsToInvite }, trip.createdById);
 
     console.log("\n   Results:");
     console.log(`   ✓ Invited: ${inviteResult.invited.length}`);
@@ -99,7 +99,7 @@ async function testInvitationFlow() {
     inviteResult.alreadyMembers.forEach(i => console.log(`     - ${i.email}`));
 
     console.log(`   ✗ Not found: ${inviteResult.notFound.length}`);
-    inviteResult.notFound.forEach(i => console.log(`     - ${i.email}`));
+    inviteResult.notFound.forEach(i => console.log(`     - ${'email' in i ? i.email : i.userId}`));
 
     // 3. Verify TripMember records
     console.log("\n3. Verifying TripMember records...");
@@ -190,7 +190,7 @@ async function testInvitationFlow() {
 
     // 8. Test duplicate invitation (should return "already member")
     console.log("\n8. Testing duplicate invitation...");
-    const duplicateResult = await inviteUsersToTrip(trip.id, [testUsers[0].email], trip.createdById);
+    const duplicateResult = await inviteUsersToTrip(trip.id, { emails: [testUsers[0].email] }, trip.createdById);
     console.log(`   Invited: ${duplicateResult.invited.length}`);
     console.log(`   Already members: ${duplicateResult.alreadyMembers.length}`);
     console.log(`   ${duplicateResult.alreadyMembers.length > 0 ? '✓' : '✗'} Correctly detected as already a member`);

@@ -23,7 +23,7 @@ interface ManageChoiceDialogProps {
   tripId: string;
   tripCurrency: string;
   onSuccess: () => void;
-  initialTab?: "details" | "items" | "status";
+  initialTab?: "details" | "items";
 }
 
 export default function ManageChoiceDialog({
@@ -44,7 +44,7 @@ export default function ManageChoiceDialog({
   const [showAddItem, setShowAddItem] = useState(false);
   const [showMenuScan, setShowMenuScan] = useState(false);
   const [showMenuUrl, setShowMenuUrl] = useState(false);
-  const [tab, setTab] = useState<"details" | "items" | "status">(initialTab);
+  const [tab, setTab] = useState<"details" | "items">(initialTab);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -137,7 +137,9 @@ export default function ManageChoiceDialog({
 
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch(`/api/choices/${choiceId}`, {
+
+      // Update basic details (name, description, place)
+      const detailsResponse = await fetch(`/api/choices/${choiceId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -150,9 +152,27 @@ export default function ManageChoiceDialog({
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update choice");
+      if (!detailsResponse.ok) throw new Error("Failed to update choice");
+
+      // Update status/deadline if dirty
+      if (statusDirty) {
+        const statusResponse = await fetch(`/api/choices/${choiceId}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            status,
+            deadline: deadline ? new Date(deadline).toISOString() : null,
+          }),
+        });
+
+        if (!statusResponse.ok) throw new Error("Failed to update deadline");
+      }
 
       setDetailsDirty(false);
+      setStatusDirty(false);
       await fetchChoice();
       onSuccess();
       onClose();
@@ -207,40 +227,6 @@ export default function ManageChoiceDialog({
     }
   };
 
-  const handleUpdateDeadline = async () => {
-    if (!user || !choiceId) return;
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch(`/api/choices/${choiceId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          status,
-          deadline: deadline ? new Date(deadline).toISOString() : null,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update deadline");
-      }
-
-      setStatusDirty(false);
-      await fetchChoice();
-      onSuccess();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleAddItem = async () => {
     if (!user || !choiceId) return;
@@ -522,16 +508,6 @@ export default function ManageChoiceDialog({
             >
               Menu Items ({items.length})
             </button>
-            <button
-              onClick={() => setTab("status")}
-              className={`px-4 py-2 font-medium transition-colors ${
-                tab === "status"
-                  ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-              }`}
-            >
-              Status & Deadline
-            </button>
           </div>
 
           {loading ? (
@@ -576,6 +552,63 @@ export default function ManageChoiceDialog({
                       }}
                       className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-3">Choice Status</label>
+                    <button
+                      onClick={handleToggleStatus}
+                      disabled={saving || (hasLinkedSpend && status === "CLOSED")}
+                      className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+                        hasLinkedSpend && status === "CLOSED"
+                          ? "bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+                          : status === "OPEN"
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-zinc-500 hover:bg-zinc-600 text-white"
+                      } ${saving ? "opacity-50 cursor-wait" : ""}`}
+                    >
+                      {saving ? (
+                        "Updating..."
+                      ) : hasLinkedSpend && status === "CLOSED" ? (
+                        "Delete spend to reopen choice"
+                      ) : status === "OPEN" ? (
+                        "Open - Click to Close"
+                      ) : (
+                        "Closed - Click to Reopen"
+                      )}
+                    </button>
+                    {hasLinkedSpend && status === "CLOSED" && (
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                        A spend has been auto-generated from this choice. Delete the spend to reopen.
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Deadline (optional)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="datetime-local"
+                        value={deadline}
+                        onChange={(e) => {
+                          setDeadline(e.target.value);
+                          setStatusDirty(true);
+                        }}
+                        className="flex-1 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                      />
+                      {deadline && (
+                        <button
+                          onClick={() => {
+                            setDeadline("");
+                            setStatusDirty(true);
+                          }}
+                          className="px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                          title="Remove deadline"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button
@@ -820,61 +853,6 @@ export default function ManageChoiceDialog({
                 </div>
               )}
 
-              {/* Status Tab */}
-              {tab === "status" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-3">Choice Status</label>
-                    <button
-                      onClick={handleToggleStatus}
-                      disabled={saving || (hasLinkedSpend && status === "CLOSED")}
-                      className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
-                        hasLinkedSpend && status === "CLOSED"
-                          ? "bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
-                          : status === "OPEN"
-                          ? "bg-green-600 hover:bg-green-700 text-white"
-                          : "bg-zinc-500 hover:bg-zinc-600 text-white"
-                      } ${saving ? "opacity-50 cursor-wait" : ""}`}
-                    >
-                      {saving ? (
-                        "Updating..."
-                      ) : hasLinkedSpend && status === "CLOSED" ? (
-                        "Delete spend to reopen choice"
-                      ) : status === "OPEN" ? (
-                        "Open - Click to Close"
-                      ) : (
-                        "Closed - Click to Reopen"
-                      )}
-                    </button>
-                    {hasLinkedSpend && status === "CLOSED" && (
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                        A spend has been auto-generated from this choice. Delete the spend to reopen.
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Deadline (optional)</label>
-                    <input
-                      type="datetime-local"
-                      value={deadline}
-                      onChange={(e) => {
-                        setDeadline(e.target.value);
-                        setStatusDirty(true);
-                      }}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
-                    />
-                    {statusDirty && (
-                      <button
-                        onClick={handleUpdateDeadline}
-                        disabled={saving}
-                        className="w-full mt-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white font-medium"
-                      >
-                        {saving ? "Saving..." : "Update Deadline"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>

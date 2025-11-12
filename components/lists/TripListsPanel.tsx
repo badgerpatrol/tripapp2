@@ -293,36 +293,52 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     <>
       {/* Header - only show when displaying all lists */}
       {showContainer && (
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            📋 Lists
-          </h2>
-          {!inWorkflowMode && (
-            <div className="flex gap-2">
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="ALL">All</option>
-                <option value="TODO">TODO</option>
-                <option value="KIT">Kit</option>
-              </select>
-              <Button
-                onClick={() => setIsAddListDialogOpen(true)}
-                className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                + Add List
-              </Button>
-            </div>
-          )}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2 flex-wrap flex-1">
+            <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Lists</h2>
+          </div>
+        </div>
+      )}
+
+      {/* Action buttons row */}
+      {showContainer && !inWorkflowMode && (
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          <button
+            onClick={() => setIsAddListDialogOpen(true)}
+            className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
+          >
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="hidden sm:inline">Add List</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        </div>
+      )}
+
+      {/* Filter dropdown */}
+      {showContainer && !inWorkflowMode && (
+        <div className="mb-4">
+          <label htmlFor="list-type-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            Filter by Type
+          </label>
+          <select
+            id="list-type-filter"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          >
+            <option value="ALL">All Lists</option>
+            <option value="TODO">TODO Lists</option>
+            <option value="KIT">Kit Lists</option>
+          </select>
         </div>
       )}
 
       {/* Loading */}
       {loading && (
         <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       )}
 
@@ -336,7 +352,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       {/* Empty State */}
       {!loading && !error && displayedLists.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-zinc-500 dark:text-zinc-400">
             No lists yet. Add a template to get started!
           </p>
         </div>
@@ -358,7 +374,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
             return (
               <div
                 key={list.id}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden"
               >
                 {/* List Header */}
                 <div className="flex items-center">
@@ -370,15 +386,15 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         onOpenList(list.id, list.title);
                       }
                     }}
-                    className="flex-1 p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className="flex-1 p-4 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{getTypeIcon(list.type)}</span>
                       <div className="text-left">
-                        <h3 className="font-medium text-gray-900 dark:text-white">
+                        <h3 className="font-medium text-zinc-900 dark:text-white">
                           {list.title}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
                           {completedCount} / {totalCount} {list.type === "TODO" ? "done" : "packed"}
                         </p>
                       </div>
@@ -386,7 +402,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
 
                     <div className="flex items-center gap-3">
                     {/* Progress Bar */}
-                    <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div className="w-32 bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
                       <div
                         className={`h-2 rounded-full transition-all ${
                           list.type === "TODO" ? "bg-blue-600" : "bg-green-600"
@@ -410,7 +426,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     title="Delete list"
                   >
                     <svg
-                      className="w-5 h-5 text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400"
+                      className="w-5 h-5 text-zinc-400 group-hover:text-red-600 dark:group-hover:text-red-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -428,33 +444,33 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
 
                 {/* Expanded Items - only in workflow mode */}
                 {isExpanded && shouldExpandInline && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/20">
+                  <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50">
                     {list.type === "TODO" ? (
                       <div className="space-y-2">
                         {(list.todoItems || []).map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-gray-800"
+                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800"
                           >
                             <label className="flex items-start gap-3 flex-1 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={item.isDone}
                                 onChange={() => handleToggleItem("TODO", item.id, item.isDone)}
-                                className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                                className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                               />
                               <div className="flex-1">
                                 <p
                                   className={`text-sm ${
                                     item.isDone
-                                      ? "line-through text-gray-400 dark:text-gray-600"
-                                      : "text-gray-900 dark:text-white"
+                                      ? "line-through text-zinc-400 dark:text-zinc-600"
+                                      : "text-zinc-900 dark:text-white"
                                   }`}
                                 >
                                   {item.label}
                                 </p>
                                 {item.notes && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                     {item.notes}
                                   </p>
                                 )}
@@ -463,7 +479,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                             {item.actionType && !item.isDone && (
                               <Button
                                 onClick={() => handleLaunchAction(item)}
-                                className="text-xs px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white whitespace-nowrap"
+                                className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
                               >
                                 {getActionButtonText(item.actionType)}
                               </Button>
@@ -476,7 +492,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         {(list.kitItems || []).map((item) => (
                           <label
                             key={item.id}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-gray-800 cursor-pointer"
+                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800 cursor-pointer"
                           >
                             <input
                               type="checkbox"
@@ -489,30 +505,30 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                                 <p
                                   className={`text-sm ${
                                     item.isPacked
-                                      ? "line-through text-gray-400 dark:text-gray-600"
-                                      : "text-gray-900 dark:text-white"
+                                      ? "line-through text-zinc-400 dark:text-zinc-600"
+                                      : "text-zinc-900 dark:text-white"
                                   }`}
                                 >
                                   {item.label}
                                 </p>
                                 {item.quantity !== 1 && (
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
                                     ×{item.quantity}
                                   </span>
                                 )}
                                 {item.perPerson && (
-                                  <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                                  <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
                                     per person
                                   </span>
                                 )}
                                 {item.category && (
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
                                     {item.category}
                                   </span>
                                 )}
                               </div>
                               {item.notes && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                   {item.notes}
                                 </p>
                               )}
@@ -532,23 +548,23 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       {/* Completion Confirmation Dialog */}
       {confirmCompletionItem && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
               Mark Task as Complete?
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
               Would you like to mark "{confirmCompletionItem.label}" as complete?
             </p>
             <div className="flex gap-3 justify-end">
               <Button
                 onClick={() => handleConfirmCompletion(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
+                className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
               >
                 No, Keep Open
               </Button>
               <Button
                 onClick={() => handleConfirmCompletion(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Yes, Mark Complete
               </Button>
@@ -560,17 +576,17 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       {/* Delete Confirmation Dialog */}
       {deleteConfirmation && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
               Delete List?
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
               Are you sure you want to delete "<strong>{deleteConfirmation.listTitle}</strong>"? This will permanently remove the list and all its items from this trip. This action cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <Button
                 onClick={() => setDeleteConfirmation(null)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
+                className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
                 disabled={deleting}
               >
                 Cancel
@@ -601,7 +617,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   );
 
   return showContainer ? (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
       {content}
     </div>
   ) : (

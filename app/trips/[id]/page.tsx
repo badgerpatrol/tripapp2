@@ -150,7 +150,7 @@ export default function TripDetailPage() {
   const [isManageChoiceDialogOpen, setIsManageChoiceDialogOpen] = useState(false);
   const [isChoiceReportsDialogOpen, setIsChoiceReportsDialogOpen] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("details");
+  const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items">("details");
   const [createChoiceInitialName, setCreateChoiceInitialName] = useState("");
 
   // List workflow modal state
@@ -283,70 +283,70 @@ export default function TripDetailPage() {
     }
   }, [user, tripId]);
 
-  useEffect(() => {
-    const fetchTrip = async () => {
-      if (!user) return;
+  const fetchTrip = useCallback(async () => {
+    if (!user) return;
 
-      try {
-        const idToken = await user.getIdToken();
-        const response = await fetch(`/api/trips/${tripId}`, {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-          console.error("API Error:", response.status, errorData);
-          throw new Error(errorData.error || `Failed to fetch trip (${response.status})`);
-        }
-
-        const data = await response.json();
-        console.log("Trip data received:", data);
-
-        // Calculate total unassigned spend
-        const tripData = data.trip;
-        if (tripData.spends && tripData.spends.length > 0) {
-          const totalUnassigned = tripData.spends.reduce((sum: number, spend: any) => {
-            const assignedPercentage = spend.assignedPercentage || 0;
-            const unassignedPercentage = 100 - assignedPercentage;
-            const unassignedAmount = (spend.normalizedAmount * unassignedPercentage) / 100;
-            return sum + unassignedAmount;
-          }, 0);
-          tripData.totalUnassigned = totalUnassigned;
-        } else {
-          tripData.totalUnassigned = 0;
-        }
-
-        // Sort timeline items by date in ascending order
-        if (tripData.timeline && tripData.timeline.length > 0) {
-          tripData.timeline.sort((a: any, b: any) => {
-            // Items with no date go to the end
-            if (!a.date && !b.date) return 0;
-            if (!a.date) return 1;
-            if (!b.date) return -1;
-
-            // Compare dates in ascending order
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
-          });
-        }
-
-        setTrip(tripData);
-      } catch (err) {
-        console.error("Error fetching trip:", err);
-        setError(err instanceof Error ? err.message : "Failed to load trip. Please try again.");
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("API Error:", response.status, errorData);
+        throw new Error(errorData.error || `Failed to fetch trip (${response.status})`);
       }
-    };
 
+      const data = await response.json();
+      console.log("Trip data received:", data);
+
+      // Calculate total unassigned spend
+      const tripData = data.trip;
+      if (tripData.spends && tripData.spends.length > 0) {
+        const totalUnassigned = tripData.spends.reduce((sum: number, spend: any) => {
+          const assignedPercentage = spend.assignedPercentage || 0;
+          const unassignedPercentage = 100 - assignedPercentage;
+          const unassignedAmount = (spend.normalizedAmount * unassignedPercentage) / 100;
+          return sum + unassignedAmount;
+        }, 0);
+        tripData.totalUnassigned = totalUnassigned;
+      } else {
+        tripData.totalUnassigned = 0;
+      }
+
+      // Sort timeline items by date in ascending order
+      if (tripData.timeline && tripData.timeline.length > 0) {
+        tripData.timeline.sort((a: any, b: any) => {
+          // Items with no date go to the end
+          if (!a.date && !b.date) return 0;
+          if (!a.date) return 1;
+          if (!b.date) return -1;
+
+          // Compare dates in ascending order
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        });
+      }
+
+      setTrip(tripData);
+    } catch (err) {
+      console.error("Error fetching trip:", err);
+      setError(err instanceof Error ? err.message : "Failed to load trip. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user, tripId]);
+
+  useEffect(() => {
     if (!authLoading && user) {
       fetchTrip();
       fetchChoices();
     } else if (!authLoading && !user) {
       router.push("/");
     }
-  }, [user, authLoading, tripId, router, fetchChoices]);
+  }, [user, authLoading, fetchTrip, fetchChoices, router]);
 
   if (authLoading || loading) {
     return (
@@ -3051,6 +3051,7 @@ export default function TripDetailPage() {
           }}
           onSuccess={() => {
             fetchChoices();
+            fetchTrip(); // Refresh timeline to show updated/new milestones
           }}
         />
       )}

@@ -310,36 +310,50 @@ export async function updateChoiceStatus(
       }
     }
 
-    // If deadline is being set/updated and no milestone exists, create one
-    if (deadline !== undefined && deadline !== null && !choiceMilestone) {
-      // Get the highest order number for existing timeline items
-      const lastItem = await tx.timelineItem.findFirst({
-        where: {
-          tripId: choice.tripId,
-          deletedAt: null,
-        },
-        orderBy: {
-          order: "desc",
-        },
-      });
+    // If deadline is being set/updated
+    if (deadline !== undefined && deadline !== null) {
+      if (choiceMilestone) {
+        // Update existing milestone's date
+        await tx.timelineItem.update({
+          where: { id: choiceMilestone.id },
+          data: {
+            date: deadline,
+            title: `Choice: ${updatedChoice.name}`,
+            description: `Deadline for choice "${updatedChoice.name}"`,
+          },
+        });
+        console.log(`[updateChoiceStatus] Updated milestone date for choice "${choice.name}" to ${deadline}`);
+      } else {
+        // Create new milestone if none exists
+        // Get the highest order number for existing timeline items
+        const lastItem = await tx.timelineItem.findFirst({
+          where: {
+            tripId: choice.tripId,
+            deletedAt: null,
+          },
+          orderBy: {
+            order: "desc",
+          },
+        });
 
-      const nextOrder = lastItem ? lastItem.order + 1 : 0;
+        const nextOrder = lastItem ? lastItem.order + 1 : 0;
 
-      await tx.timelineItem.create({
-        data: {
-          tripId: choice.tripId,
-          choiceId,
-          title: `Choice: ${choice.name}`,
-          description: `Deadline for choice "${choice.name}"`,
-          date: deadline,
-          isCompleted: status === "CLOSED", // If already closed, mark milestone as completed
-          completedAt: status === "CLOSED" ? now : null,
-          triggerType: status === "CLOSED" ? MilestoneTriggerType.MANUAL : null,
-          order: nextOrder,
-          createdById: userId,
-        },
-      });
-      console.log(`[updateChoiceStatus] Created milestone for choice "${choice.name}" with deadline ${deadline}`);
+        await tx.timelineItem.create({
+          data: {
+            tripId: choice.tripId,
+            choiceId,
+            title: `Choice: ${choice.name}`,
+            description: `Deadline for choice "${choice.name}"`,
+            date: deadline,
+            isCompleted: status === "CLOSED", // If already closed, mark milestone as completed
+            completedAt: status === "CLOSED" ? now : null,
+            triggerType: status === "CLOSED" ? MilestoneTriggerType.MANUAL : null,
+            order: nextOrder,
+            createdById: userId,
+          },
+        });
+        console.log(`[updateChoiceStatus] Created milestone for choice "${choice.name}" with deadline ${deadline}`);
+      }
     }
 
     // If deadline is being removed, delete the milestone
