@@ -49,7 +49,7 @@ export function ListWorkflowModal({
   const [isCreateChoiceDialogOpen, setIsCreateChoiceDialogOpen] = useState(false);
   const [isManageChoiceDialogOpen, setIsManageChoiceDialogOpen] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items" | "status">("items");
+  const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items">("items");
   const [isMilestoneDialogOpen, setIsMilestoneDialogOpen] = useState(false);
   const [milestoneTitle, setMilestoneTitle] = useState("");
   const [milestoneDate, setMilestoneDate] = useState("");

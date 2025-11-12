@@ -171,7 +171,7 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
   }
 
   // Normalize items
-  const normalizedItems: ParsedReceiptItem[] = parsedResponse.items
+  const normalizedItems = parsedResponse.items
     .map((item) => {
       // Parse price to minor units
       let costMinor: number;
@@ -196,7 +196,7 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
 
       return {
         name: item.name.trim().substring(0, 80), // Match spend item name limit
-        description: item.description?.trim().substring(0, 280), // Match spend item description limit
+        ...(item.description && { description: item.description.trim().substring(0, 280) }), // Match spend item description limit
         costMinor,
         currency,
         quantity: item.quantity,
