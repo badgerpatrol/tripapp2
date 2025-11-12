@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       data: {
         id: firebaseUser.uid,
         email: firebaseUser.email!,
-        displayName: displayName || null,
+        displayName: displayName || "",
         photoURL: null,
         phoneNumber: null,
         role: UserRole.USER,
