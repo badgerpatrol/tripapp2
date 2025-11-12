@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthError } from 'firebase/auth';
+import { signInWithEmailAndPassword, AuthError } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
-import { SignUpSchema, SignInSchema } from '@/types/schemas';
+import { SignInSchema } from '@/types/schemas';
 import { authenticateWithPasskey } from '@/lib/passkey/client';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
@@ -39,7 +39,6 @@ export function getAuthErrorMessage(error: AuthError): string {
 }
 
 export default function LoginForm() {
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -52,8 +51,7 @@ export default function LoginForm() {
 
     try {
       // Validate input with Zod
-      const schema = isSignUp ? SignUpSchema : SignInSchema;
-      const validation = schema.safeParse({ email, password });
+      const validation = SignInSchema.safeParse({ email, password });
 
       if (!validation.success) {
         const firstError = validation.error.issues[0];
@@ -63,13 +61,8 @@ export default function LoginForm() {
       }
 
       // Attempt authentication with Firebase
-      if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
-        // Database sync happens automatically in AuthContext after auth state change
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        // Database sync happens automatically in AuthContext after auth state change
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      // Database sync happens automatically in AuthContext after auth state change
 
       // Success - redirect will happen via auth state change in AuthContext
     } catch (err) {
@@ -106,7 +99,7 @@ export default function LoginForm() {
             TripPlanner
           </h1>
           <p className="text-center text-zinc-600 dark:text-zinc-400 mb-8">
-            {isSignUp ? 'Create your account' : 'Welcome back'}
+            Welcome back
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -144,25 +137,10 @@ export default function LoginForm() {
               variant="primary"
               full
             >
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              Sign In
             </Button>
           </form>
 
-          
-
-          <div className="mt-6 text-center">
-            <Button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError('');
-              }}
-              variant="ghost"
-              className="text-sm"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </Button>
-          </div>
         </div>
       </div>
     </div>

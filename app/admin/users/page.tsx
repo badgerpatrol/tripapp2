@@ -43,6 +43,11 @@ export default function AdminUsersPage() {
   const [savingUser, setSavingUser] = useState(false);
   const [deletingUsers, setDeletingUsers] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserDisplayName, setNewUserDisplayName] = useState("");
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -246,6 +251,46 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setCreatingUser(true);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: newUserEmail,
+          password: newUserPassword,
+          displayName: newUserDisplayName || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create user");
+      }
+
+      setToast({ message: "User created successfully!", type: "success" });
+      setShowCreateModal(false);
+      setNewUserEmail("");
+      setNewUserPassword("");
+      setNewUserDisplayName("");
+      fetchUsers();
+    } catch (err: any) {
+      console.error("Error creating user:", err);
+      setToast({ message: err.message || "Failed to create user", type: "error" });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const handleDeleteSelected = async () => {
     if (!user || selectedUserIds.size === 0) return;
 
@@ -338,6 +383,12 @@ export default function AdminUsersPage() {
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold">User Management</h1>
             <div className="flex items-center gap-4">
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Add New User
+              </Button>
               {selectedUserIds.size > 0 && (
                 <Button
                   onClick={handleDeleteSelected}
@@ -496,6 +547,79 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Add New User</h2>
+
+            <form onSubmit={handleCreateUser}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Email *</label>
+                <input
+                  type="email"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="user@example.com"
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Display Name</label>
+                <input
+                  type="text"
+                  value={newUserDisplayName}
+                  onChange={(e) => setNewUserDisplayName(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="John Doe"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Password *</label>
+                <input
+                  type="password"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Minimum 6 characters"
+                  required
+                  minLength={6}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Password must be at least 6 characters long
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setNewUserEmail("");
+                    setNewUserPassword("");
+                    setNewUserDisplayName("");
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  disabled={creatingUser}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={creatingUser}
+                >
+                  {creatingUser ? "Creating..." : "Create User"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
