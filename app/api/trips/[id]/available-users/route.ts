@@ -5,7 +5,8 @@ import { TripMemberRole } from "@/lib/generated/prisma";
 
 /**
  * GET /api/trips/:id/available-users
- * Gets list of users who are not yet members of this trip.
+ * Gets list of users who are in the same groups as the requesting user
+ * and are not yet members of this trip.
  * Only OWNER or ADMIN can access this endpoint.
  */
 export async function GET(
@@ -39,7 +40,34 @@ export async function GET(
       );
     }
 
-    // 3. Get all current trip members
+    // 3. Get all groups that the current user is a member of
+    const userGroups = await prisma.groupMember.findMany({
+      where: {
+        userId: auth.uid,
+      },
+      select: {
+        groupId: true,
+      },
+    });
+
+    const userGroupIds = userGroups.map(g => g.groupId);
+
+    // 4. Get all users who are in the same groups as the current user
+    const usersInSameGroups = await prisma.groupMember.findMany({
+      where: {
+        groupId: {
+          in: userGroupIds,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    // De-duplicate user IDs
+    const usersInSameGroupIds = [...new Set(usersInSameGroups.map(m => m.userId))];
+
+    // 5. Get all current trip members
     const currentMembers = await prisma.tripMember.findMany({
       where: {
         tripId,
@@ -52,10 +80,11 @@ export async function GET(
 
     const currentMemberIds = currentMembers.map(m => m.userId);
 
-    // 4. Get all users who are NOT in this trip
+    // 6. Get all users who are in the same groups AND NOT in this trip
     const availableUsers = await prisma.user.findMany({
       where: {
         id: {
+          in: usersInSameGroupIds,
           notIn: currentMemberIds,
         },
         deletedAt: null,

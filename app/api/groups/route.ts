@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireUserRole } from "@/server/authz";
 import { createGroup, listUserGroups } from "@/server/services/groups";
 import {
   GroupCreateSchema,
   CreateGroupResponseSchema,
   ListGroupsResponseSchema,
 } from "@/types/schemas";
+import { UserRole } from "@/lib/generated/prisma";
 
 /**
  * POST /api/groups
@@ -26,6 +27,9 @@ export async function POST(request: NextRequest) {
 
     // Verify user exists in database
     await requireAuth(auth.uid);
+
+    // Require ADMIN role to access Groups feature
+    await requireUserRole(auth.uid, UserRole.ADMIN);
 
     // 2. Parse and validate request body
     const body = await request.json();
@@ -90,6 +94,9 @@ export async function GET(request: NextRequest) {
 
     // Verify user exists in database
     await requireAuth(auth.uid);
+
+    // Require ADMIN role to access Groups feature
+    await requireUserRole(auth.uid, UserRole.ADMIN);
 
     // 2. Get user's groups
     const groups = await listUserGroups(auth.uid);

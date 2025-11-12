@@ -883,6 +883,106 @@ export type GroupMemberResponse = z.infer<typeof GroupMemberResponseSchema>;
 export type GroupDetailResponse = z.infer<typeof GroupDetailResponseSchema>;
 
 // ============================================================================
+// Admin User Management Schemas
+// ============================================================================
+
+export const UserRoleSchema = z.nativeEnum(UserRole);
+
+export const UserRoleUpdateSchema = z.object({
+  role: UserRoleSchema,
+});
+
+export const UserInfoUpdateSchema = z.object({
+  displayName: z.string().min(1, "Display name is required").optional(),
+  phoneNumber: z.string().optional().nullable(),
+  timezone: z.string().optional(),
+  language: z.string().optional(),
+  defaultCurrency: z.string().length(3, "Currency must be a 3-letter code").optional(),
+});
+
+export const PasswordResetSchema = z.object({
+  newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+});
+
+export const PasswordResetResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
+export const AdminUserResponseSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string(),
+  photoURL: z.string().nullable(),
+  phoneNumber: z.string().nullable(),
+  role: z.nativeEnum(UserRole),
+  subscription: z.nativeEnum(SubscriptionTier),
+  timezone: z.string(),
+  language: z.string(),
+  defaultCurrency: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  tripCount: z.number(),
+  groupCount: z.number(),
+});
+
+export const AdminUserDetailResponseSchema = AdminUserResponseSchema.extend({
+  createdTripCount: z.number(),
+  ownedGroupCount: z.number(),
+  deletedAt: z.coerce.date().nullable(),
+});
+
+export const ListUsersResponseSchema = z.object({
+  success: z.boolean(),
+  users: z.array(AdminUserResponseSchema),
+});
+
+export const GetUserResponseSchema = z.object({
+  success: z.boolean(),
+  user: AdminUserDetailResponseSchema,
+});
+
+export const UpdateUserRoleResponseSchema = z.object({
+  success: z.boolean(),
+  user: AdminUserResponseSchema,
+});
+
+export const UpdateUserInfoResponseSchema = z.object({
+  success: z.boolean(),
+  user: AdminUserResponseSchema,
+});
+
+export const DeactivateUserResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+});
+
+export const SearchUsersQuerySchema = z.object({
+  query: z.string().min(1, "Search query is required"),
+});
+
+export const SearchUsersResponseSchema = z.object({
+  success: z.boolean(),
+  users: z.array(z.object({
+    id: z.string(),
+    email: z.string(),
+    displayName: z.string().nullable(),
+    photoURL: z.string().nullable(),
+    role: z.nativeEnum(UserRole),
+    subscription: z.nativeEnum(SubscriptionTier),
+    createdAt: z.coerce.date(),
+  })),
+});
+
+// Type exports
+export type UserRoleUpdate = z.infer<typeof UserRoleUpdateSchema>;
+export type UserInfoUpdate = z.infer<typeof UserInfoUpdateSchema>;
+export type PasswordReset = z.infer<typeof PasswordResetSchema>;
+export type AdminUserResponse = z.infer<typeof AdminUserResponseSchema>;
+export type AdminUserDetailResponse = z.infer<typeof AdminUserDetailResponseSchema>;
+export type SearchUsersQuery = z.infer<typeof SearchUsersQuerySchema>;
+
+// ============================================================================
 // Guards and Utility Functions
 // ============================================================================
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
-import { GroupMemberRole } from "@/lib/generated/prisma";
+import { GroupMemberRole, UserRole } from "@/lib/generated/prisma";
 
 interface Group {
   id: string;
@@ -18,7 +18,7 @@ interface Group {
 
 export default function GroupsPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +32,15 @@ export default function GroupsPage() {
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
+      return;
     }
-  }, [user, authLoading, router]);
+
+    // Check if user is admin
+    if (!authLoading && user && userProfile && userProfile.role !== UserRole.ADMIN) {
+      setToast({ message: "Access denied. Groups feature is only available to admin users.", type: "error" });
+      router.push("/");
+    }
+  }, [user, userProfile, authLoading, router]);
 
   useEffect(() => {
     if (user) {

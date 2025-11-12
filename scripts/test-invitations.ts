@@ -68,7 +68,7 @@ async function testInvitations() {
       console.log("");
 
       console.log("3. Sending invitations...");
-      const result = await inviteUsersToTrip(trip.id, testEmails, trip.createdById);
+      const result = await inviteUsersToTrip(trip.id, { emails: testEmails }, trip.createdById);
 
       console.log("\n=== Invitation Results ===");
       console.log(`Invited: ${result.invited.length} users`);
@@ -78,7 +78,7 @@ async function testInvitations() {
       result.alreadyMembers.forEach(i => console.log(`  - ${i.email} (${i.userId})`));
 
       console.log(`\nNot found: ${result.notFound.length} emails`);
-      result.notFound.forEach(i => console.log(`  - ${i.email}`));
+      result.notFound.forEach(i => console.log(`  - ${'email' in i ? i.email : i.userId}`));
 
       return;
     }
@@ -90,7 +90,7 @@ async function testInvitations() {
 
     // 3. Send invitations
     console.log("3. Sending invitations...");
-    const result = await inviteUsersToTrip(trip.id, emailsToInvite, trip.createdById);
+    const result = await inviteUsersToTrip(trip.id, { emails: emailsToInvite }, trip.createdById);
 
     console.log("\n=== Invitation Results ===");
     console.log(`Invited: ${result.invited.length} users`);
@@ -100,7 +100,7 @@ async function testInvitations() {
     result.alreadyMembers.forEach(i => console.log(`  - ${i.email} (${i.userId})`));
 
     console.log(`\nNot found: ${result.notFound.length} emails`);
-    result.notFound.forEach(i => console.log(`  - ${i.email}`));
+    result.notFound.forEach(i => console.log(`  - ${'email' in i ? i.email : i.userId}`));
 
     // 4. Verify TripMember records were created
     console.log("\n4. Verifying database records...");

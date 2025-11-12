@@ -100,7 +100,7 @@ async function comprehensiveTest() {
     ];
     console.log(`   Inviting: ${emailsToInvite.join(", ")}`);
 
-    const result = await inviteUsersToTrip(trip.id, emailsToInvite, trip.createdById);
+    const result = await inviteUsersToTrip(trip.id, { emails: emailsToInvite }, trip.createdById);
 
     console.log(`\n3. Results:`);
     console.log(`   ✓ Invited (${result.invited.length}):`);
@@ -110,7 +110,7 @@ async function comprehensiveTest() {
     result.alreadyMembers.forEach(i => console.log(`      - ${i.email}`));
 
     console.log(`   ✗ Not found (${result.notFound.length}):`);
-    result.notFound.forEach(i => console.log(`      - ${i.email}`));
+    result.notFound.forEach(i => console.log(`      - ${'email' in i ? i.email : i.userId}`));
 
     // Verify expectations
     console.log(`\n4. Verification:`);

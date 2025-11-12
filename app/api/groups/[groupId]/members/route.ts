@@ -4,6 +4,7 @@ import {
   requireAuth,
   requireGroupAdmin,
   requireGroupMember,
+  requireUserRole,
 } from "@/server/authz";
 import { listGroupMembers, addGroupMember } from "@/server/services/groups";
 import {
@@ -11,6 +12,7 @@ import {
   ListGroupMembersResponseSchema,
   AddGroupMemberResponseSchema,
 } from "@/types/schemas";
+import { UserRole } from "@/lib/generated/prisma";
 
 type Params = {
   params: Promise<{
@@ -38,6 +40,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     }
 
     await requireAuth(auth.uid);
+
+    // Require ADMIN role to access Groups feature
+    await requireUserRole(auth.uid, UserRole.ADMIN);
 
     // 2. Verify user is a member of this group
     await requireGroupMember(auth.uid, groupId);
@@ -102,6 +107,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     await requireAuth(auth.uid);
+
+    // Require ADMIN role to access Groups feature
+    await requireUserRole(auth.uid, UserRole.ADMIN);
 
     // 2. Verify user is an admin of this group
     await requireGroupAdmin(auth.uid, groupId);

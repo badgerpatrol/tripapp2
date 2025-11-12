@@ -3,9 +3,11 @@ import {
   getAuthTokenFromHeader,
   requireAuth,
   requireGroupAdmin,
+  requireUserRole,
 } from "@/server/authz";
 import { removeGroupMember } from "@/server/services/groups";
 import { RemoveGroupMemberResponseSchema } from "@/types/schemas";
+import { UserRole } from "@/lib/generated/prisma";
 
 type Params = {
   params: Promise<{
@@ -35,6 +37,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     await requireAuth(auth.uid);
+
+    // Require ADMIN role to access Groups feature
+    await requireUserRole(auth.uid, UserRole.ADMIN);
 
     // 2. Verify user is an admin of this group
     await requireGroupAdmin(auth.uid, groupId);

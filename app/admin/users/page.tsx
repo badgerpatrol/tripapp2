@@ -1,0 +1,660 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { Button } from "@/components/ui/button";
+import { UserRole } from "@/lib/generated/prisma";
+
+interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  photoURL: string | null;
+  phoneNumber: string | null;
+  role: UserRole;
+  subscription: string;
+  timezone: string;
+  language: string;
+  defaultCurrency: string;
+  createdAt: string;
+  updatedAt: string;
+  tripCount: number;
+  groupCount: number;
+  deletedAt?: string | null;
+}
+
+export default function AdminUsersPage() {
+  const router = useRouter();
+  const { user, userProfile, loading: authLoading } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [editRole, setEditRole] = useState<UserRole>(UserRole.USER);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editPhoneNumber, setEditPhoneNumber] = useState("");
+  const [editSuspended, setEditSuspended] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [savingUser, setSavingUser] = useState(false);
+  const [deletingUsers, setDeletingUsers] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/");
+      return;
+    }
+
+    // Check if user is admin
+    if (!authLoading && user && userProfile && userProfile.role !== UserRole.ADMIN) {
+      setToast({ message: "Access denied. User management is only available to admin users.", type: "error" });
+      router.push("/");
+    }
+  }, [user, userProfile, authLoading, router]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUsers();
+    }
+  }, [user]);
+
+  // Auto-hide toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const fetchUsers = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/admin/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+
+      const data = await response.json();
+      setUsers(data.users || []);
+    } catch (err: any) {
+      console.error("Error fetching users:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditRole(user.role);
+    setEditDisplayName(user.displayName || "");
+    setEditPhoneNumber(user.phoneNumber || "");
+    setEditSuspended(!!user.deletedAt);
+    setNewPassword("");
+    setShowPasswordSection(false);
+    setShowEditModal(true);
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    const newSelection = new Set(selectedUserIds);
+    if (newSelection.has(userId)) {
+      newSelection.delete(userId);
+    } else {
+      newSelection.add(userId);
+    }
+    setSelectedUserIds(newSelection);
+  };
+
+  const toggleAllUsers = () => {
+    if (selectedUserIds.size === filteredUsers.filter(u => u.id !== user?.uid).length) {
+      setSelectedUserIds(new Set());
+    } else {
+      const allIds = new Set(filteredUsers.filter(u => u.id !== user?.uid).map(u => u.id));
+      setSelectedUserIds(allIds);
+    }
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedUser) return;
+
+    setSavingUser(true);
+
+    try {
+      const token = await user.getIdToken();
+
+      // Determine what changed
+      const roleChanged = editRole !== selectedUser.role;
+      const infoChanged =
+        editDisplayName !== (selectedUser.displayName || "") ||
+        editPhoneNumber !== (selectedUser.phoneNumber || "");
+      const suspendedChanged = editSuspended !== !!selectedUser.deletedAt;
+
+      // Update role if changed
+      if (roleChanged) {
+        const roleResponse = await fetch(`/api/admin/users/${selectedUser.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            role: editRole,
+          }),
+        });
+
+        if (!roleResponse.ok) {
+          const errorData = await roleResponse.json();
+          throw new Error(errorData.error || "Failed to update user role");
+        }
+      }
+
+      // Update info if changed
+      if (infoChanged) {
+        const infoResponse = await fetch(`/api/admin/users/${selectedUser.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            displayName: editDisplayName || undefined,
+            phoneNumber: editPhoneNumber || null,
+          }),
+        });
+
+        if (!infoResponse.ok) {
+          const errorData = await infoResponse.json();
+          throw new Error(errorData.error || "Failed to update user info");
+        }
+      }
+
+      // Handle suspend/unsuspend
+      if (suspendedChanged) {
+        if (editSuspended) {
+          // Suspend user
+          const suspendResponse = await fetch(`/api/admin/users/${selectedUser.id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!suspendResponse.ok) {
+            const errorData = await suspendResponse.json();
+            throw new Error(errorData.error || "Failed to suspend user");
+          }
+        } else {
+          // Reactivate user
+          const reactivateResponse = await fetch(`/api/admin/users/${selectedUser.id}?action=reactivate`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!reactivateResponse.ok) {
+            const errorData = await reactivateResponse.json();
+            throw new Error(errorData.error || "Failed to reactivate user");
+          }
+        }
+      }
+
+      // Handle password reset if provided
+      if (newPassword.trim().length > 0) {
+        const passwordResponse = await fetch(`/api/admin/users/${selectedUser.id}/password`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            newPassword: newPassword,
+          }),
+        });
+
+        if (!passwordResponse.ok) {
+          const errorData = await passwordResponse.json();
+          throw new Error(errorData.error || "Failed to reset password");
+        }
+      }
+
+      setToast({ message: "User updated successfully!", type: "success" });
+      setShowEditModal(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      console.error("Error updating user:", err);
+      setToast({ message: err.message || "Failed to update user", type: "error" });
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!user || selectedUserIds.size === 0) return;
+
+    const count = selectedUserIds.size;
+    if (!confirm(`Are you sure you want to delete ${count} selected user${count > 1 ? 's' : ''}? This will permanently remove them from the system.`)) {
+      return;
+    }
+
+    setDeletingUsers(true);
+
+    try {
+      const token = await user.getIdToken();
+      const errors: string[] = [];
+
+      // Delete users one by one
+      for (const userId of Array.from(selectedUserIds)) {
+        try {
+          const response = await fetch(`/api/admin/users/${userId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            const userName = users.find(u => u.id === userId)?.displayName || 'Unknown';
+            errors.push(`${userName}: ${errorData.error}`);
+          }
+        } catch (err: any) {
+          const userName = users.find(u => u.id === userId)?.displayName || 'Unknown';
+          errors.push(`${userName}: ${err.message}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        setToast({
+          message: `Failed to delete some users: ${errors.join(', ')}`,
+          type: "error"
+        });
+      } else {
+        setToast({
+          message: `Successfully deleted ${count} user${count > 1 ? 's' : ''}`,
+          type: "success"
+        });
+      }
+
+      setSelectedUserIds(new Set());
+      fetchUsers();
+    } catch (err: any) {
+      console.error("Error deleting users:", err);
+      setToast({ message: err.message || "Failed to delete users", type: "error" });
+    } finally {
+      setDeletingUsers(false);
+    }
+  };
+
+  const getRoleBadgeColor = (role: UserRole) => {
+    switch (role) {
+      case UserRole.ADMIN:
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      case UserRole.SUPERADMIN:
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const filteredUsers = users.filter((user) =>
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (authLoading || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-24">
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">User Management</h1>
+            <div className="flex items-center gap-4">
+              {selectedUserIds.size > 0 && (
+                <Button
+                  onClick={handleDeleteSelected}
+                  disabled={deletingUsers}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {deletingUsers ? "Deleting..." : `Delete Selected (${selectedUserIds.size})`}
+                </Button>
+              )}
+              <div className="text-sm text-gray-600">
+                Total Users: {users.length}
+              </div>
+            </div>
+          </div>
+
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Search by email or name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        {filteredUsers.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">👥</div>
+            <h2 className="text-xl font-semibold mb-2">
+              {searchQuery ? "No users found" : "No users yet"}
+            </h2>
+            <p className="text-gray-600">
+              {searchQuery
+                ? "Try a different search term"
+                : "Users will appear here when they sign up"}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.size === filteredUsers.filter(u => u.id !== user?.uid).length && filteredUsers.length > 0}
+                      onChange={toggleAllUsers}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Activity
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Joined
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      {u.id !== user?.uid && (
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.has(u.id)}
+                          onChange={() => toggleUserSelection(u.id)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {u.photoURL ? (
+                          <img
+                            src={u.photoURL}
+                            alt={u.displayName}
+                            className="w-10 h-10 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold">
+                            {u.displayName?.[0]?.toUpperCase() || u.email[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {u.displayName || "No name"}
+                          </div>
+                          <div className="text-sm text-gray-500">{u.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getRoleBadgeColor(
+                          u.role
+                        )}`}
+                      >
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
+                          u.deletedAt
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : "bg-green-100 text-green-800 border-green-200"
+                        }`}
+                      >
+                        {u.deletedAt ? "Suspended" : "Active"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600">
+                        {u.tripCount} trips, {u.groupCount} groups
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-sm text-gray-600">
+                        {new Date(u.createdAt).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => handleEditUser(u)}
+                        className="text-blue-600 hover:text-blue-800 px-3 py-1 text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Edit User Modal */}
+      {showEditModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Edit User</h2>
+
+            <form onSubmit={handleSaveUser}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Email</label>
+                <input
+                  type="text"
+                  value={selectedUser.email}
+                  disabled
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Display Name</label>
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="User's display name"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                <input
+                  type="text"
+                  value={editPhoneNumber}
+                  onChange={(e) => setEditPhoneNumber(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="User's phone number"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Role</label>
+                <select
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value as UserRole)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={selectedUser.id === user?.uid}
+                >
+                  <option value={UserRole.USER}>User</option>
+                  <option value={UserRole.ADMIN}>Admin</option>
+                  <option value={UserRole.SUPERADMIN}>Super Admin</option>
+                </select>
+                {selectedUser.id === user?.uid && (
+                  <p className="text-xs text-gray-500 mt-1">You cannot change your own role</p>
+                )}
+              </div>
+
+              {selectedUser.id !== user?.uid && (
+                <>
+                  <div className="mb-4 p-4 border rounded-lg bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Account Status</label>
+                        <p className="text-xs text-gray-600">
+                          {editSuspended
+                            ? "User is suspended and cannot log in"
+                            : "User can log in normally"}
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editSuspended}
+                          onChange={(e) => setEditSuspended(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                        <span className="ml-3 text-sm font-medium text-gray-900">
+                          {editSuspended ? "Suspended" : "Active"}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordSection(!showPasswordSection)}
+                      className="flex items-center justify-between w-full text-left"
+                    >
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Password Reset</label>
+                        <p className="text-xs text-gray-600">
+                          {showPasswordSection
+                            ? "Enter a new password for this user"
+                            : "Click to reset user's password"}
+                        </p>
+                      </div>
+                      <span className="text-blue-600 text-sm font-medium">
+                        {showPasswordSection ? "Hide" : "Show"}
+                      </span>
+                    </button>
+                    {showPasswordSection && (
+                      <div className="mt-4">
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Enter new password (min 6 characters)"
+                          minLength={6}
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          Leave blank to keep current password unchanged
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  disabled={savingUser}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={savingUser}
+                >
+                  {savingUser ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed bottom-28 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 ${
+            toast.type === "success"
+              ? "bg-green-600 text-white"
+              : "bg-red-600 text-white"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+    </div>
+  );
+}

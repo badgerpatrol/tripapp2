@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
-import { GroupMemberRole } from "@/lib/generated/prisma";
+import { GroupMemberRole, UserRole } from "@/lib/generated/prisma";
+import AddMembersDialog from "./AddMembersDialog";
 
 interface GroupMember {
   id: string;
@@ -33,7 +34,7 @@ interface Group {
 export default function GroupDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const groupId = params.id as string;
 
   const [group, setGroup] = useState<Group | null>(null);
@@ -44,15 +45,20 @@ export default function GroupDetailPage() {
   const [editDescription, setEditDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
-  const [memberEmail, setMemberEmail] = useState("");
-  const [addingMember, setAddingMember] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/");
+      return;
     }
-  }, [user, authLoading, router]);
+
+    // Check if user is admin
+    if (!authLoading && user && userProfile && userProfile.role !== UserRole.ADMIN) {
+      setToast({ message: "Access denied. Groups feature is only available to admin users.", type: "error" });
+      router.push("/");
+    }
+  }, [user, userProfile, authLoading, router]);
 
   useEffect(() => {
     if (user && groupId) {
@@ -136,47 +142,8 @@ export default function GroupDetailPage() {
     }
   };
 
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !memberEmail.trim()) return;
-
-    setAddingMember(true);
-
-    try {
-      // First, find the user by email
-      const token = await user.getIdToken();
-
-      // For now, we need to get userId from email
-      // In a real implementation, you might have a /api/users/search endpoint
-      // For this demo, we'll assume the user knows the userId
-
-      const response = await fetch(`/api/groups/${groupId}/members`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          userId: memberEmail.trim(), // This should be userId, but using email for now
-          role: GroupMemberRole.MEMBER,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to add member");
-      }
-
-      setToast({ message: "Member added successfully!", type: "success" });
-      setShowAddMember(false);
-      setMemberEmail("");
-      fetchGroup();
-    } catch (err: any) {
-      console.error("Error adding member:", err);
-      setToast({ message: err.message || "Failed to add member", type: "error" });
-    } finally {
-      setAddingMember(false);
-    }
+  const handleMembersDialogSuccess = () => {
+    fetchGroup();
   };
 
   const handleRemoveMember = async (memberId: string, memberName: string) => {
@@ -358,54 +325,25 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
-      {/* Add Member Modal */}
-      {showAddMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Add Member</h2>
-
-            <form onSubmit={handleAddMember}>
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">
-                  User ID *
-                </label>
-                <input
-                  type="text"
-                  value={memberEmail}
-                  onChange={(e) => setMemberEmail(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter user ID"
-                  required
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Note: Enter the Firebase user ID of the person you want to add
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setShowAddMember(false);
-                    setMemberEmail("");
-                  }}
-                  className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300"
-                  disabled={addingMember}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1"
-                  disabled={addingMember || !memberEmail.trim()}
-                >
-                  {addingMember ? "Adding..." : "Add Member"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Add Members Dialog */}
+      <AddMembersDialog
+        groupId={groupId}
+        groupName={group.name}
+        isOpen={showAddMember}
+        onClose={() => setShowAddMember(false)}
+        onSuccess={handleMembersDialogSuccess}
+        currentMembers={
+          group.members?.map((m) => ({
+            id: m.id,
+            role: m.role,
+            user: {
+              id: m.user?.id || "",
+              email: m.user?.email || "",
+              displayName: m.user?.displayName || null,
+            },
+          })) || []
+        }
+      />
 
       {/* Toast Notification */}
       {toast && (

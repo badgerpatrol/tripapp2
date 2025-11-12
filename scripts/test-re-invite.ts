@@ -61,7 +61,7 @@ async function testReInvite() {
     console.log(`\n2. Re-inviting the same member: ${memberToRemove.user.email}`);
     const result = await inviteUsersToTrip(
       trip.id,
-      [memberToRemove.user.email],
+      { emails: [memberToRemove.user.email] },
       trip.createdById
     );
 
