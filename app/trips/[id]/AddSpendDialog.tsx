@@ -498,6 +498,7 @@ export default function AddSpendDialog({
       <ManageItemsDialog
         items={items}
         currency={formData.currency}
+        tripId={trip.id}
         isOpen={isManageItemsOpen}
         onClose={handleManageItemsClose}
       />
