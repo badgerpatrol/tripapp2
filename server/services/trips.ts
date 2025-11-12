@@ -1145,12 +1145,30 @@ export async function deleteTimelineItem(
     throw new Error("Timeline item not found");
   }
 
-  // Soft delete the timeline item
-  const deletedItem = await prisma.timelineItem.update({
-    where: { id: itemId },
-    data: {
-      deletedAt: new Date(),
-    },
+  const now = new Date();
+
+  // Use transaction to delete timeline item and clear choice deadline if linked
+  const deletedItem = await prisma.$transaction(async (tx) => {
+    // Soft delete the timeline item
+    const deleted = await tx.timelineItem.update({
+      where: { id: itemId },
+      data: {
+        deletedAt: now,
+      },
+    });
+
+    // If this timeline item is linked to a choice, clear the choice's deadline
+    if (timelineItem.choiceId) {
+      await tx.choice.update({
+        where: { id: timelineItem.choiceId },
+        data: {
+          deadline: null,
+        },
+      });
+      console.log(`[deleteTimelineItem] Cleared deadline from choice ${timelineItem.choiceId} due to milestone deletion`);
+    }
+
+    return deleted;
   });
 
   // Log the deletion event
