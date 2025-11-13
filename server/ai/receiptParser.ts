@@ -47,52 +47,42 @@ export async function parseReceiptImage(
   };
 
   // Create the prompt for Claude to analyze the receipt
-  const prompt = `Extract all items from this receipt image and return ONLY raw JSON. No markdown formatting, no code blocks, no explanations.
+  const prompt = `You are analyzing a receipt image to extract purchased items. Your task is to identify what was bought, how many of each item, and what each item cost.
 
-Output this exact JSON structure:
+Return ONLY raw JSON with no markdown formatting, no code blocks, no explanations.
+
+Required JSON structure:
 {"items":[{"name":"item name","description":"optional details","quantity":1,"unitPrice":"12.50"}],"currency_hint":"£","total":"45.50"}
 
-CRITICAL RULES:
-1. Return ONLY the JSON object - no backtick marks, no json label, no extra text
-2. Read ALL purchased items from the receipt, INCLUDING:
-   - All food/product items
-   - Service charges (as a separate item named "Service Charge")
-   - Tips/gratuity (as a separate item named "Tip" or "Gratuity")
-   - Delivery fees (as a separate item)
-   - EXCLUDE: subtotal lines, final total line, tax (unless it's a separate added charge), payment info, dates
-3. For name: extract the item/product name ONLY (remove quantity indicators like "2x", "x3", "2 @", etc.)
-4. For description: add any variant info (size, flavor, etc.) if present
-5. For quantity: CAREFULLY look for quantity indicators in these formats:
-   - "2x Item" or "Item x2" → quantity: 2
-   - "2 @ £5.00" → quantity: 2
-   - "Item (2)" → quantity: 2
-   - "2 Item" at start of line → quantity: 2
-   - If no quantity shown, default to 1
-6. For unitPrice: the price PER SINGLE ITEM (if you see "2x Coffee £7.00", unitPrice is "3.50" not "7.00")
-   - ALWAYS divide the total item price by quantity to get unit price
-   - If the receipt shows unit price separately, use that
-   - For service charges/tips/fees, the unitPrice is the full amount (quantity: 1)
-7. For currency_hint: the currency symbol you see (£, $, €, etc.)
-8. For total: ALWAYS include the final total amount from the receipt
-   - Look for "Total", "Amount Due", "Balance", etc.
-   - This is CRITICAL for validation
+Your task:
+1. Identify all purchased items on the receipt (products, food items, etc.)
+2. For each item, determine:
+   - The item name (what it is)
+   - The quantity purchased (how many)
+   - The price per single unit (unitPrice)
+   - Any additional details like size, variant, or flavor (description field, optional)
 
-${currencyHint ? `Expected currency: ${currencyHint}` : ""}
+3. Also identify:
+   - Service charges, tips, or gratuity (treat as separate items with quantity: 1)
+   - Delivery or other fees (treat as separate items with quantity: 1)
+   - The currency symbol used (£, $, €, etc.)
+   - The final total amount paid
 
-Examples:
-- "2x Coffee @ £3.50 each" → {"name":"Coffee","quantity":2,"unitPrice":"3.50"}
-- "2x Coffee £7.00" → {"name":"Coffee","quantity":2,"unitPrice":"3.50"}
-- "Service Charge (12.5%) £5.00" → {"name":"Service Charge","quantity":1,"unitPrice":"5.00"}
-- "Tip £3.00" → {"name":"Tip","quantity":1,"unitPrice":"3.00"}
-- "Large Latte £4.50" → {"name":"Latte","description":"Large","quantity":1,"unitPrice":"4.50"}
-- "Sandwich x3 £15.00" → {"name":"Sandwich","quantity":3,"unitPrice":"5.00"}
+4. Do NOT include:
+   - Subtotal lines
+   - Tax lines (unless tax is a separate added charge)
+   - Payment method information
+   - Dates or times
+   - The final total line itself (but DO extract the total value for the "total" field)
 
-IMPORTANT:
-- Pay close attention to quantities - they are CRITICAL for accurate receipt parsing!
-- ALWAYS include service charges, tips, and fees as separate items
-- ALWAYS extract the final total amount for validation
+Important notes:
+- The unitPrice should ALWAYS be the price for ONE unit of the item, not the total for multiple units
+- If an item was purchased multiple times, the quantity should reflect this
+- Focus on the actual purchased items, filtering out the surrounding receipt noise
+- Return ONLY the JSON object - no backticks, no "json" label, no extra text
+${currencyHint ? `- Expected currency: ${currencyHint}` : ""}
 
-Output format: Pure JSON only, starting with curly brace and ending with curly brace`;
+Output format: Pure JSON only, starting with { and ending with }`;
 
   // Call Claude Vision API
   const message = await anthropic.messages.create({

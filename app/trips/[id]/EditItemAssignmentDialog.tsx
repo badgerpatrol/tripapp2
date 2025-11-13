@@ -125,6 +125,12 @@ export default function EditItemAssignmentDialog({
       newSelected.add(itemId);
     }
     setSelectedItemIds(newSelected);
+
+    // Auto-update the custom amount to match selected items total
+    const selectedItemsTotal = items
+      .filter(item => newSelected.has(item.id))
+      .reduce((sum, item) => sum + item.cost, 0);
+    setCustomAmount(selectedItemsTotal.toFixed(2));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
