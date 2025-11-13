@@ -38,12 +38,22 @@ export function CopyToTripDialog({
   const [loading, setLoading] = useState(false);
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasConflict, setHasConflict] = useState(false);
+  const [checkingConflict, setCheckingConflict] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
       fetchTrips();
     }
   }, [isOpen, user]);
+
+  useEffect(() => {
+    if (selectedTripId && user) {
+      checkForConflict();
+    } else {
+      setHasConflict(false);
+    }
+  }, [selectedTripId, user]);
 
   const fetchTrips = async () => {
     if (!user) return;
@@ -65,6 +75,42 @@ export function CopyToTripDialog({
       console.error("Error fetching trips:", err);
     } finally {
       setLoadingTrips(false);
+    }
+  };
+
+  const checkForConflict = async () => {
+    if (!user || !selectedTripId) return;
+
+    setCheckingConflict(true);
+
+    try {
+      const token = await user.getIdToken();
+      const params = new URLSearchParams({
+        title: template.title,
+        type: template.type,
+      });
+
+      const response = await fetch(
+        `/api/trips/${selectedTripId}/lists/check-conflict?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to check for conflicts");
+      }
+
+      const data = await response.json();
+      setHasConflict(data.exists);
+    } catch (err) {
+      console.error("Error checking for conflict:", err);
+      // In case of error, default to showing conflict options to be safe
+      setHasConflict(true);
+    } finally {
+      setCheckingConflict(false);
     }
   };
 
@@ -98,6 +144,11 @@ export function CopyToTripDialog({
 
       onSuccess();
       onClose();
+
+      // Reset state
+      setSelectedTripId("");
+      setMergeMode("NEW_INSTANCE");
+      setHasConflict(false);
     } catch (err: any) {
       console.error("Error copying template:", err);
       setError(err.message);
@@ -165,8 +216,17 @@ export function CopyToTripDialog({
           )}
         </div>
 
-        {/* Merge Mode */}
-        {selectedTripId && (
+        {/* Merge Mode - only show when trip is selected AND there's a conflict */}
+        {selectedTripId && checkingConflict && (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+              Checking for conflicts...
+            </span>
+          </div>
+        )}
+
+        {selectedTripId && !checkingConflict && hasConflict && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               What if a list with the same name exists?

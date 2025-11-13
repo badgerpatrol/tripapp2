@@ -46,6 +46,8 @@ export function AddListDialog({
   const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [hasConflict, setHasConflict] = useState(false);
+  const [checkingConflict, setCheckingConflict] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -64,6 +66,14 @@ export function AddListDialog({
       }
     }
   }, [activeTab, typeFilter, isOpen, user]);
+
+  useEffect(() => {
+    if (selectedTemplateId && user) {
+      checkForConflict();
+    } else {
+      setHasConflict(false);
+    }
+  }, [selectedTemplateId, user]);
 
   const fetchMyTemplates = async () => {
     if (!user) return;
@@ -118,6 +128,46 @@ export function AddListDialog({
     }
   };
 
+  const checkForConflict = async () => {
+    if (!user || !selectedTemplateId) return;
+
+    // Find the selected template
+    const template = templates.find((t) => t.id === selectedTemplateId);
+    if (!template) return;
+
+    setCheckingConflict(true);
+
+    try {
+      const token = await user.getIdToken();
+      const params = new URLSearchParams({
+        title: template.title,
+        type: template.type,
+      });
+
+      const response = await fetch(
+        `/api/trips/${tripId}/lists/check-conflict?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to check for conflicts");
+      }
+
+      const data = await response.json();
+      setHasConflict(data.exists);
+    } catch (err) {
+      console.error("Error checking for conflict:", err);
+      // In case of error, default to showing conflict options to be safe
+      setHasConflict(true);
+    } finally {
+      setCheckingConflict(false);
+    }
+  };
+
   const handleAddList = async () => {
     if (!user || !selectedTemplateId) return;
 
@@ -152,6 +202,7 @@ export function AddListDialog({
       // Reset form
       setSelectedTemplateId("");
       setMergeMode("NEW_INSTANCE");
+      setHasConflict(false);
     } catch (err: any) {
       console.error("Error adding list:", err);
       setError(err.message);
@@ -351,8 +402,17 @@ export function AddListDialog({
           )}
         </div>
 
-        {/* Merge Mode - only show when template is selected */}
-        {selectedTemplateId && (
+        {/* Merge Mode - only show when template is selected AND there's a conflict */}
+        {selectedTemplateId && checkingConflict && (
+          <div className="flex items-center justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+              Checking for conflicts...
+            </span>
+          </div>
+        )}
+
+        {selectedTemplateId && !checkingConflict && hasConflict && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               What if a list with the same name exists?
