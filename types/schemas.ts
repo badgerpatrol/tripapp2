@@ -73,7 +73,7 @@ export const CreateTripSchema = z.object({
 
 export const UpdateTripSchema = z.object({
   name: z.string().min(1, "Trip name is required").max(200, "Trip name is too long").optional(),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   baseCurrency: z.string().length(3, "Currency must be a 3-letter code (e.g., USD)").optional(),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
