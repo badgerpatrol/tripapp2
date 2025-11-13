@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { GroupMemberRole, UserRole } from "@/lib/generated/prisma";
@@ -34,6 +34,7 @@ interface Group {
 export default function GroupDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { user, userProfile, loading: authLoading } = useAuth();
   const groupId = params.id as string;
 
@@ -65,6 +66,15 @@ export default function GroupDetailPage() {
       fetchGroup();
     }
   }, [user, groupId]);
+
+  // Auto-open AddMembers dialog if addMembers parameter is present
+  useEffect(() => {
+    if (searchParams.get("addMembers") === "true" && group) {
+      setShowAddMember(true);
+      // Clean up the URL parameter
+      router.replace(`/groups/${groupId}`, { scroll: false });
+    }
+  }, [searchParams, group, groupId, router]);
 
   // Auto-hide toast
   useEffect(() => {
