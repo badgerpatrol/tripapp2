@@ -53,8 +53,14 @@ export default function SplitRemainderDialog({
   allParticipants,
   currentUserId,
 }: SplitRemainderDialogProps) {
+  // Calculate smart default for split target:
+  // - If all users already have costs assigned -> default to "all-users"
+  // - If some users have no costs assigned -> default to "zero-cost"
+  const hasUsersWithNoCosts = existingAssignments.some(a => a.shareAmount === 0);
+  const defaultSplitTarget: SplitTarget = hasUsersWithNoCosts ? "zero-cost" : "all-users";
+
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
-  const [splitTarget, setSplitTarget] = useState<SplitTarget>("zero-cost");
+  const [splitTarget, setSplitTarget] = useState<SplitTarget>(defaultSplitTarget);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +69,16 @@ export default function SplitRemainderDialog({
   const totalAssigned = existingAssignments.reduce((sum, a) => sum + (a.shareAmount || 0), 0);
   const remainder = spend.amount - totalAssigned;
   const remainderPercentage = (remainder / spend.amount) * 100;
+
+  // Reset split target to smart default when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      const hasUsersWithNoCosts = existingAssignments.some(a => a.shareAmount === 0);
+      const smartDefault: SplitTarget = hasUsersWithNoCosts ? "zero-cost" : "all-users";
+      setSplitTarget(smartDefault);
+      setError(null);
+    }
+  }, [isOpen, existingAssignments]);
 
   // Auto-select users based on split target
   useEffect(() => {
@@ -82,7 +98,6 @@ export default function SplitRemainderDialog({
       }
 
       setSelectedUserIds(userIds);
-      setError(null);
     }
   }, [isOpen, existingAssignments, splitTarget]);
 
