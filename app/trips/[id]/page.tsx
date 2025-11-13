@@ -2194,7 +2194,7 @@ export default function TripDetailPage() {
                             {choice.place && (
                               <p className="text-sm text-zinc-600 dark:text-zinc-400">{choice.place}</p>
                             )}
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
                               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                                 choice.status === 'OPEN'
                                   ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
@@ -2202,6 +2202,11 @@ export default function TripDetailPage() {
                               }`}>
                                 {choice.status}
                               </span>
+                              {choice._count?.selections > 0 && (
+                                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                                  {choice._count.selections} {choice._count.selections === 1 ? 'choice' : 'choices'} made
+                                </span>
+                              )}
                             </div>
                           </div>
                           {canInvite && (
@@ -2223,6 +2228,18 @@ export default function TripDetailPage() {
                         </div>
 
                         <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => {
+                              setSelectedChoiceId(choice.id);
+                              setIsChoiceDetailDialogOpen(true);
+                            }}
+                            className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            Choose
+                          </button>
                           <button
                             onClick={() => {
                               setSelectedChoiceId(choice.id);
