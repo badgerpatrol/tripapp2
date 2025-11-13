@@ -28,6 +28,7 @@ export default function ScanReceiptDialogOffline({
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStatus, setProcessingStatus] = useState<string>("");
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -49,6 +50,7 @@ export default function ScanReceiptDialogOffline({
   const startCamera = async () => {
     try {
       setError(null);
+      setPermissionDenied(false);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
@@ -65,6 +67,7 @@ export default function ScanReceiptDialogOffline({
         setIsCameraActive(true);
       }
     } catch (err) {
+      setPermissionDenied(true);
       setError("Unable to access camera. Please check permissions or use the upload option.");
       console.error("Camera error:", err);
     }
@@ -393,7 +396,7 @@ export default function ScanReceiptDialogOffline({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <p className="text-sm">Initializing camera...</p>
+                      <p className="text-sm font-medium">{permissionDenied ? "Permission needed" : "Initializing camera..."}</p>
                       <p className="text-xs opacity-75 mt-2">100% Private & Offline</p>
                     </div>
                   </div>
@@ -417,14 +420,13 @@ export default function ScanReceiptDialogOffline({
               <>
                 <button
                   type="button"
-                  onClick={capturePhoto}
-                  disabled={!isCameraActive}
-                  className="tap-target w-full px-6 py-4 rounded-lg bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
+                  onClick={isCameraActive ? capturePhoto : startCamera}
+                  className="tap-target w-full px-6 py-4 rounded-lg bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold transition-colors flex items-center justify-center gap-2 text-base"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   </svg>
-                  Capture Receipt
+                  {isCameraActive ? "Capture Receipt" : "Enable Camera"}
                 </button>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
