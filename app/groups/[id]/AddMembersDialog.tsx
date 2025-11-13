@@ -192,6 +192,13 @@ export default function AddMembersDialog({
 
       // Refresh the available users list
       await fetchAvailableUsers();
+
+      // Close the form after successful save
+      if (successCount > 0) {
+        setTimeout(() => {
+          onClose();
+        }, 1000); // Small delay to show success message
+      }
     } catch (err) {
       console.error("Error adding members:", err);
       setError(
@@ -519,19 +526,11 @@ export default function AddMembersDialog({
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
               <button
-                type="button"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Done
-              </button>
-              <button
                 type="submit"
                 disabled={isSubmitting || selectedUserIds.length === 0}
-                className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="tap-target w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Adding..." : `Add ${selectedUserIds.length} Member${selectedUserIds.length !== 1 ? 's' : ''}`}
+                {isSubmitting ? "Saving..." : "Save"}
               </button>
             </div>
           </form>
