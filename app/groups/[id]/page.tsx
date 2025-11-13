@@ -179,10 +179,10 @@ export default function GroupDetailPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading group...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600 mx-auto mb-4"></div>
+          <p className="text-zinc-600 dark:text-zinc-400">Loading group...</p>
         </div>
       </div>
     );
@@ -190,11 +190,11 @@ export default function GroupDetailPage() {
 
   if (error || !group) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold mb-2">Error Loading Group</h2>
-          <p className="text-gray-600 mb-6">{error || "Group not found"}</p>
+          <h2 className="text-xl font-bold mb-2 text-zinc-900 dark:text-white">Error Loading Group</h2>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-6">{error || "Group not found"}</p>
           <Button onClick={() => router.push("/groups")}>
             Back to Groups
           </Button>
@@ -204,13 +204,13 @@ export default function GroupDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 pb-24">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <button
             onClick={() => router.push("/groups")}
-            className="text-blue-600 hover:text-blue-800 mb-2 flex items-center gap-1"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-2 flex items-center gap-1"
           >
             ← Back to Groups
           </button>
@@ -221,13 +221,13 @@ export default function GroupDetailPage() {
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full text-2xl font-bold px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full text-2xl font-bold px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                 maxLength={100}
               />
               <textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                 placeholder="Description (optional)"
                 rows={2}
                 maxLength={500}
@@ -242,7 +242,7 @@ export default function GroupDetailPage() {
                     setEditName(group.name);
                     setEditDescription(group.description || "");
                   }}
-                  className="bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  className="bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600"
                   disabled={saving}
                 >
                   Cancel
@@ -252,7 +252,7 @@ export default function GroupDetailPage() {
           ) : (
             <>
               <div className="flex items-start justify-between mb-2">
-                <h1 className="text-2xl font-bold">{group.name}</h1>
+                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{group.name}</h1>
                 {(isOwner || isAdmin) && (
                   <Button onClick={() => setIsEditing(true)} className="text-sm">
                     Edit
@@ -260,7 +260,7 @@ export default function GroupDetailPage() {
                 )}
               </div>
               {group.description && (
-                <p className="text-gray-600">{group.description}</p>
+                <p className="text-zinc-600 dark:text-zinc-400">{group.description}</p>
               )}
             </>
           )}
@@ -269,9 +269,9 @@ export default function GroupDetailPage() {
 
       {/* Members Section */}
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="bg-white rounded-lg border p-4">
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
               Members ({group.members?.length || 0})
             </h2>
             {(isOwner || isAdmin) && (
@@ -286,17 +286,17 @@ export default function GroupDetailPage() {
               group.members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center justify-between p-3 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
                       {member.user?.displayName?.[0] || member.user?.email?.[0] || "?"}
                     </div>
                     <div>
-                      <p className="font-medium">
+                      <p className="font-medium text-zinc-900 dark:text-white">
                         {member.user?.displayName || member.user?.email || "Unknown"}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
                         {member.role === GroupMemberRole.ADMIN ? "Admin" : "Member"}
                         {member.userId === group.ownerId && " · Owner"}
                       </p>
@@ -311,7 +311,7 @@ export default function GroupDetailPage() {
                           member.user?.displayName || member.user?.email || "member"
                         )
                       }
-                      className="text-red-600 hover:text-red-800 text-sm px-2 py-1"
+                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm px-2 py-1"
                     >
                       Remove
                     </button>
@@ -319,7 +319,7 @@ export default function GroupDetailPage() {
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-center py-8">No members yet</p>
+              <p className="text-zinc-500 dark:text-zinc-400 text-center py-8">No members yet</p>
             )}
           </div>
         </div>
