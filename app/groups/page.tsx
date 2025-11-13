@@ -110,15 +110,11 @@ export default function GroupsPage() {
       }
 
       const data = await response.json();
-      setToast({ message: "Group created successfully!", type: "success" });
-      setShowCreateModal(false);
-      setNewGroupName("");
-      setNewGroupDescription("");
-      fetchGroups();
+      // Navigate to the group detail page with addMembers parameter to auto-open dialog
+      router.push(`/groups/${data.group.id}?addMembers=true`);
     } catch (err: any) {
       console.error("Error creating group:", err);
       setToast({ message: err.message || "Failed to create group", type: "error" });
-    } finally {
       setCreatingGroup(false);
     }
   };
