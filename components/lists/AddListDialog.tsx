@@ -187,7 +187,7 @@ export function AddListDialog({
           </Button>
           <Button
             onClick={handleAddList}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
             disabled={loading || !selectedTemplateId}
           >
             {loading ? "Adding..." : "Add List"}
@@ -209,7 +209,7 @@ export function AddListDialog({
             }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === "my-templates"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                ? "border-blue-600 text-blue-600 dark:text-blue-400"
                 : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             }`}
           >
@@ -222,7 +222,7 @@ export function AddListDialog({
             }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === "public-gallery"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                ? "border-blue-600 text-blue-600 dark:text-blue-400"
                 : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             }`}
           >
@@ -256,7 +256,7 @@ export function AddListDialog({
           {activeTab === "public-gallery" && searchQuery && (
             <Button
               onClick={fetchPublicTemplates}
-              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2"
+              className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2"
             >
               Search
             </Button>
@@ -267,7 +267,7 @@ export function AddListDialog({
         <div>
           {loadingTemplates ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : templates.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-8">
@@ -282,7 +282,7 @@ export function AddListDialog({
                   key={template.id}
                   className={`flex items-start p-3 border-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${
                     selectedTemplateId === template.id
-                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                       : "border-gray-300 dark:border-gray-600"
                   }`}
                 >
