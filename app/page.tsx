@@ -82,6 +82,7 @@ export default function Home() {
 
     if (!authLoading && user) {
       console.log("[DEBUG] Auth loaded, user exists, fetching trips");
+      setLoading(true);
       fetchTrips();
     } else if (!authLoading && !user) {
       console.log("[DEBUG] Auth loaded, no user");
