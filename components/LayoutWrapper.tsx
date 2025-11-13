@@ -15,7 +15,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
           <Navigation />
         </>
       )}
-      {children}
+      <main className={user ? "pt-28" : ""}>
+        {children}
+      </main>
     </>
   );
 }

@@ -20,16 +20,16 @@ export default function Navigation() {
   const isAdmin = userProfile?.role === UserRole.ADMIN;
 
   return (
-    <nav className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-3 py-2">
-        <div className="flex items-center gap-4">
+    <nav className="bg-white dark:bg-zinc-900 fixed top-14 left-0 right-0 z-40">
+      <div className="max-w-7xl mx-auto px-3 py-3">
+        <div className="flex items-center gap-2">
           {/* Home Button */}
           <button
             onClick={() => router.push("/")}
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
               isHomePage
                 ? "bg-blue-600 text-white"
-                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
             Home
@@ -38,10 +38,10 @@ export default function Navigation() {
           {/* Lists Button */}
           <button
             onClick={() => router.push("/lists")}
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
               isListsPage
                 ? "bg-blue-600 text-white"
-                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
             Lists
@@ -51,10 +51,10 @@ export default function Navigation() {
           {isAdmin && (
             <button
               onClick={() => router.push("/groups")}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
                 isGroupsPage
                   ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               }`}
             >
               Groups
@@ -65,10 +65,10 @@ export default function Navigation() {
           {isAdmin && (
             <button
               onClick={() => router.push("/admin/users")}
-              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
                 isUsersPage
                   ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               }`}
             >
               Users

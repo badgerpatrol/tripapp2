@@ -24,7 +24,7 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 shadow-sm">
+    <header className="bg-white dark:bg-zinc-900 fixed top-0 left-0 right-0 z-50">
       <div className="max-w-7xl mx-auto px-3 py-2">
         <div className="flex justify-between items-center gap-2 min-w-0">
           {/* Left side - Logo */}
