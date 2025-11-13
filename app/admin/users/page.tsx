@@ -366,22 +366,22 @@ export default function AdminUsersPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading users...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600 mx-auto mb-4"></div>
+          <p className="text-zinc-600 dark:text-zinc-400">Loading users...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 pb-24">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
+      <div className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">User Management</h1>
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">User Management</h1>
             <div className="flex items-center gap-4">
               <Button
                 onClick={() => setShowCreateModal(true)}
@@ -398,7 +398,7 @@ export default function AdminUsersPage() {
                   {deletingUsers ? "Deleting..." : `Delete Selected (${selectedUserIds.size})`}
                 </Button>
               )}
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-zinc-600 dark:text-zinc-400">
                 Total Users: {users.length}
               </div>
             </div>
@@ -410,7 +410,7 @@ export default function AdminUsersPage() {
             placeholder="Search by email or name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
           />
         </div>
       </div>
@@ -418,7 +418,7 @@ export default function AdminUsersPage() {
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg mb-4">
             {error}
           </div>
         )}
@@ -426,19 +426,19 @@ export default function AdminUsersPage() {
         {filteredUsers.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">👥</div>
-            <h2 className="text-xl font-semibold mb-2">
+            <h2 className="text-xl font-semibold mb-2 text-zinc-900 dark:text-white">
               {searchQuery ? "No users found" : "No users yet"}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-zinc-600 dark:text-zinc-400">
               {searchQuery
                 ? "Try a different search term"
                 : "Users will appear here when they sign up"}
             </p>
           </div>
         ) : (
-          <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
                 <tr>
                   <th className="px-4 py-3 w-12">
                     <input
@@ -448,29 +448,29 @@ export default function AdminUsersPage() {
                       className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     User
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Role
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Activity
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Joined
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
                 {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50">
+                  <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
                     <td className="px-4 py-3">
                       {u.id !== user?.uid && (
                         <input
@@ -490,15 +490,15 @@ export default function AdminUsersPage() {
                             className="w-10 h-10 rounded-full"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center font-semibold">
                             {u.displayName?.[0]?.toUpperCase() || u.email[0].toUpperCase()}
                           </div>
                         )}
                         <div>
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-zinc-900 dark:text-white">
                             {u.displayName || "No name"}
                           </div>
-                          <div className="text-sm text-gray-500">{u.email}</div>
+                          <div className="text-sm text-zinc-500 dark:text-zinc-400">{u.email}</div>
                         </div>
                       </div>
                     </td>
@@ -515,27 +515,27 @@ export default function AdminUsersPage() {
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
                           u.deletedAt
-                            ? "bg-red-100 text-red-800 border-red-200"
-                            : "bg-green-100 text-green-800 border-green-200"
+                            ? "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800"
+                            : "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800"
                         }`}
                       >
                         {u.deletedAt ? "Suspended" : "Active"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
                         {u.tripCount} trips, {u.groupCount} groups
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
                         {new Date(u.createdAt).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
                         onClick={() => handleEditUser(u)}
-                        className="text-blue-600 hover:text-blue-800 px-3 py-1 text-sm font-medium"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-3 py-1 text-sm font-medium"
                       >
                         Edit
                       </button>
@@ -551,45 +551,45 @@ export default function AdminUsersPage() {
       {/* Create User Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Add New User</h2>
+          <div className="bg-white dark:bg-zinc-800 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-white">Add New User</h2>
 
             <form onSubmit={handleCreateUser}>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Email *</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-900 dark:text-white">Email *</label>
                 <input
                   type="email"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   placeholder="user@example.com"
                   required
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Display Name</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-900 dark:text-white">Display Name</label>
                 <input
                   type="text"
                   value={newUserDisplayName}
                   onChange={(e) => setNewUserDisplayName(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   placeholder="John Doe"
                 />
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Password *</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-900 dark:text-white">Password *</label>
                 <input
                   type="password"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   placeholder="Minimum 6 characters"
                   required
                   minLength={6}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                   Password must be at least 6 characters long
                 </p>
               </div>
@@ -603,7 +603,7 @@ export default function AdminUsersPage() {
                     setNewUserPassword("");
                     setNewUserDisplayName("");
                   }}
-                  className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  className="flex-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600"
                   disabled={creatingUser}
                 >
                   Cancel
@@ -624,49 +624,49 @@ export default function AdminUsersPage() {
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Edit User</h2>
+          <div className="bg-white dark:bg-zinc-800 rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-white">Edit User</h2>
 
             <form onSubmit={handleSaveUser}>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Email</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-900 dark:text-white">Email</label>
                 <input
                   type="text"
                   value={selectedUser.email}
                   disabled
-                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 text-gray-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400"
                 />
-                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Email cannot be changed</p>
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Display Name</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-900 dark:text-white">Display Name</label>
                 <input
                   type="text"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   placeholder="User's display name"
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-900 dark:text-white">Phone Number</label>
                 <input
                   type="text"
                   value={editPhoneNumber}
                   onChange={(e) => setEditPhoneNumber(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   placeholder="User's phone number"
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Role</label>
+                <label className="block text-sm font-medium mb-2 text-zinc-900 dark:text-white">Role</label>
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value as UserRole)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   disabled={selectedUser.id === user?.uid}
                 >
                   <option value={UserRole.USER}>User</option>
@@ -674,17 +674,17 @@ export default function AdminUsersPage() {
                   <option value={UserRole.SUPERADMIN}>Super Admin</option>
                 </select>
                 {selectedUser.id === user?.uid && (
-                  <p className="text-xs text-gray-500 mt-1">You cannot change your own role</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">You cannot change your own role</p>
                 )}
               </div>
 
               {selectedUser.id !== user?.uid && (
                 <>
-                  <div className="mb-4 p-4 border rounded-lg bg-gray-50">
+                  <div className="mb-4 p-4 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-900">
                     <div className="flex items-center justify-between">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Account Status</label>
-                        <p className="text-xs text-gray-600">
+                        <label className="block text-sm font-medium mb-1 text-zinc-900 dark:text-white">Account Status</label>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400">
                           {editSuspended
                             ? "User is suspended and cannot log in"
                             : "User can log in normally"}
@@ -697,29 +697,29 @@ export default function AdminUsersPage() {
                           onChange={(e) => setEditSuspended(e.target.checked)}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                        <span className="ml-3 text-sm font-medium text-gray-900">
+                        <div className="w-11 h-6 bg-zinc-200 dark:bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-zinc-300 dark:peer-focus:ring-zinc-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                        <span className="ml-3 text-sm font-medium text-zinc-900 dark:text-white">
                           {editSuspended ? "Suspended" : "Active"}
                         </span>
                       </label>
                     </div>
                   </div>
 
-                  <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+                  <div className="mb-6 p-4 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-900">
                     <button
                       type="button"
                       onClick={() => setShowPasswordSection(!showPasswordSection)}
                       className="flex items-center justify-between w-full text-left"
                     >
                       <div>
-                        <label className="block text-sm font-medium mb-1">Password Reset</label>
-                        <p className="text-xs text-gray-600">
+                        <label className="block text-sm font-medium mb-1 text-zinc-900 dark:text-white">Password Reset</label>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400">
                           {showPasswordSection
                             ? "Enter a new password for this user"
                             : "Click to reset user's password"}
                         </p>
                       </div>
-                      <span className="text-blue-600 text-sm font-medium">
+                      <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">
                         {showPasswordSection ? "Hide" : "Show"}
                       </span>
                     </button>
@@ -729,11 +729,11 @@ export default function AdminUsersPage() {
                           type="password"
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                           placeholder="Enter new password (min 6 characters)"
                           minLength={6}
                         />
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
                           Leave blank to keep current password unchanged
                         </p>
                       </div>
@@ -749,7 +749,7 @@ export default function AdminUsersPage() {
                     setShowEditModal(false);
                     setSelectedUser(null);
                   }}
-                  className="flex-1 bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  className="flex-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-600"
                   disabled={savingUser}
                 >
                   Cancel
