@@ -2228,15 +2228,24 @@ export default function TripDetailPage() {
                         </div>
 
                         <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => {
-                              setSelectedChoiceId(choice.id);
-                              setIsChoiceDetailDialogOpen(true);
-                            }}
-                            className="tap-target px-4 py-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-semibold transition-colors text-xs sm:text-sm whitespace-nowrap"
-                          >
-                            Choose
-                          </button>
+                          {choice._count?.items > 0 ? (
+                            <button
+                              onClick={() => {
+                                setSelectedChoiceId(choice.id);
+                                setIsChoiceDetailDialogOpen(true);
+                              }}
+                              className="tap-target px-4 py-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-semibold transition-colors text-xs sm:text-sm whitespace-nowrap"
+                            >
+                              Choose
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="tap-target px-4 py-1.5 rounded-lg bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 font-semibold cursor-not-allowed text-xs sm:text-sm whitespace-nowrap"
+                            >
+                              Preparing
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setSelectedChoiceId(choice.id);
