@@ -17,7 +17,7 @@ export function Field({
   error?: string;
 }) {
   return (
-    <div className="mb-4">
+    <div className="mb-4 min-w-0">
       <label
         htmlFor={htmlFor}
         className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300"
@@ -40,7 +40,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={clsx(
-        "tap-target w-full h-10 px-4 py-3 rounded-lg",
+        "tap-target w-full min-w-0 appearance-none h-10 px-4 py-3 rounded-lg box-border",
         "bg-white dark:bg-zinc-800",
         "border border-zinc-300 dark:border-zinc-700",
         "text-zinc-900 dark:text-zinc-100",

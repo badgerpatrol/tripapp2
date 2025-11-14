@@ -194,7 +194,7 @@ export default function EditPaymentDialog({
               type="date"
               value={formData.paidAt}
               onChange={(e) => setFormData({ ...formData, paidAt: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full min-w-0 appearance-none px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 box-border"
               required
             />
           </div>
