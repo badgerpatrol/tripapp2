@@ -25,7 +25,7 @@ export default function ChoiceReportsDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"items" | "users">("items");
+  const [tab, setTab] = useState<"items" | "users" | "respondents">("items");
   const [itemsReport, setItemsReport] = useState<any>(null);
   const [usersReport, setUsersReport] = useState<any>(null);
   const [respondents, setRespondents] = useState<any>(null);
@@ -186,6 +186,16 @@ export default function ChoiceReportsDialog({
             >
               By User
             </button>
+            <button
+              onClick={() => setTab("respondents")}
+              className={`px-4 py-2 font-medium ${
+                tab === "respondents"
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-zinc-600 dark:text-zinc-400"
+              }`}
+            >
+              Respondents
+            </button>
           </div>
 
           {loading ? (
@@ -311,6 +321,87 @@ export default function ChoiceReportsDialog({
                       </button>
                     )
                   )}
+                </div>
+              )}
+
+              {/* Respondents Tab */}
+              {tab === "respondents" && respondents && (
+                <div className="space-y-4">
+                  {/* Who Has Chosen */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+                      <span className="text-green-600">✓</span> Who Has Chosen ({respondents.respondedUsers?.length || 0})
+                    </h3>
+                    {respondents.respondedUsers && respondents.respondedUsers.length > 0 ? (
+                      <div className="space-y-2">
+                        {respondents.respondedUsers.map((user: any) => (
+                          <div
+                            key={user.userId}
+                            className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+                          >
+                            {user.photoURL && (
+                              <img
+                                src={user.photoURL}
+                                alt={user.displayName || user.email}
+                                className="w-8 h-8 rounded-full"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                                {user.displayName || user.email}
+                              </div>
+                              {user.displayName && (
+                                <div className="text-xs text-zinc-600 dark:text-zinc-400">{user.email}</div>
+                              )}
+                            </div>
+                            <span className="text-green-600 text-xl">✓</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-zinc-500 dark:text-zinc-400 text-sm italic p-3 bg-zinc-50 dark:bg-zinc-900/20 rounded-lg">
+                        No one has made a choice yet
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Who Hasn't Chosen */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+                      <span className="text-orange-600">⏳</span> Who Hasn't Chosen ({respondents.pendingUsers?.length || 0})
+                    </h3>
+                    {respondents.pendingUsers && respondents.pendingUsers.length > 0 ? (
+                      <div className="space-y-2">
+                        {respondents.pendingUsers.map((user: any) => (
+                          <div
+                            key={user.userId}
+                            className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg"
+                          >
+                            {user.photoURL && (
+                              <img
+                                src={user.photoURL}
+                                alt={user.displayName || user.email}
+                                className="w-8 h-8 rounded-full"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                                {user.displayName || user.email}
+                              </div>
+                              {user.displayName && (
+                                <div className="text-xs text-zinc-600 dark:text-zinc-400">{user.email}</div>
+                              )}
+                            </div>
+                            <span className="text-orange-600 text-xl">⏳</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-zinc-500 dark:text-zinc-400 text-sm italic p-3 bg-zinc-50 dark:bg-zinc-900/20 rounded-lg">
+                        Everyone has made a choice!
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </>

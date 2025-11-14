@@ -992,7 +992,16 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
       tripId,
       deletedAt: null,
     },
-    select: { userId: true },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          photoURL: true,
+        },
+      },
+    },
   });
 
   const allUserIds = tripMembers.map(m => m.userId);
@@ -1006,9 +1015,30 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
   const respondedUserIds = selections.map(s => s.userId);
   const pendingUserIds = allUserIds.filter(id => !respondedUserIds.includes(id));
 
+  // Build user details maps
+  const respondedUsers = tripMembers
+    .filter(m => respondedUserIds.includes(m.userId))
+    .map(m => ({
+      userId: m.user.id,
+      displayName: m.user.displayName,
+      email: m.user.email,
+      photoURL: m.user.photoURL,
+    }));
+
+  const pendingUsers = tripMembers
+    .filter(m => pendingUserIds.includes(m.userId))
+    .map(m => ({
+      userId: m.user.id,
+      displayName: m.user.displayName,
+      email: m.user.email,
+      photoURL: m.user.photoURL,
+    }));
+
   return {
     respondedUserIds,
     pendingUserIds,
+    respondedUsers,
+    pendingUsers,
   };
 }
 
