@@ -132,6 +132,7 @@ export default function TripDetailPage() {
   const [isItemsDialogOpen, setIsItemsDialogOpen] = useState(false);
   const [selectedSpendId, setSelectedSpendId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+  const [loadingAssignmentId, setLoadingAssignmentId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [isDeletingSpend, setIsDeletingSpend] = useState(false);
   const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
@@ -620,6 +621,7 @@ export default function TripDetailPage() {
     if (!user) return;
 
     setSelectedAssignmentId(assignmentId);
+    setLoadingAssignmentId(assignmentId);
 
     // Find the spend for this assignment
     let spend: any = null;
@@ -631,6 +633,7 @@ export default function TripDetailPage() {
     }
 
     if (!spend) {
+      setLoadingAssignmentId(null);
       setIsEditAssignmentDialogOpen(true);
       return;
     }
@@ -661,6 +664,8 @@ export default function TripDetailPage() {
       console.error("Error checking for items:", err);
       // Default to regular assignment dialog on error
       setIsEditAssignmentDialogOpen(true);
+    } finally {
+      setLoadingAssignmentId(null);
     }
   };
 
@@ -2783,7 +2788,9 @@ export default function TripDetailPage() {
           onLeave={handleLeaveSpend}
           onFinalize={handleFinalizeSpend}
           onDelete={handleDeleteSpend}
+          onViewItems={handleViewItems}
           isDeletingSpend={isDeletingSpend}
+          loadingAssignmentId={loadingAssignmentId}
         />
       )}
 
