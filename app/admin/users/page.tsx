@@ -603,7 +603,8 @@ export default function AdminUsersPage() {
                     setNewUserPassword("");
                     setNewUserDisplayName("");
                   }}
-                  className="flex-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+                  variant="secondary"
+                  className="flex-1"
                   disabled={creatingUser}
                 >
                   Cancel
@@ -749,7 +750,8 @@ export default function AdminUsersPage() {
                     setShowEditModal(false);
                     setSelectedUser(null);
                   }}
-                  className="flex-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+                  variant="secondary"
+                  className="flex-1"
                   disabled={savingUser}
                 >
                   Cancel

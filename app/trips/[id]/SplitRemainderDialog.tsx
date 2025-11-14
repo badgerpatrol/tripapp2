@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 type SplitMode = "equal" | "proportional";
 type SplitTarget = "zero-cost" | "all-users";
@@ -537,22 +538,27 @@ export default function SplitRemainderDialog({
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
-            <button
+            <Button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="tap-target flex-1 px-4 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+              variant="secondary"
+              className="flex-1"
+              size="lg"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={handleApply}
               disabled={isSubmitting || selectedUserIds.size === 0 || remainder <= 0}
-              className="tap-target flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={isSubmitting}
+              variant="primary"
+              className="flex-1"
+              size="lg"
             >
               {isSubmitting ? "Applying..." : "Apply Split"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

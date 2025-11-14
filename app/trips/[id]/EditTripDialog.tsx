@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 interface EditTripDialogProps {
   trip: {
@@ -354,22 +355,27 @@ export default function EditTripDialog({
                       permanently deleted.
                     </p>
                     <div className="flex gap-2 mt-3">
-                      <button
+                      <Button
                         type="button"
                         onClick={() => setShowDeleteConfirm(false)}
                         disabled={isDeleting}
-                        className="tap-target px-4 py-2 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        variant="secondary"
+                        size="sm"
+                        className="flex-1"
                       >
                         Cancel
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
                         onClick={handleDelete}
                         disabled={isDeleting}
-                        className="tap-target px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        loading={isDeleting}
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
                       >
                         {isDeleting ? "Deleting..." : "Delete Trip"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -379,21 +385,26 @@ export default function EditTripDialog({
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 pt-4">
               <div className="flex gap-3">
-                <button
+                <Button
                   type="button"
                   onClick={onClose}
                   disabled={isSubmitting || isDeleting}
-                  className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  variant="secondary"
+                  className="flex-1"
+                  size="lg"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={isSubmitting || isDeleting}
-                  className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  loading={isSubmitting}
+                  variant="primary"
+                  className="flex-1"
+                  size="lg"
                 >
                   {isSubmitting ? "Saving..." : "Save Changes"}
-                </button>
+                </Button>
               </div>
 
               {/* Delete Button */}

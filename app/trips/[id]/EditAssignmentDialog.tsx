@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 interface EditAssignmentDialogProps {
   isOpen: boolean;
@@ -213,20 +214,25 @@ export default function EditAssignmentDialog({
                 Are you sure you want to remove {assignment.user.displayName || assignment.user.email} from this spend?
               </p>
               <div className="flex gap-2">
-                <button
+                <Button
                   onClick={() => setShowRemoveConfirm(false)}
                   disabled={isRemoving}
-                  className="flex-1 px-3 py-2 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleRemoveConfirm}
                   disabled={isRemoving}
-                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  loading={isRemoving}
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1"
                 >
                   {isRemoving ? "Removing..." : "Confirm"}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -352,21 +358,26 @@ export default function EditAssignmentDialog({
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-3 pt-4">
                   <div className="flex gap-3">
-                    <button
+                    <Button
                       type="button"
                       onClick={handleClose}
                       disabled={isSubmitting}
-                      className="tap-target flex-1 px-4 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                      variant="secondary"
+                      className="flex-1"
+                      size="lg"
                     >
                       Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
                       disabled={isSubmitting || !amount || parseFloat(amount) < 0 || !canEdit}
-                      className="tap-target flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      loading={isSubmitting}
+                      variant="primary"
+                      className="flex-1"
+                      size="lg"
                     >
                       {isSubmitting ? "Updating..." : "Update Amount"}
-                    </button>
+                    </Button>
                   </div>
 
                   {/* Remove Button */}

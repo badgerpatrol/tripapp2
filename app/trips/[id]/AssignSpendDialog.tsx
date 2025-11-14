@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface Participant {
   id: string;
@@ -268,21 +269,26 @@ export default function AssignSpendDialog({
 
           {/* Footer */}
           <div className="p-6 border-t border-zinc-200 dark:border-zinc-700 flex gap-3">
-            <button
+            <Button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="flex-1 px-4 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="secondary"
+              className="flex-1"
+              size="lg"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={isSubmitting || selectedUserIds.size === 0}
-              className="flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              loading={isSubmitting}
+              variant="primary"
+              className="flex-1"
+              size="lg"
             >
               {isSubmitting ? "Saving..." : "Save"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

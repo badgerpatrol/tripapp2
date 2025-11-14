@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { SplitType } from "@/lib/generated/prisma";
+import { Button } from "@/components/ui/button";
 
 interface SelfAssignDialogProps {
   isOpen: boolean;
@@ -208,21 +209,26 @@ export default function SelfAssignDialog({
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
-              <button
+              <Button
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="tap-target flex-1 px-4 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                variant="secondary"
+                className="flex-1"
+                size="lg"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={isSubmitting || !amount || parseFloat(amount) < 0}
-                className="tap-target flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={isSubmitting}
+                variant="primary"
+                className="flex-1"
+                size="lg"
               >
                 {isSubmitting ? "Assigning..." : existingAssignment ? "Update" : "Assign"}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

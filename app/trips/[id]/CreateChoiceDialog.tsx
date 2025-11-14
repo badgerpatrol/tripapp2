@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface CreateChoiceDialogProps {
   isOpen: boolean;
@@ -172,20 +173,23 @@ export default function CreateChoiceDialog({
             </div>
 
             <div className="flex gap-3 pt-4">
-              <button
+              <Button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                variant="secondary"
+                className="flex-1"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
                 disabled={loading || !formData.name}
-                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
+                loading={loading}
+                variant="primary"
+                className="flex-1"
               >
                 {loading ? "Creating..." : "Create Choice"}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

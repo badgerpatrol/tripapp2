@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface ChoiceItem {
   id: string;
@@ -388,20 +389,23 @@ export default function ChoiceDetailDialog({
 
               {/* Actions */}
               <div className="flex gap-3">
-                <button
+                <Button
                   onClick={onClose}
-                  className="flex-1 px-4 py-2 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
+                </Button>
                 {!isClosed && (
-                  <button
+                  <Button
                     onClick={handleSubmitSelections}
                     disabled={saving}
-                    className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
+                    loading={saving}
+                    variant="primary"
+                    className="flex-1"
                   >
                     {saving ? "Saving..." : "Save Selection"}
-                  </button>
+                  </Button>
                 )}
               </div>
             </>

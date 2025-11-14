@@ -279,7 +279,7 @@ export default function RecordPaymentDialog({
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                variant="outline"
+                variant="secondary"
                 full
                 size="lg"
               >

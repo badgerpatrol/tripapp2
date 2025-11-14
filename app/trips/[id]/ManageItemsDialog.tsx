@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import ScanReceiptDialog from "./ScanReceiptDialog";
 import ScanReceiptDialogIOS from "./ScanReceiptDialogIOS";
 import ScanReceiptDialogOffline from "./ScanReceiptDialogOffline";
@@ -389,19 +390,21 @@ function ItemForm({
         </div>
 
         <div className="flex gap-3 pt-2">
-          <button
+          <Button
             type="button"
             onClick={onCancel}
-            className="tap-target flex-1 px-4 py-2 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+            variant="secondary"
+            className="flex-1"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="tap-target flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+            variant="primary"
+            className="flex-1"
           >
             {item ? "Update" : "Add"} Item
-          </button>
+          </Button>
         </div>
       </form>
     </div>

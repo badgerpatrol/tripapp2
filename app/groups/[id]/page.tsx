@@ -252,7 +252,7 @@ export default function GroupDetailPage() {
                     setEditName(group.name);
                     setEditDescription(group.description || "");
                   }}
-                  className="bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-300 dark:hover:bg-zinc-600"
+                  variant="secondary"
                   disabled={saving}
                 >
                   Cancel

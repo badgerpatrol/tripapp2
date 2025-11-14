@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { SpendStatus } from "@/lib/generated/prisma";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { Button } from "@/components/ui/button";
 
 interface SpendItem {
   id: string;
@@ -600,20 +601,25 @@ function ItemForm({ spend, item, isOpen, onClose, onSaved }: ItemFormProps) {
 
           {/* Action Buttons */}
           <div className="flex gap-3">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="flex-1 tap-target px-4 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+              variant="secondary"
+              className="flex-1"
+              size="lg"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={saving || !name.trim() || !cost}
-              className="flex-1 tap-target px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-medium transition-colors"
+              loading={saving}
+              variant="primary"
+              className="flex-1"
+              size="lg"
             >
               {saving ? "Saving..." : item ? "Update" : "Add"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
