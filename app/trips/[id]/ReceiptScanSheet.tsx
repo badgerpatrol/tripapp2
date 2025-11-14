@@ -38,6 +38,7 @@ export default function ReceiptScanSheet({
   const [error, setError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [scannedItems, setScannedItems] = useState<ScannedReceiptItem[] | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [receiptTotal, setReceiptTotal] = useState<number | null>(null); // Total from receipt in minor units
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -50,6 +51,13 @@ export default function ReceiptScanSheet({
       stopCamera();
     };
   }, [isOpen]);
+
+  // Initialize all items as selected when scannedItems changes
+  useEffect(() => {
+    if (scannedItems) {
+      setSelectedItems(new Set(scannedItems.map((_, index) => index)));
+    }
+  }, [scannedItems]);
 
   const startCamera = async () => {
     try {
@@ -103,6 +111,7 @@ export default function ReceiptScanSheet({
   const retakePhoto = () => {
     setCapturedImage(null);
     setScannedItems(null);
+    setSelectedItems(new Set());
     setReceiptTotal(null);
     setError(null);
     startCamera();
@@ -152,12 +161,16 @@ export default function ReceiptScanSheet({
   };
 
   const addItemsToSpend = () => {
-    if (!scannedItems || scannedItems.length === 0) return;
+    if (!scannedItems || scannedItems.length === 0 || selectedItems.size === 0) return;
 
     // Expand items with quantity > 1 into multiple separate items
+    // Only process selected items
     const expandedItems: ExpandedReceiptItem[] = [];
 
-    scannedItems.forEach((item) => {
+    scannedItems.forEach((item, index) => {
+      // Skip items that are not selected
+      if (!selectedItems.has(index)) return;
+
       for (let i = 0; i < item.quantity; i++) {
         expandedItems.push({
           id: crypto.randomUUID(),
@@ -177,6 +190,7 @@ export default function ReceiptScanSheet({
     stopCamera();
     setCapturedImage(null);
     setScannedItems(null);
+    setSelectedItems(new Set());
     setReceiptTotal(null);
     setError(null);
     setIsProcessing(false);
@@ -232,6 +246,35 @@ export default function ReceiptScanSheet({
     return null;
   };
 
+  // Toggle item selection
+  const toggleItemSelection = (index: number) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  // Toggle all items selection
+  const toggleAllItems = () => {
+    if (!scannedItems) return;
+
+    if (selectedItems.size === scannedItems.length) {
+      // Deselect all
+      setSelectedItems(new Set());
+    } else {
+      // Select all
+      setSelectedItems(new Set(scannedItems.map((_, index) => index)));
+    }
+  };
+
+  // Check if all items are selected
+  const allItemsSelected = scannedItems && selectedItems.size === scannedItems.length;
+
   if (!isOpen) return null;
 
   return (
@@ -273,12 +316,48 @@ export default function ReceiptScanSheet({
           {/* Scanned Items Preview */}
           {scannedItems && (
             <div className="mb-6">
+              {/* Select All/Deselect All Button */}
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  {selectedItems.size} of {scannedItems.length} items selected
+                </span>
+                <button
+                  type="button"
+                  onClick={toggleAllItems}
+                  className="tap-target text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                >
+                  {allItemsSelected ? "Deselect All" : "Select All"}
+                </button>
+              </div>
+
               <div className="max-h-[300px] overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg">
                 <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
                   {scannedItems.map((item, index) => (
-                    <div key={index} className="p-3 hover:bg-zinc-50 dark:hover:bg-zinc-700/50">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
+                    <div
+                      key={index}
+                      className="p-3 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer"
+                      onClick={() => toggleItemSelection(index)}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Checkbox */}
+                        <div className="flex-shrink-0 mt-0.5">
+                          <div
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                              selectedItems.has(index)
+                                ? "bg-blue-600 border-blue-600"
+                                : "border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800"
+                            }`}
+                          >
+                            {selectedItems.has(index) && (
+                              <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Item Details */}
+                        <div className="flex-1 min-w-0">
                           <div className="font-medium text-zinc-900 dark:text-zinc-100">
                             {item.name}
                             {item.quantity > 1 && (
@@ -293,6 +372,8 @@ export default function ReceiptScanSheet({
                             </div>
                           )}
                         </div>
+
+                        {/* Price */}
                         <div className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
                           {(item.costMinor / 100).toFixed(2)} {item.currency}
                           {item.quantity > 1 && (
@@ -426,9 +507,10 @@ export default function ReceiptScanSheet({
                 <button
                   type="button"
                   onClick={addItemsToSpend}
-                  className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                  disabled={selectedItems.size === 0}
+                  className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
                 >
-                  Add Items to Spend
+                  Add {selectedItems.size > 0 ? `${selectedItems.size} Item${selectedItems.size !== 1 ? 's' : ''}` : 'Items'} to Spend
                 </button>
               </div>
             ) : (
