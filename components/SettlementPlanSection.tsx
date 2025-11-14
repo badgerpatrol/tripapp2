@@ -91,6 +91,7 @@ export default function SettlementPlanSection({
   const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
+  const [perPersonTotalsCollapsed, setPerPersonTotalsCollapsed] = useState(true);
 
   const fetchData = async () => {
     if (!user) return;
@@ -546,10 +547,26 @@ export default function SettlementPlanSection({
 
           {/* Per-Person Balances */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Per-Person Totals
-            </h3>
-            <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Per-Person Totals
+              </h3>
+              <button
+                onClick={() => setPerPersonTotalsCollapsed(!perPersonTotalsCollapsed)}
+                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+                aria-label={perPersonTotalsCollapsed ? "Expand Per-Person Totals" : "Collapse Per-Person Totals"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {perPersonTotalsCollapsed ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  )}
+                </svg>
+              </button>
+            </div>
+            {!perPersonTotalsCollapsed && (
+              <div className="space-y-3">
               {getFilteredBalances()
                 .sort((a, b) => b.netBalance - a.netBalance) // Owed money first
                 .map((balance) => (
@@ -616,7 +633,8 @@ export default function SettlementPlanSection({
                     </div>
                   </div>
                 ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
           )}
