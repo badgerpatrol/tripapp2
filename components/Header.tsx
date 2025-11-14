@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 export default function Header() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -34,7 +34,16 @@ export default function Header() {
             </span>
           </div>
 
-          {/* Right side - Logout button only */}
+          {/* Middle - User display name */}
+          {userProfile?.displayName && (
+            <div className="flex items-center flex-1 justify-center min-w-0">
+              <span className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 truncate">
+                {userProfile.displayName}
+              </span>
+            </div>
+          )}
+
+          {/* Right side - Logout button */}
           <div className="flex items-center flex-shrink-0">
             <Button
               onClick={handleSignOut}
