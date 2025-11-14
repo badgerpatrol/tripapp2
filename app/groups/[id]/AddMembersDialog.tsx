@@ -11,21 +11,22 @@ interface AvailableUser {
   photoURL: string | null;
 }
 
+interface GroupMember {
+  id: string;
+  role: string;
+  user: {
+    id: string;
+    email: string;
+    displayName: string | null;
+  };
+}
+
 interface AddMembersDialogProps {
   groupId: string;
   groupName: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  currentMembers: Array<{
-    id: string;
-    role: string;
-    user: {
-      id: string;
-      email: string;
-      displayName: string | null;
-    };
-  }>;
 }
 
 export default function AddMembersDialog({
@@ -34,21 +35,23 @@ export default function AddMembersDialog({
   isOpen,
   onClose,
   onSuccess,
-  currentMembers,
 }: AddMembersDialogProps) {
   const { user } = useAuth();
+  const [currentMembers, setCurrentMembers] = useState<GroupMember[]>([]);
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Fetch available users when dialog opens
+  // Fetch members and available users when dialog opens
   useEffect(() => {
     if (isOpen && user) {
+      fetchCurrentMembers();
       fetchAvailableUsers();
     }
   }, [isOpen, user]);
@@ -60,6 +63,41 @@ export default function AddMembersDialog({
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
+
+  const fetchCurrentMembers = async () => {
+    if (!user) return;
+
+    setIsLoadingMembers(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/groups/${groupId}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch group members");
+      }
+
+      const data = await response.json();
+      const members = data.group.members?.map((m: any) => ({
+        id: m.id,
+        role: m.role,
+        user: {
+          id: m.user?.id || m.userId,
+          email: m.user?.email || "",
+          displayName: m.user?.displayName || null,
+        },
+      })) || [];
+      setCurrentMembers(members);
+    } catch (err) {
+      console.error("Error fetching current members:", err);
+      setError("Failed to load current members. Please try again.");
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  };
 
   const fetchAvailableUsers = async () => {
     if (!user) return;
@@ -242,9 +280,11 @@ export default function AddMembersDialog({
         );
       }
 
-      // Success - refresh the group data
+      // Success - update only the member panes, not the whole page
       setSuccessMessage(`${userName} has been removed from the group`);
-      onSuccess();
+
+      // Remove member from local state
+      setCurrentMembers(prev => prev.filter(m => m.user.id !== userId));
 
       // Refresh the available users list to show the removed user
       await fetchAvailableUsers();
@@ -262,9 +302,13 @@ export default function AddMembersDialog({
 
   const handleClose = () => {
     if (!isSubmitting) {
+      // Refresh parent page with latest data
+      onSuccess();
       onClose();
       // Reset state after closing
       setTimeout(() => {
+        setCurrentMembers([]);
+        setAvailableUsers([]);
         setSelectedUserIds([]);
         setSearchQuery("");
         setError(null);
@@ -346,8 +390,13 @@ export default function AddMembersDialog({
                 </label>
               </div>
               <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg p-2 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800">
-                <div className="space-y-1.5">
-                  {currentMembers.map((member) => (
+                {isLoadingMembers ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-zinc-300 border-t-blue-600"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {currentMembers.map((member) => (
                     <div
                       key={member.id}
                       className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
@@ -390,8 +439,9 @@ export default function AddMembersDialog({
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
