@@ -295,6 +295,28 @@ describe("Choice Service Tests", () => {
     expect(respondents.pendingUserIds).toContain(TEST_USER_1);
     expect(respondents.pendingUserIds).toContain(TEST_USER_3);
     expect(respondents.pendingUserIds).toHaveLength(2);
+
+    // Check user details are included
+    expect(respondents.respondedUsers).toBeDefined();
+    expect(respondents.respondedUsers).toHaveLength(1);
+    expect(respondents.respondedUsers[0]).toMatchObject({
+      userId: TEST_USER_2,
+      displayName: "Choice User 2",
+      email: "choice-user2@test.com",
+    });
+
+    expect(respondents.pendingUsers).toBeDefined();
+    expect(respondents.pendingUsers).toHaveLength(2);
+    const pendingUserIds = respondents.pendingUsers.map((u: any) => u.userId);
+    expect(pendingUserIds).toContain(TEST_USER_1);
+    expect(pendingUserIds).toContain(TEST_USER_3);
+
+    // Verify user details are present
+    const user1 = respondents.pendingUsers.find((u: any) => u.userId === TEST_USER_1);
+    expect(user1).toMatchObject({
+      displayName: "Choice User 1",
+      email: "choice-user1@test.com",
+    });
   });
 
   // Test Scenario: item_deactivated_visibility
