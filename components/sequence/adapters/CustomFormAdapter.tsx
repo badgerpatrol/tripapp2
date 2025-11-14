@@ -117,7 +117,7 @@ export default function CustomFormAdapter({ run, step, runStep }: CustomFormAdap
                 value={formData[field.key] || ""}
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
                 required={field.required}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+                className="w-full min-w-0 appearance-none px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-md bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 box-border"
               />
             )}
           </div>
