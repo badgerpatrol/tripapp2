@@ -342,17 +342,6 @@ export default function GroupDetailPage() {
         isOpen={showAddMember}
         onClose={() => setShowAddMember(false)}
         onSuccess={handleMembersDialogSuccess}
-        currentMembers={
-          group.members?.map((m) => ({
-            id: m.id,
-            role: m.role,
-            user: {
-              id: m.user?.id || "",
-              email: m.user?.email || "",
-              displayName: m.user?.displayName || null,
-            },
-          })) || []
-        }
       />
 
       {/* Toast Notification */}
