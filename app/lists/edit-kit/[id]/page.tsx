@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Visibility } from "@/lib/generated/prisma";
+import KitPhotoScanSheet, { KitItemToAdd } from "@/components/lists/KitPhotoScanSheet";
 
 interface KitItem {
   id?: string;
@@ -58,6 +59,7 @@ export default function EditKitListPage() {
   const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
   const [tags, setTags] = useState<string>("");
   const [items, setItems] = useState<KitItem[]>([]);
+  const [isPhotoScanOpen, setIsPhotoScanOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !templateId) return;
@@ -173,6 +175,16 @@ export default function EditKitListPage() {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
     setItems(newItems);
+  };
+
+  const handlePhotoScanComplete = (scannedItems: KitItemToAdd[]) => {
+    // Add scanned items to the end of the list with proper order indices
+    const startIndex = items.length;
+    const newItems = scannedItems.map((item, idx) => ({
+      ...item,
+      orderIndex: startIndex + idx,
+    }));
+    setItems([...items, ...newItems]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -374,14 +386,27 @@ export default function EditKitListPage() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Items ({items.filter((i) => i.label.trim()).length})
               </h2>
-              <Button
-                type="button"
-                onClick={addItem}
-                className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
-                disabled={saving}
-              >
-                + Add Item
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => setIsPhotoScanOpen(true)}
+                  className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  disabled={saving}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  </svg>
+                  Scan Photo (AI)
+                </Button>
+                <Button
+                  type="button"
+                  onClick={addItem}
+                  className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+                  disabled={saving}
+                >
+                  + Add Item
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -557,6 +582,14 @@ export default function EditKitListPage() {
             </Button>
           </div>
         </form>
+
+        {/* Photo Scan Dialog */}
+        <KitPhotoScanSheet
+          listId={templateId}
+          isOpen={isPhotoScanOpen}
+          onClose={() => setIsPhotoScanOpen(false)}
+          onItemsSelected={handlePhotoScanComplete}
+        />
       </div>
     </div>
   );
