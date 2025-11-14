@@ -6,6 +6,9 @@ import { useAuth } from "@/lib/auth/AuthContext";
 export interface ScannedKitItem {
   name: string;
   description?: string;
+  year?: string;
+  makeModel?: string;
+  weightGrams?: number;
 }
 
 export interface KitItemToAdd {
@@ -188,13 +191,21 @@ export default function KitPhotoScanSheet({
         const item = scannedItems[index];
         if (!item) return null;
 
+        // Build description with available details
+        const descriptionParts: string[] = [];
+        if (item.description) descriptionParts.push(item.description);
+        if (item.makeModel) descriptionParts.push(`Make/Model: ${item.makeModel}`);
+        if (item.year) descriptionParts.push(`Year: ${item.year}`);
+
+        const notes = descriptionParts.join(" | ");
+
         return {
           id: crypto.randomUUID(),
           label: item.name,
-          notes: item.description || "",
+          notes,
           quantity: 1,
           category: "",
-          weightGrams: "",
+          weightGrams: item.weightGrams ? String(item.weightGrams) : "",
           cost: "",
           url: "",
           perPerson: false,
@@ -311,6 +322,19 @@ export default function KitPhotoScanSheet({
                         {item.description && (
                           <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
                             {item.description}
+                          </div>
+                        )}
+                        {(item.makeModel || item.year || item.weightGrams) && (
+                          <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-1 space-y-0.5">
+                            {item.makeModel && (
+                              <div>Make/Model: {item.makeModel}</div>
+                            )}
+                            {item.year && (
+                              <div>Year: {item.year}</div>
+                            )}
+                            {item.weightGrams && (
+                              <div>Weight: {item.weightGrams}g</div>
+                            )}
                           </div>
                         )}
                       </div>
