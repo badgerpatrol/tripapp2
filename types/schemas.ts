@@ -750,7 +750,8 @@ export const BrowsePublicTemplatesQuerySchema = z.object({
 });
 
 export const ListTripInstancesQuerySchema = z.object({
-  type: ListTypeSchema.optional()
+  type: ListTypeSchema.optional(),
+  completionStatus: z.enum(["all", "open", "done"]).optional()
 });
 
 // ============================================================================

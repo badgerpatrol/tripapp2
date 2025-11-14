@@ -27,6 +27,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const queryValidation = ListTripInstancesQuerySchema.safeParse({
       type: searchParams.get("type") ?? undefined,
+      completionStatus: searchParams.get("completionStatus") ?? undefined,
     });
 
     if (!queryValidation.success) {

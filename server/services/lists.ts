@@ -674,6 +674,30 @@ export async function listTripInstances(
     orderBy: { createdAt: "desc" },
   });
 
+  // Filter by completion status if specified
+  if (query.completionStatus && query.completionStatus !== "all") {
+    return instances.filter((instance) => {
+      const items = instance.type === "TODO" ? instance.todoItems : instance.kitItems;
+
+      // If no items, consider it as "done"
+      if (items.length === 0) {
+        return query.completionStatus === "done";
+      }
+
+      // Check if all items are completed
+      const allCompleted = instance.type === "TODO"
+        ? instance.todoItems.every((item) => item.isDone)
+        : instance.kitItems.every((item) => item.isPacked);
+
+      // Return based on filter
+      if (query.completionStatus === "done") {
+        return allCompleted;
+      } else { // "open"
+        return !allCompleted;
+      }
+    });
+  }
+
   return instances;
 }
 
