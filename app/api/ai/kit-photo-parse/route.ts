@@ -20,6 +20,9 @@ interface KitPhotoParseRequest {
 export interface ParsedKitItem {
   name: string;
   description?: string;
+  year?: string;
+  makeModel?: string;
+  weightGrams?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -74,20 +77,27 @@ Look at the image and identify ALL distinct items you can see. These could be AN
 Return ONLY a raw JSON array with no markdown formatting, code blocks, or explanations.
 
 Each item should have:
-- "name": A short, clear name for the item
+- "name": A short, clear name for the item (REQUIRED)
 - "description": (optional) Additional details about the item if relevant (brand, color, size, condition, etc.)
+- "year": (optional) Approximate year or era the item is from, if identifiable (e.g., "2020", "2015-2018", "1990s")
+- "makeModel": (optional) Manufacturer and model information if visible or identifiable (e.g., "The North Face Summit Series", "MSR PocketRocket 2", "Garmin Fenix 6")
+- "weightGrams": (optional) Estimated weight in grams if you can reasonably estimate it based on the item type and size
 
 Example format:
 [
-  {"name":"Hiking boots","description":"Brown leather, ankle height"},
-  {"name":"Water bottle"},
-  {"name":"Backpack","description":"Blue, 40L capacity"},
+  {"name":"Hiking boots","description":"Brown leather, ankle height","year":"2018","makeModel":"Salomon Quest 4D GTX","weightGrams":1200},
+  {"name":"Water bottle","weightGrams":150},
+  {"name":"Backpack","description":"Blue, 40L capacity","makeModel":"Osprey Atmos AG 50","weightGrams":2100},
+  {"name":"Headlamp","makeModel":"Petzl Actik Core","weightGrams":75},
   {"name":"First aid kit"}
 ]
 
 Important:
 - Be specific but concise with item names
-- Only include description if it adds useful context
+- Only include optional fields (year, makeModel, weightGrams) if you can identify them with reasonable confidence
+- For year: provide your best estimate based on design, style, or visible markings
+- For makeModel: look for brand logos, model names, or distinctive features
+- For weightGrams: use your knowledge of typical item weights (only if you're confident)
 - List each distinct item you can identify
 - Don't group items together - list them separately
 - Return valid JSON only, no other text`;
