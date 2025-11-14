@@ -272,7 +272,7 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
       </Field>
 
       {/* Date Range */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0 overflow-hidden">
         <Field label="Start Date" htmlFor="startDate">
           <Input
             id="startDate"

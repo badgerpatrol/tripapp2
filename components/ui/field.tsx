@@ -17,7 +17,7 @@ export function Field({
   error?: string;
 }) {
   return (
-    <div className="mb-4">
+    <div className="mb-4 min-w-0">
       <label
         htmlFor={htmlFor}
         className="block mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300"
