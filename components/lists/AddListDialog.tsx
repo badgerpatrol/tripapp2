@@ -43,6 +43,8 @@ export function AddListDialog({
   const [mergeMode, setMergeMode] = useState<MergeMode>("NEW_INSTANCE");
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [loadingMyTemplates, setLoadingMyTemplates] = useState(true);
+  const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,6 +81,7 @@ export function AddListDialog({
     if (!user) return;
 
     setLoadingTemplates(true);
+    setLoadingMyTemplates(true);
     setError(null);
 
     try {
@@ -100,11 +103,13 @@ export function AddListDialog({
       setError(err instanceof Error ? err.message : "Failed to load templates");
     } finally {
       setLoadingTemplates(false);
+      setLoadingMyTemplates(false);
     }
   };
 
   const fetchPublicTemplates = async () => {
     setLoadingTemplates(true);
+    setLoadingPublicTemplates(true);
     setError(null);
 
     try {
@@ -125,6 +130,7 @@ export function AddListDialog({
       setError(err instanceof Error ? err.message : "Failed to load templates");
     } finally {
       setLoadingTemplates(false);
+      setLoadingPublicTemplates(false);
     }
   };
 
@@ -264,7 +270,14 @@ export function AddListDialog({
                 : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             }`}
           >
-            My Templates ({myTemplates.length})
+            <span className="flex items-center gap-2">
+              My Templates
+              {loadingMyTemplates ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
+              ) : (
+                <span>({myTemplates.length})</span>
+              )}
+            </span>
           </button>
           <button
             onClick={() => {
@@ -277,7 +290,14 @@ export function AddListDialog({
                 : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             }`}
           >
-            Public Gallery ({publicTemplates.length})
+            <span className="flex items-center gap-2">
+              Public Gallery
+              {loadingPublicTemplates ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
+              ) : (
+                <span>({publicTemplates.length})</span>
+              )}
+            </span>
           </button>
         </div>
 
