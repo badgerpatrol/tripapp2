@@ -132,11 +132,11 @@ export default function CreateTodoListPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function CreateTodoListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
       <Header />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -193,7 +193,7 @@ export default function CreateTodoListPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Pre-Trip Planning Tasks"
-                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   disabled={loading}
                   required
                 />
@@ -208,7 +208,7 @@ export default function CreateTodoListPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief description of this TODO list"
                   rows={3}
-                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   disabled={loading}
                 />
               </div>
@@ -221,7 +221,7 @@ export default function CreateTodoListPage() {
                   <select
                     value={visibility}
                     onChange={(e) => setVisibility(e.target.value as Visibility)}
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     disabled={loading}
                   >
                     <option value="PRIVATE">Private (only you)</option>
@@ -238,7 +238,7 @@ export default function CreateTodoListPage() {
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
                     placeholder="e.g., planning, essentials"
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                     disabled={loading}
                   />
                 </div>
@@ -255,7 +255,7 @@ export default function CreateTodoListPage() {
               <Button
                 type="button"
                 onClick={addItem}
-                className="text-sm px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={loading}
               >
                 + Add Task
@@ -266,7 +266,7 @@ export default function CreateTodoListPage() {
               {items.map((item, index) => (
                 <div
                   key={item.id}
-                  className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                  className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
                 >
                   {/* Task Header */}
                   <div className="flex items-start gap-3 mb-3">
@@ -304,7 +304,7 @@ export default function CreateTodoListPage() {
                         value={item.label}
                         onChange={(e) => updateItem(item.id, "label", e.target.value)}
                         placeholder="Task description"
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         disabled={loading}
                       />
 
@@ -313,7 +313,7 @@ export default function CreateTodoListPage() {
                         onChange={(e) => updateItem(item.id, "notes", e.target.value)}
                         placeholder="Optional notes or details"
                         rows={2}
-                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                         disabled={loading}
                       />
 
@@ -331,7 +331,7 @@ export default function CreateTodoListPage() {
                               e.target.value || null
                             )
                           }
-                          className="w-full px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                           disabled={loading}
                         >
                           <option value="">None</option>
@@ -380,7 +380,7 @@ export default function CreateTodoListPage() {
             </Button>
             <Button
               type="submit"
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
               disabled={loading}
             >
               {loading ? "Creating..." : "Create TODO List"}
