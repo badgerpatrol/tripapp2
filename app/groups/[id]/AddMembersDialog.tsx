@@ -47,6 +47,7 @@ export default function AddMembersDialog({
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [hasDeletedMembers, setHasDeletedMembers] = useState(false);
 
   // Fetch members and available users when dialog opens
   useEffect(() => {
@@ -167,7 +168,14 @@ export default function AddMembersDialog({
     setError(null);
     setSuccessMessage(null);
 
+    // If no users selected to add
     if (selectedUserIds.length === 0) {
+      // If members were deleted, just close the dialog (changes already saved)
+      if (hasDeletedMembers) {
+        onClose();
+        return;
+      }
+      // Otherwise, show error
       setError("Please select at least one user to add");
       return;
     }
@@ -286,6 +294,9 @@ export default function AddMembersDialog({
       // Remove member from local state
       setCurrentMembers(prev => prev.filter(m => m.user.id !== userId));
 
+      // Track that a member was deleted
+      setHasDeletedMembers(true);
+
       // Refresh the available users list to show the removed user
       await fetchAvailableUsers();
     } catch (err) {
@@ -314,6 +325,7 @@ export default function AddMembersDialog({
         setError(null);
         setSuccessMessage(null);
         setRemovingUserId(null);
+        setHasDeletedMembers(false);
       }, 300);
     }
   };
@@ -577,7 +589,7 @@ export default function AddMembersDialog({
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                disabled={isSubmitting || selectedUserIds.length === 0}
+                disabled={isSubmitting || (selectedUserIds.length === 0 && !hasDeletedMembers)}
                 className="tap-target w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Saving..." : "Save"}
