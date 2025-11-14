@@ -2226,6 +2226,15 @@ export default function TripDetailPage() {
                           <button
                             onClick={() => {
                               setSelectedChoiceId(choice.id);
+                              setIsChoiceDetailDialogOpen(true);
+                            }}
+                            className="tap-target px-4 py-1.5 rounded-lg bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-semibold transition-colors text-xs sm:text-sm whitespace-nowrap"
+                          >
+                            Choose
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedChoiceId(choice.id);
                               setIsChoiceReportsDialogOpen(true);
                             }}
                             className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
