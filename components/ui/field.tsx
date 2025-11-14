@@ -40,7 +40,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={clsx(
-        "tap-target w-full h-10 px-4 py-3 rounded-lg",
+        "tap-target w-full max-w-full min-w-0 h-10 px-4 py-3 rounded-lg box-border",
         "bg-white dark:bg-zinc-800",
         "border border-zinc-300 dark:border-zinc-700",
         "text-zinc-900 dark:text-zinc-100",
