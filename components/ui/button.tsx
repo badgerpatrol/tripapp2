@@ -13,16 +13,16 @@ const buttonStyles = cva(
           "dark:bg-blue-600 dark:hover:bg-blue-700 dark:active:bg-blue-800"
         ),
         secondary: clsx(
-          "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300",
-          "border-zinc-200 dark:border-zinc-700",
+          "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100",
+          "border-zinc-400 dark:border-zinc-600",
           "hover:bg-zinc-200 dark:hover:bg-zinc-700",
           "active:bg-zinc-300 dark:active:bg-zinc-600"
         ),
         outline: clsx(
-          "bg-transparent text-zinc-700 dark:text-zinc-300",
-          "border-zinc-300 dark:border-zinc-700",
+          "bg-transparent text-zinc-900 dark:text-zinc-100",
+          "border-zinc-400 dark:border-zinc-600",
           "hover:bg-zinc-100 dark:hover:bg-zinc-800",
-          "hover:border-zinc-400 dark:hover:border-zinc-600"
+          "hover:border-zinc-500 dark:hover:border-zinc-500"
         ),
         ghost: clsx(
           "bg-transparent text-zinc-600 dark:text-zinc-400 border-transparent",

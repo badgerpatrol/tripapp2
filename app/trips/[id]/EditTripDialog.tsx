@@ -358,7 +358,7 @@ export default function EditTripDialog({
                         type="button"
                         onClick={() => setShowDeleteConfirm(false)}
                         disabled={isDeleting}
-                        className="tap-target px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="tap-target px-4 py-2 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 text-sm font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
@@ -383,7 +383,7 @@ export default function EditTripDialog({
                   type="button"
                   onClick={onClose}
                   disabled={isSubmitting || isDeleting}
-                  className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>

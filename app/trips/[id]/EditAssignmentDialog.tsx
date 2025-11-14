@@ -216,7 +216,7 @@ export default function EditAssignmentDialog({
                 <button
                   onClick={() => setShowRemoveConfirm(false)}
                   disabled={isRemoving}
-                  className="flex-1 px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                  className="flex-1 px-3 py-2 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -356,7 +356,7 @@ export default function EditAssignmentDialog({
                       type="button"
                       onClick={handleClose}
                       disabled={isSubmitting}
-                      className="tap-target flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
+                      className="tap-target flex-1 px-4 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50"
                     >
                       Cancel
                     </button>

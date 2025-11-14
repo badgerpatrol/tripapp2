@@ -603,7 +603,7 @@ function ItemForm({ spend, item, isOpen, onClose, onSaved }: ItemFormProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 tap-target px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+              className="flex-1 tap-target px-4 py-3 rounded-lg border border-zinc-400 dark:border-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
             >
               Cancel
             </button>

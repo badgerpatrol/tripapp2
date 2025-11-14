@@ -189,7 +189,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
       size="lg"
       footer={
         <>
-          <Button onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200" disabled={loading}>
+          <Button onClick={onClose} className="bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100" disabled={loading}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={loading}>
