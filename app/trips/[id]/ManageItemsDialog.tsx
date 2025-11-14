@@ -219,6 +219,7 @@ export default function ManageItemsDialog({
                     Add Item Manually
                   </button>
                 </div>
+                {/* Scan privately on device button - hidden but code kept in place
                 <button
                   type="button"
                   onClick={() => {
@@ -232,6 +233,7 @@ export default function ManageItemsDialog({
                   </svg>
                   Use offline scanner (private, runs on device)
                 </button>
+                */}
               </>
             )}
             <button
