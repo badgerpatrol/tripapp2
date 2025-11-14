@@ -28,6 +28,8 @@ interface KitItem {
   required: boolean;
   weightGrams: number | null;
   category: string | null;
+  cost: number | null;
+  url: string | null;
   orderIndex: number;
 }
 
@@ -48,7 +50,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
     { label: "", notes: "", actionType: null, actionData: null, orderIndex: 0 },
   ]);
   const [kitItems, setKitItems] = useState<KitItem[]>([
-    { label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, orderIndex: 0 },
+    { label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: 0 },
   ]);
 
   const handleSubmit = async () => {
@@ -103,6 +105,8 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
           required: (item as KitItem).required ?? true,
           weightGrams: (item as KitItem).weightGrams || undefined,
           category: (item as KitItem).category?.trim() || undefined,
+          cost: (item as KitItem).cost || undefined,
+          url: (item as KitItem).url?.trim() || undefined,
           orderIndex: idx,
         }));
       }
@@ -139,7 +143,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
     setVisibility("PRIVATE");
     setTags("");
     setTodoItems([{ label: "", notes: "", actionType: null, actionData: null, orderIndex: 0 }]);
-    setKitItems([{ label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, orderIndex: 0 }]);
+    setKitItems([{ label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: 0 }]);
     setError(null);
   };
 
@@ -165,7 +169,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
   const addKitItem = () => {
     setKitItems([
       ...kitItems,
-      { label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, orderIndex: kitItems.length },
+      { label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: kitItems.length },
     ]);
   };
 
@@ -329,7 +333,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
                         type="text"
                         value={item.label}
                         onChange={(e) => updateKitItem(index, "label", e.target.value)}
-                        placeholder="Item label"
+                        placeholder="Item name"
                         className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         disabled={loading}
                       />
@@ -343,13 +347,22 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
                         </button>
                       )}
                     </div>
+                    <textarea
+                      value={item.notes}
+                      onChange={(e) => updateKitItem(index, "notes", e.target.value)}
+                      placeholder="Description (optional)"
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                      disabled={loading}
+                    />
                     <div className="grid grid-cols-2 gap-2">
                       <input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => updateKitItem(index, "quantity", parseInt(e.target.value) || 1)}
-                        placeholder="Qty"
-                        min="1"
+                        onChange={(e) => updateKitItem(index, "quantity", parseFloat(e.target.value) || 1)}
+                        placeholder="Quantity"
+                        min="0"
+                        step="0.1"
                         className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         disabled={loading}
                       />
@@ -357,7 +370,36 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
                         type="text"
                         value={item.category || ""}
                         onChange={(e) => updateKitItem(index, "category", e.target.value)}
-                        placeholder="Category"
+                        placeholder="Category (optional)"
+                        className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        value={item.weightGrams || ""}
+                        onChange={(e) => updateKitItem(index, "weightGrams", e.target.value ? parseInt(e.target.value) : null)}
+                        placeholder="Weight (g)"
+                        min="0"
+                        className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        disabled={loading}
+                      />
+                      <input
+                        type="number"
+                        value={item.cost || ""}
+                        onChange={(e) => updateKitItem(index, "cost", e.target.value ? parseFloat(e.target.value) : null)}
+                        placeholder="Cost ($)"
+                        min="0"
+                        step="0.01"
+                        className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        disabled={loading}
+                      />
+                      <input
+                        type="url"
+                        value={item.url || ""}
+                        onChange={(e) => updateKitItem(index, "url", e.target.value)}
+                        placeholder="URL (optional)"
                         className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         disabled={loading}
                       />

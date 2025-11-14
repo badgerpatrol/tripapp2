@@ -87,6 +87,13 @@ export async function listMyTemplates(ownerId: string) {
     include: {
       todoItems: true,
       kitItems: true,
+      owner: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+        },
+      },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -122,6 +129,13 @@ export async function browsePublicTemplates(query: BrowsePublicTemplatesQuery) {
     include: {
       todoItems: true,
       kitItems: true,
+      owner: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+        },
+      },
     },
     orderBy: { publishedAt: "desc" },
   });
@@ -254,6 +268,8 @@ export async function updateTemplate(
             required: item.required ?? true,
             weightGrams: item.weightGrams,
             category: item.category,
+            cost: item.cost,
+            url: item.url,
             orderIndex: item.orderIndex ?? idx,
           })),
         });
@@ -375,6 +391,8 @@ export async function forkPublicTemplate(
         required: item.required,
         weightGrams: item.weightGrams,
         category: item.category,
+        cost: item.cost,
+        url: item.url,
         orderIndex: item.orderIndex,
       })),
     });

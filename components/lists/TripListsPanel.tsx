@@ -28,6 +28,8 @@ interface KitItem {
   required: boolean;
   weightGrams: number | null;
   category: string | null;
+  cost: number | null;
+  url: string | null;
   isPacked: boolean;
   packedBy: string | null;
   packedAt: string | null;
@@ -532,6 +534,25 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                                   {item.notes}
                                 </p>
                               )}
+                              <div className="flex flex-wrap gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                {item.weightGrams && (
+                                  <span>{item.weightGrams}g</span>
+                                )}
+                                {item.cost && (
+                                  <span>${Number(item.cost).toFixed(2)}</span>
+                                )}
+                                {item.url && (
+                                  <a
+                                    href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    link
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           </label>
                         ))}
