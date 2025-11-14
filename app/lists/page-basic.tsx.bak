@@ -327,7 +327,7 @@ export default function ListsPage() {
                         onClick={() => alert("Fork template - Coming soon!")}
                         className="flex-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
                       >
-                        Fork
+                        Copy
                       </Button>
                       <Button
                         onClick={() => alert("Copy to trip - Coming soon!")}

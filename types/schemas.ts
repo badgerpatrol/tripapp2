@@ -669,6 +669,8 @@ export const KitItemTemplateInput = z.object({
   required: z.boolean().default(true),
   weightGrams: z.number().int().positive().optional(),
   category: z.string().optional(),
+  cost: z.number().positive().optional(),
+  url: z.string().optional().or(z.literal("")),
   orderIndex: z.number().int().nonnegative().default(0)
 }).strict();
 

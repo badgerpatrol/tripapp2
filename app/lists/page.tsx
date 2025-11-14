@@ -18,6 +18,11 @@ interface ListTemplate {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  owner?: {
+    id: string;
+    displayName: string | null;
+    email: string;
+  };
   todoItems?: Array<{
     id: string;
     label: string;
@@ -178,7 +183,7 @@ export default function ListsPage() {
                 ✓ New TODO List
               </Button>
               <Button
-                onClick={() => alert("Kit list creation coming soon!")}
+                onClick={() => window.location.href = "/lists/create-kit"}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 🎒 New Kit List
@@ -316,6 +321,13 @@ export default function ListsPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
                     {template.description}
                   </p>
+                )}
+
+                {/* Creator */}
+                {template.owner && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    By {template.owner.displayName || template.owner.email.split('@')[0]}
+                  </div>
                 )}
 
                 {/* Stats */}

@@ -29,8 +29,12 @@ interface ListTemplate {
   kitItems?: Array<{
     id: string;
     label: string;
+    notes: string | null;
     quantity: number;
     category: string | null;
+    weightGrams: number | null;
+    cost: number | null;
+    url: string | null;
     orderIndex: number;
   }>;
 }
@@ -276,7 +280,12 @@ export default function ViewListPage() {
             {isOwner && (
               <>
                 <Button
-                  onClick={() => router.push(`/lists/edit/${template.id}`)}
+                  onClick={() => {
+                    const editPath = template.type === "KIT"
+                      ? `/lists/edit-kit/${template.id}`
+                      : `/lists/edit/${template.id}`;
+                    router.push(editPath);
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   Edit
@@ -294,7 +303,7 @@ export default function ViewListPage() {
                 onClick={() => setForkDialog({ isOpen: true, template })}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Fork
+                Copy
               </Button>
             )}
             <Button
@@ -365,10 +374,31 @@ export default function ViewListPage() {
                             × {item.quantity}
                           </span>
                         </div>
-                        {item.category && (
+                        {item.notes && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            Category: {item.category}
+                            {item.notes}
                           </p>
+                        )}
+                        <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          {item.category && (
+                            <span>Category: {item.category}</span>
+                          )}
+                          {item.weightGrams && (
+                            <span>Weight: {item.weightGrams}g</span>
+                          )}
+                          {item.cost && (
+                            <span>Cost: ${Number(item.cost).toFixed(2)}</span>
+                          )}
+                        </div>
+                        {item.url && (
+                          <a
+                            href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block"
+                          >
+                            {item.url}
+                          </a>
                         )}
                       </div>
                     </div>

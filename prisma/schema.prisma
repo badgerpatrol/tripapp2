@@ -236,6 +236,7 @@ model User {
 
   groupsOwned        Group[]           @relation("GroupOwner")
   groupMemberships   GroupMember[]
+  listTemplatesCreated ListTemplate[]
 
   @@index([email])
   @@map("users")
@@ -794,7 +795,8 @@ model ListTemplate {
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
-  // Per-type item relations
+  // Relations
+  owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   todoItems TodoItemTemplate[]
   kitItems  KitItemTemplate[]
 
@@ -862,16 +864,18 @@ model TodoItemInstance {
 
 /********** KIT type items **********/
 model KitItemTemplate {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   templateId  String
   label       String
   notes       String?
-  quantity    Float   @default(1) // can be fractional
-  perPerson   Boolean @default(false)
-  required    Boolean @default(true)
+  quantity    Float    @default(1) // can be fractional
+  perPerson   Boolean  @default(false)
+  required    Boolean  @default(true)
   weightGrams Int?
   category    String?
-  orderIndex  Int     @default(0)
+  cost        Decimal? @db.Decimal(10, 2)
+  url         String?
+  orderIndex  Int      @default(0)
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -889,6 +893,8 @@ model KitItemInstance {
   required    Boolean   @default(true)
   weightGrams Int?
   category    String?
+  cost        Decimal?  @db.Decimal(10, 2)
+  url         String?
   isPacked    Boolean   @default(false)
   packedBy    String?
   packedAt    DateTime?
