@@ -29,9 +29,14 @@ async function createDefaultTimelineItems(
   });
 
   // Calculate dates based on trip dates if provided
-  const rsvpDeadline = startDate
-    ? new Date(startDate.getTime() - 14 * 24 * 60 * 60 * 1000) // 2 weeks before start
-    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+  // RSVP deadline: 1 week before start if still in future, otherwise start date
+  let rsvpDeadline: Date;
+  if (startDate) {
+    const oneWeekBefore = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    rsvpDeadline = oneWeekBefore > now ? oneWeekBefore : startDate;
+  } else {
+    rsvpDeadline = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+  }
 
   const spendingWindowStart = startDate
     ? new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 1 week before start
@@ -182,9 +187,14 @@ async function updateDependentTimelineItems(
   const updates = [];
 
   // Calculate new dates
-  const rsvpDeadline = startDate
-    ? new Date(startDate.getTime() - 14 * 24 * 60 * 60 * 1000)
-    : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  // RSVP deadline: 1 week before start if still in future, otherwise start date
+  let rsvpDeadline: Date;
+  if (startDate) {
+    const oneWeekBefore = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+    rsvpDeadline = oneWeekBefore > now ? oneWeekBefore : startDate;
+  } else {
+    rsvpDeadline = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+  }
 
   const spendingWindowStart = startDate
     ? new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000)

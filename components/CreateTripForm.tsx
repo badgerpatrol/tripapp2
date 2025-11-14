@@ -58,6 +58,16 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
     loadTemplates();
   }, []);
 
+  // Auto-set end date to match start date when start date is selected
+  useEffect(() => {
+    if (startDate) {
+      // If endDate is empty or before startDate, set it to startDate
+      if (!endDate || endDate < startDate) {
+        setEndDate(startDate);
+      }
+    }
+  }, [startDate, endDate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
