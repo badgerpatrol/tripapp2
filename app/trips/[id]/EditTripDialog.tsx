@@ -263,8 +263,8 @@ export default function EditTripDialog({
             </div>
 
             {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-hidden">
-              <div className="min-w-0 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+              <div className="min-w-0">
                 <label
                   htmlFor="startDate"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
@@ -281,7 +281,7 @@ export default function EditTripDialog({
                 />
               </div>
 
-              <div className="min-w-0 overflow-hidden">
+              <div className="min-w-0">
                 <label
                   htmlFor="endDate"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
