@@ -150,6 +150,59 @@ describe("Trip Service", () => {
       const firstItem = timelineItems.find((item) => item.order === 0);
       expect(firstItem?.title).toBe("Trip Created");
     });
+
+    it("should set RSVP deadline to 1 week before start if that's in the future", async () => {
+      // Start date 30 days in the future
+      const startDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const tripData = {
+        name: "Future Trip",
+        startDate,
+      };
+
+      const trip = await createTrip(testUserId, tripData);
+
+      const rsvpItem = await prisma.timelineItem.findFirst({
+        where: {
+          tripId: trip.id,
+          title: "RSVP Deadline",
+        },
+      });
+
+      expect(rsvpItem).toBeDefined();
+      expect(rsvpItem?.date).toBeDefined();
+
+      // RSVP deadline should be 7 days before start
+      const expectedDeadline = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const actualDeadline = rsvpItem!.date!;
+
+      // Compare dates without milliseconds
+      expect(actualDeadline.getTime()).toBeCloseTo(expectedDeadline.getTime(), -3);
+    });
+
+    it("should set RSVP deadline to start date if 1 week before is in the past", async () => {
+      // Start date 3 days in the future (less than 1 week)
+      const startDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+      const tripData = {
+        name: "Soon Trip",
+        startDate,
+      };
+
+      const trip = await createTrip(testUserId, tripData);
+
+      const rsvpItem = await prisma.timelineItem.findFirst({
+        where: {
+          tripId: trip.id,
+          title: "RSVP Deadline",
+        },
+      });
+
+      expect(rsvpItem).toBeDefined();
+      expect(rsvpItem?.date).toBeDefined();
+
+      // RSVP deadline should be same as start date
+      const actualDeadline = rsvpItem!.date!;
+      expect(actualDeadline.getTime()).toBeCloseTo(startDate.getTime(), -3);
+    });
   });
 
   describe("getTripById", () => {
