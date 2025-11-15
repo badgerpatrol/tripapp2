@@ -14,8 +14,8 @@ export default function Navigation() {
   }
 
   const isHomePage = pathname === "/";
-  const isListsPage = pathname?.startsWith("/lists");
-  const isKitPage = pathname?.startsWith("/kit");
+  const isKitPage = pathname?.startsWith("/kit") || pathname === "/lists/create-kit";
+  const isListsPage = pathname?.startsWith("/lists") && pathname !== "/lists/create-kit";
   const isGroupsPage = pathname?.startsWith("/groups");
   const isUsersPage = pathname?.startsWith("/admin/users");
   const isAdmin = userProfile?.role === UserRole.ADMIN;
