@@ -182,12 +182,6 @@ export default function ListsPage() {
               >
                 ✓ New TODO List
               </Button>
-              <Button
-                onClick={() => window.location.href = "/lists/create-kit"}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                🎒 New Kit List
-              </Button>
             </div>
           </div>
         </div>
