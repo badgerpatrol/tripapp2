@@ -15,6 +15,7 @@ export default function Navigation() {
 
   const isHomePage = pathname === "/";
   const isListsPage = pathname?.startsWith("/lists");
+  const isKitPage = pathname?.startsWith("/kit");
   const isGroupsPage = pathname?.startsWith("/groups");
   const isUsersPage = pathname?.startsWith("/admin/users");
   const isAdmin = userProfile?.role === UserRole.ADMIN;
@@ -45,6 +46,18 @@ export default function Navigation() {
             }`}
           >
             Lists
+          </button>
+
+          {/* Kit Button */}
+          <button
+            onClick={() => router.push("/kit")}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+              isKitPage
+                ? "bg-blue-600 text-white"
+                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            }`}
+          >
+            Kit
           </button>
 
           {/* Groups Button - Only visible to admin users */}
