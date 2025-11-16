@@ -759,7 +759,7 @@ export default function AdminUsersPage() {
                   className="flex-1"
                   disabled={savingUser}
                 >
-                  {savingUser ? "Saving..." : "Save Changes"}
+                  {savingUser ? "Saving..." : "Save"}
                 </Button>
               </div>
             </form>

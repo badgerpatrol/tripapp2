@@ -344,7 +344,7 @@ export default function EditSpendDialog({
                 disabled={isSubmitting}
                 className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Saving Changes..." : "Save Changes"}
+                {isSubmitting ? "Saving Changes..." : "Save"}
               </button>
             </div>
           </form>

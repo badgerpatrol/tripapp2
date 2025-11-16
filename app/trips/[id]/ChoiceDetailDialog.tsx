@@ -400,7 +400,7 @@ export default function ChoiceDetailDialog({
                     disabled={saving}
                     className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
                   >
-                    {saving ? "Saving..." : "Save Selection"}
+                    {saving ? "Saving..." : "Save"}
                   </button>
                 )}
               </div>

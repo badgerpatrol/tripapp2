@@ -335,7 +335,7 @@ export function SpendListView({
       // User is the spender - show full Assign functionality
       if (onAssign && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
         items.push({
-          label: "Add People",
+          label: "People",
           onClick: () => onAssign(spendId),
         });
       }

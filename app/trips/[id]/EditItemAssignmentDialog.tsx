@@ -537,7 +537,7 @@ export default function EditItemAssignmentDialog({
                       disabled={isSubmitting || !canEdit || loading}
                       className="tap-target flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? "Updating..." : "Update Assignment"}
+                      {isSubmitting ? "Saving..." : "Save"}
                     </button>
                   </div>
 

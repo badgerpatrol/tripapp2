@@ -2508,7 +2508,7 @@ export default function TripDetailPage() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Add Milestone
+                      Save
                     </button>
                   ) : (
                     <div className="p-4 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 space-y-3">
@@ -2553,7 +2553,7 @@ export default function TripDetailPage() {
                           disabled={!newMilestoneTitle.trim()}
                           className="tap-target flex-1 px-4 py-2 text-sm rounded bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
                         >
-                          Add Milestone
+                          Save
                         </button>
                         <button
                           onClick={() => {

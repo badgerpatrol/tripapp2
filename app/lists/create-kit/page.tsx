@@ -463,7 +463,7 @@ export default function CreateKitListPage() {
               className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
               disabled={loading}
             >
-              {loading ? "Creating..." : "Create Kit List"}
+              {loading ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>

@@ -383,7 +383,7 @@ export default function CreateTodoListPage() {
               className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white"
               disabled={loading}
             >
-              {loading ? "Creating..." : "Create TODO List"}
+              {loading ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>
