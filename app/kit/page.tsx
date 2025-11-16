@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ interface ListTemplate {
 
 type Tab = "my-templates" | "public-gallery" | "inventory";
 
-export default function KitPage() {
+function KitPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -423,5 +423,22 @@ export default function KitPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function KitPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600 mx-auto"></div>
+            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <KitPageContent />
+    </Suspense>
   );
 }
