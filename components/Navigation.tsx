@@ -45,7 +45,7 @@ export default function Navigation() {
                 : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
-            Lists
+            Checklists
           </button>
 
           {/* Kit Button */}

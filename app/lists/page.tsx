@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
@@ -42,14 +42,16 @@ type Tab = "my-templates" | "public-gallery";
 
 export default function ListsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("my-templates");
+  const tabParam = searchParams.get("tab") as Tab | null;
+  const [activeTab, setActiveTab] = useState<Tab>(tabParam || "my-templates");
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
   const [publicTemplates, setPublicTemplates] = useState<ListTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
+  const typeFilter: ListType = "TODO"; // Only show TODO lists, exclude kit lists
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
@@ -113,7 +115,7 @@ export default function ListsPage() {
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set("query", searchQuery);
-      if (typeFilter !== "ALL") params.set("type", typeFilter);
+      params.set("type", typeFilter); // Always filter for TODO lists only
 
       const response = await fetch(`/api/lists/templates/public?${params}`);
 
@@ -142,9 +144,7 @@ export default function ListsPage() {
       : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
   };
 
-  const filteredMyTemplates = myTemplates.filter((t) =>
-    typeFilter === "ALL" ? true : t.type === typeFilter
-  );
+  const filteredMyTemplates = myTemplates.filter((t) => t.type === typeFilter);
 
   const templates = activeTab === "my-templates" ? filteredMyTemplates : publicTemplates;
 
@@ -172,7 +172,7 @@ export default function ListsPage() {
                 📋 Checklists
               </h1>
               <p className="text-zinc-600 dark:text-zinc-400">
-                Create reusable TODO and packing list templates
+                Create and manage reusable TODO checklist templates
               </p>
             </div>
           </div>
@@ -224,8 +224,8 @@ export default function ListsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          {activeTab === "public-gallery" && (
+        {activeTab === "public-gallery" && (
+          <div className="flex flex-wrap gap-4 mb-6">
             <input
               type="text"
               placeholder="Search templates..."
@@ -234,27 +234,17 @@ export default function ListsPage() {
               onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
               className="flex-1 min-w-[200px] px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
             />
-          )}
 
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-            className="px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
-          >
-            <option value="ALL">All Types</option>
-            <option value="TODO">TODO Lists</option>
-            <option value="KIT">Packing Lists</option>
-          </select>
-
-          {activeTab === "public-gallery" && searchQuery && (
-            <Button
-              onClick={fetchPublicTemplates}
-              className="bg-zinc-600 hover:bg-zinc-700 text-white"
-            >
-              Search
-            </Button>
-          )}
-        </div>
+            {searchQuery && (
+              <Button
+                onClick={fetchPublicTemplates}
+                className="bg-zinc-600 hover:bg-zinc-700 text-white"
+              >
+                Search
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -297,7 +287,12 @@ export default function ListsPage() {
             {templates.map((template) => (
               <div
                 key={template.id}
-                onClick={() => router.push(`/lists/${template.id}`)}
+                onClick={() => {
+                  const returnTo = activeTab === "public-gallery"
+                    ? "/lists?tab=public-gallery"
+                    : "/lists";
+                  router.push(`/lists/${template.id}?returnTo=${encodeURIComponent(returnTo)}`);
+                }}
                 className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
               >
                 {/* Header */}
