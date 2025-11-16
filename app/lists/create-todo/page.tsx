@@ -108,13 +108,13 @@ export default function CreateTodoListPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to create TODO list");
+        throw new Error(data.error || "Failed to create checklist");
       }
 
       // Redirect to lists page
       router.push("/lists");
     } catch (err: any) {
-      console.error("Error creating TODO list:", err);
+      console.error("Error creating checklist:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -152,11 +152,11 @@ export default function CreateTodoListPage() {
               </svg>
             </button>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-              Create TODO List
+              Create Checklist
             </h1>
           </div>
           <p className="text-zinc-600 dark:text-zinc-400 ml-14">
-            Build a reusable TODO list template for your trips
+            Build a reusable checklist for your trips
           </p>
         </div>
 
@@ -197,7 +197,7 @@ export default function CreateTodoListPage() {
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Brief description of this TODO list"
+                  placeholder="Brief description of this checklist"
                   rows={3}
                   className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   disabled={loading}
@@ -251,7 +251,7 @@ export default function CreateTodoListPage() {
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={loading}
               >
-                {loading ? "Creating..." : "Create TODO List"}
+                {loading ? "Creating..." : "Create checklist"}
               </Button>
             </div>
           </div>
