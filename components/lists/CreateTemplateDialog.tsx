@@ -276,17 +276,10 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
 
         {/* Items */}
         <div>
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
               {type === "TODO" ? "Tasks" : "Items"} *
             </h3>
-            <Button
-              onClick={type === "TODO" ? addTodoItem : addKitItem}
-              className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
-              disabled={loading}
-            >
-              + Add {type === "TODO" ? "Task" : "Item"}
-            </Button>
           </div>
 
           <div className="space-y-3">
@@ -323,6 +316,13 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
                     />
                   </div>
                 ))}
+                <Button
+                  onClick={addTodoItem}
+                  className="w-full text-sm px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+                  disabled={loading}
+                >
+                  + Add Task
+                </Button>
               </>
             ) : (
               <>
@@ -428,6 +428,13 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
                     </div>
                   </div>
                 ))}
+                <Button
+                  onClick={addKitItem}
+                  className="w-full text-sm px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+                  disabled={loading}
+                >
+                  + Add Item
+                </Button>
               </>
             )}
           </div>
