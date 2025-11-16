@@ -53,14 +53,15 @@ export default function AssignSpendDialog({
   const [error, setError] = useState<string | null>(null);
   const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
 
-  // Initialize with already assigned users
+  // Initialize with already assigned users, or select all users by default
   useEffect(() => {
     if (spend.assignments && spend.assignments.length > 0) {
       setSelectedUserIds(new Set(spend.assignments.map((a) => a.userId)));
     } else {
-      setSelectedUserIds(new Set());
+      // Default to all users selected
+      setSelectedUserIds(new Set(participants.map((p) => p.user.id)));
     }
-  }, [spend.id, spend.assignments]);
+  }, [spend.id, spend.assignments, participants]);
 
   // Set default filter based on trip RSVP status
   useEffect(() => {
@@ -95,6 +96,24 @@ export default function AssignSpendDialog({
       newSelected.add(userId);
     }
     setSelectedUserIds(newSelected);
+  };
+
+  const handleToggleAll = () => {
+    const filteredParticipants = getFilteredParticipants();
+    const filteredUserIds = filteredParticipants.map((p) => p.user.id);
+    const allSelected = filteredUserIds.every((id) => selectedUserIds.has(id));
+
+    if (allSelected) {
+      // Deselect all filtered users
+      const newSelected = new Set(selectedUserIds);
+      filteredUserIds.forEach((id) => newSelected.delete(id));
+      setSelectedUserIds(newSelected);
+    } else {
+      // Select all filtered users
+      const newSelected = new Set(selectedUserIds);
+      filteredUserIds.forEach((id) => newSelected.add(id));
+      setSelectedUserIds(newSelected);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -197,6 +216,19 @@ export default function AssignSpendDialog({
                 <option value="MAYBE">Maybe</option>
                 <option value="DECLINED">Declined</option>
               </select>
+            </div>
+
+            {/* Select/Deselect All Button */}
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={handleToggleAll}
+                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              >
+                {getFilteredParticipants().every((p) => selectedUserIds.has(p.user.id))
+                  ? "Deselect All"
+                  : "Select All"}
+              </button>
             </div>
 
             <div className="space-y-2">

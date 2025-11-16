@@ -164,16 +164,17 @@ export async function POST(
           });
           console.log(`[spend-status] Marked Spending Window Closes milestone as completed (MANUAL) for trip ${tripId}`);
         } else if (newStatus === SpendStatus.OPEN && spendMilestone.isCompleted) {
-          // Reopening spending - reset milestone to uncompleted
+          // Reopening spending - reset milestone to uncompleted with MANUAL trigger
+          // This prevents auto-close from triggering again even if deadline has passed
           await tx.timelineItem.update({
             where: { id: spendMilestone.id },
             data: {
               isCompleted: false,
               completedAt: null,
-              triggerType: null,
+              triggerType: MilestoneTriggerType.MANUAL,
             },
           });
-          console.log(`[spend-status] Reset Spending Window Closes milestone to uncompleted for trip ${tripId}`);
+          console.log(`[spend-status] Reset Spending Window Closes milestone to uncompleted (MANUAL) for trip ${tripId}`);
         }
       }
 
