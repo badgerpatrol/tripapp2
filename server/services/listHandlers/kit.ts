@@ -29,6 +29,13 @@ export const kitHandler: ListTypeHandler = {
         url: item.url,
         orderIndex: item.orderIndex,
         isPacked: false,
+        // Inventory fields
+        date: item.date,
+        needsRepair: item.needsRepair,
+        conditionNotes: item.conditionNotes,
+        lost: item.lost,
+        lastSeenText: item.lastSeenText,
+        lastSeenDate: item.lastSeenDate,
       })),
     });
   },
@@ -74,6 +81,13 @@ export const kitHandler: ListTypeHandler = {
             url: templateItem.url,
             orderIndex: templateItem.orderIndex,
             isPacked: false,
+            // Inventory fields
+            date: templateItem.date,
+            needsRepair: templateItem.needsRepair,
+            conditionNotes: templateItem.conditionNotes,
+            lost: templateItem.lost,
+            lastSeenText: templateItem.lastSeenText,
+            lastSeenDate: templateItem.lastSeenDate,
           },
         });
         added++;
@@ -94,6 +108,13 @@ export const kitHandler: ListTypeHandler = {
               url: templateItem.url,
               orderIndex: templateItem.orderIndex,
               isPacked: false,
+              // Inventory fields
+              date: templateItem.date,
+              needsRepair: templateItem.needsRepair,
+              conditionNotes: templateItem.conditionNotes,
+              lost: templateItem.lost,
+              lastSeenText: templateItem.lastSeenText,
+              lastSeenDate: templateItem.lastSeenDate,
             },
           });
           added++;

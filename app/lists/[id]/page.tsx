@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
@@ -42,7 +42,9 @@ interface ListTemplate {
 export default function ViewListPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const templateId = params?.id as string;
+  const returnTo = searchParams.get("returnTo") || "/lists";
   const { user, loading: authLoading } = useAuth();
   const [template, setTemplate] = useState<ListTemplate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,10 +187,10 @@ export default function ViewListPage() {
             <p className="text-red-800 dark:text-red-200">{error || "Template not found"}</p>
           </div>
           <Button
-            onClick={() => router.push("/lists")}
+            onClick={() => router.push(returnTo)}
             className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800"
           >
-            Back to Lists
+            Back
           </Button>
         </div>
       </div>
@@ -222,13 +224,13 @@ export default function ViewListPage() {
         {/* Back Button */}
         <div className="mb-6">
           <button
-            onClick={() => router.push("/lists")}
+            onClick={() => router.push(returnTo)}
             className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Lists
+            Back
           </button>
         </div>
 
@@ -282,8 +284,8 @@ export default function ViewListPage() {
                 <Button
                   onClick={() => {
                     const editPath = template.type === "KIT"
-                      ? `/lists/edit-kit/${template.id}`
-                      : `/lists/edit/${template.id}`;
+                      ? `/lists/edit-kit/${template.id}?returnTo=${encodeURIComponent(returnTo)}`
+                      : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(returnTo)}`;
                     router.push(editPath);
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white"

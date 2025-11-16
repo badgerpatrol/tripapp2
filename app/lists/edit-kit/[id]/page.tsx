@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,13 @@ interface KitItem {
   perPerson: boolean;
   required: boolean;
   orderIndex: number;
+  // Inventory fields
+  date: string;
+  needsRepair: boolean;
+  conditionNotes: string;
+  lost: boolean;
+  lastSeenText: string;
+  lastSeenDate: string;
 }
 
 interface ListTemplate {
@@ -29,6 +36,7 @@ interface ListTemplate {
   visibility: Visibility;
   tags: string[];
   type: string;
+  inventory: boolean;
   kitItems?: Array<{
     id: string;
     label: string;
@@ -41,13 +49,21 @@ interface ListTemplate {
     perPerson: boolean;
     required: boolean;
     orderIndex: number;
+    date: string | null;
+    needsRepair: boolean;
+    conditionNotes: string | null;
+    lost: boolean;
+    lastSeenText: string | null;
+    lastSeenDate: string | null;
   }>;
 }
 
 export default function EditKitListPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const templateId = params?.id as string;
+  const returnTo = searchParams.get("returnTo") || `/lists/${templateId}`;
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,6 +74,7 @@ export default function EditKitListPage() {
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
   const [tags, setTags] = useState<string>("");
+  const [inventory, setInventory] = useState(false);
   const [items, setItems] = useState<KitItem[]>([]);
   const [isPhotoScanOpen, setIsPhotoScanOpen] = useState(false);
 
@@ -85,6 +102,7 @@ export default function EditKitListPage() {
         setDescription(template.description || "");
         setVisibility(template.visibility);
         setTags(template.tags.join(", "));
+        setInventory(template.inventory || false);
 
         // Populate items
         if (template.kitItems && template.kitItems.length > 0) {
@@ -101,6 +119,12 @@ export default function EditKitListPage() {
               perPerson: item.perPerson,
               required: item.required,
               orderIndex: item.orderIndex,
+              date: item.date || "",
+              needsRepair: item.needsRepair || false,
+              conditionNotes: item.conditionNotes || "",
+              lost: item.lost || false,
+              lastSeenText: item.lastSeenText || "",
+              lastSeenDate: item.lastSeenDate || "",
             }))
           );
         } else {
@@ -117,6 +141,12 @@ export default function EditKitListPage() {
               perPerson: false,
               required: true,
               orderIndex: 0,
+              date: "",
+              needsRepair: false,
+              conditionNotes: "",
+              lost: false,
+              lastSeenText: "",
+              lastSeenDate: "",
             },
           ]);
         }
@@ -147,6 +177,12 @@ export default function EditKitListPage() {
         perPerson: false,
         required: true,
         orderIndex: items.length,
+        date: "",
+        needsRepair: false,
+        conditionNotes: "",
+        lost: false,
+        lastSeenText: "",
+        lastSeenDate: "",
       },
     ]);
   };
@@ -178,11 +214,17 @@ export default function EditKitListPage() {
   };
 
   const handlePhotoScanComplete = (scannedItems: KitItemToAdd[]) => {
-    // Add scanned items to the end of the list with proper order indices
+    // Add scanned items to the end of the list with proper order indices and inventory fields
     const startIndex = items.length;
     const newItems = scannedItems.map((item, idx) => ({
       ...item,
       orderIndex: startIndex + idx,
+      date: "",
+      needsRepair: false,
+      conditionNotes: "",
+      lost: false,
+      lastSeenText: "",
+      lastSeenDate: "",
     }));
     setItems([...items, ...newItems]);
   };
@@ -220,6 +262,7 @@ export default function EditKitListPage() {
         description: description.trim() || undefined,
         visibility,
         tags: tagsArray.length > 0 ? tagsArray : undefined,
+        inventory,
         kitItems: validItems.map((item, idx) => ({
           id: item.id?.startsWith("kit-") ? undefined : item.id, // Keep DB IDs, remove temp IDs
           label: item.label.trim(),
@@ -232,6 +275,15 @@ export default function EditKitListPage() {
           perPerson: item.perPerson,
           required: item.required,
           orderIndex: idx,
+          // Include inventory fields only if inventory mode is enabled
+          ...(inventory && {
+            date: item.date ? new Date(item.date).toISOString() : undefined,
+            needsRepair: item.needsRepair,
+            conditionNotes: item.conditionNotes.trim() || undefined,
+            lost: item.lost,
+            lastSeenText: item.lastSeenText.trim() || undefined,
+            lastSeenDate: item.lastSeenDate ? new Date(item.lastSeenDate).toISOString() : undefined,
+          }),
         })),
       };
 
@@ -249,8 +301,8 @@ export default function EditKitListPage() {
         throw new Error(data.error || "Failed to update kit list");
       }
 
-      // Redirect to template detail page
-      router.push(`/lists/${templateId}`);
+      // Redirect back to where the user came from
+      router.push(returnTo);
     } catch (err: any) {
       console.error("Error updating kit list:", err);
       setError(err.message);
@@ -287,7 +339,7 @@ export default function EditKitListPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <button
-              onClick={() => router.push(`/lists/${templateId}`)}
+              onClick={() => router.push(returnTo)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,6 +429,22 @@ export default function EditKitListPage() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={inventory}
+                    onChange={(e) => setInventory(e.target.checked)}
+                    className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                  <span className="font-medium">Inventory Mode</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    (Track condition, repairs, and loss)
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -396,7 +464,7 @@ export default function EditKitListPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   </svg>
-                  Scan Photo (AI)
+                  Scan From Photo
                 </Button>
                 <Button
                   type="button"
@@ -542,6 +610,105 @@ export default function EditKitListPage() {
                           Required
                         </label>
                       </div>
+
+                      {/* Inventory-specific fields - only show when inventory mode is enabled */}
+                      {inventory && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Inventory Tracking
+                          </h4>
+
+                          {/* Date field */}
+                          <div>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                              Date
+                            </label>
+                            <input
+                              type="date"
+                              value={item.date}
+                              onChange={(e) => updateItem(item.id!, "date", e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                              disabled={saving}
+                            />
+                          </div>
+
+                          {/* Needs Repair checkbox */}
+                          <div>
+                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={item.needsRepair}
+                                onChange={(e) => updateItem(item.id!, "needsRepair", e.target.checked)}
+                                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
+                                disabled={saving}
+                              />
+                              Needs Repair
+                            </label>
+                          </div>
+
+                          {/* Condition Notes - only show when needsRepair is checked */}
+                          {item.needsRepair && (
+                            <div>
+                              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                Condition Notes
+                              </label>
+                              <textarea
+                                value={item.conditionNotes}
+                                onChange={(e) => updateItem(item.id!, "conditionNotes", e.target.value)}
+                                placeholder="Describe the repair needed..."
+                                rows={2}
+                                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                disabled={saving}
+                              />
+                            </div>
+                          )}
+
+                          {/* Lost checkbox */}
+                          <div>
+                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={item.lost}
+                                onChange={(e) => updateItem(item.id!, "lost", e.target.checked)}
+                                className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
+                                disabled={saving}
+                              />
+                              Lost
+                            </label>
+                          </div>
+
+                          {/* Last Seen fields - only show when lost is checked */}
+                          {item.lost && (
+                            <div className="space-y-3 pl-6 border-l-2 border-red-300 dark:border-red-700">
+                              <div>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                  Last Seen (Location/Description)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.lastSeenText}
+                                  onChange={(e) => updateItem(item.id!, "lastSeenText", e.target.value)}
+                                  placeholder="e.g., Left at campsite near lake"
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                  disabled={saving}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                  Last Seen Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={item.lastSeenDate}
+                                  onChange={(e) => updateItem(item.id!, "lastSeenDate", e.target.value)}
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                  disabled={saving}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Delete Button */}
@@ -567,7 +734,7 @@ export default function EditKitListPage() {
           <div className="flex gap-4 justify-end">
             <Button
               type="button"
-              onClick={() => router.push(`/lists/${templateId}`)}
+              onClick={() => router.push(returnTo)}
               className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
               disabled={saving}
             >

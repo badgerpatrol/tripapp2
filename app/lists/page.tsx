@@ -169,19 +169,11 @@ export default function ListsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">
-                📋 Lists
+                📋 Checklists
               </h1>
               <p className="text-zinc-600 dark:text-zinc-400">
                 Create reusable TODO and packing list templates
               </p>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => window.location.href = "/lists/create-todo"}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                ✓ New TODO List
-              </Button>
             </div>
           </div>
         </div>
@@ -217,7 +209,7 @@ export default function ListsPage() {
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
-            My Templates ({myTemplates.length})
+            My Checklists ({myTemplates.length})
           </button>
           <button
             onClick={() => setActiveTab("public-gallery")}
@@ -290,7 +282,18 @@ export default function ListsPage() {
         )}
 
         {!loading && templates.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <>
+            {activeTab === "my-templates" && (
+              <div className="mb-6 flex justify-end">
+                <Button
+                  onClick={() => window.location.href = "/lists/create-todo"}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  ✓ New Checklist
+                </Button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {templates.map((template) => (
               <div
                 key={template.id}
@@ -358,7 +361,8 @@ export default function ListsPage() {
                 )}
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
     </div>
