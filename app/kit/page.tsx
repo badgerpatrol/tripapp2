@@ -38,7 +38,7 @@ interface ListTemplate {
   }>;
 }
 
-type Tab = "my-templates" | "public-gallery";
+type Tab = "my-templates" | "public-gallery" | "inventory";
 
 export default function KitPage() {
   const router = useRouter();
@@ -142,7 +142,7 @@ export default function KitPage() {
     return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
   };
 
-  const templates = activeTab === "my-templates" ? myTemplates : publicTemplates;
+  const templates = activeTab === "my-templates" ? myTemplates : activeTab === "public-gallery" ? publicTemplates : [];
 
   if (authLoading || !user) {
     return (
@@ -213,7 +213,7 @@ export default function KitPage() {
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
-            My Templates ({myTemplates.length})
+            My Kit Lists ({myTemplates.length})
           </button>
           <button
             onClick={() => setActiveTab("public-gallery")}
@@ -224,6 +224,16 @@ export default function KitPage() {
             }`}
           >
             Public Gallery ({publicTemplates.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("inventory")}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+              activeTab === "inventory"
+                ? "border-zinc-600 text-zinc-900 dark:text-white"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+            }`}
+          >
+            Inventory
           </button>
         </div>
 
@@ -271,7 +281,9 @@ export default function KitPage() {
             <p className="text-zinc-500 dark:text-zinc-400 text-lg">
               {activeTab === "my-templates"
                 ? "No kit templates yet. Create your first one!"
-                : "No public kit templates found. Try adjusting your search."}
+                : activeTab === "public-gallery"
+                ? "No public kit templates found. Try adjusting your search."
+                : "Inventory feature coming soon!"}
             </p>
           </div>
         )}
