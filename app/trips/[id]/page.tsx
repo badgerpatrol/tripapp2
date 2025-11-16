@@ -1723,6 +1723,7 @@ export default function TripDetailPage() {
           <TripListsPanel
             key={listsRefreshKey}
             tripId={trip.id}
+            isOrganizer={canInvite}
             onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
             onOpenCreateChoice={(choiceName) => {
               setIsCreateChoiceDialogOpen(true);
@@ -2124,7 +2125,7 @@ export default function TripDetailPage() {
         })()}
 
         {/* Choices Section (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (
+        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || choices.length > 0) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
             {/* Header row with title and toggle */}
             <div className="flex items-start justify-between gap-3 mb-3">

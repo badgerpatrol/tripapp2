@@ -59,9 +59,10 @@ interface TripListsPanelProps {
   inWorkflowMode?: boolean;
   onOpenList?: (listId: string, listTitle: string) => void;
   selectedListId?: string; // ID of a specific list to show (hides others and container title)
+  isOrganizer?: boolean; // If false and no lists exist, component will not render
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -293,6 +294,11 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   // When showing a single list, hide the container wrapper
   const showContainer = !selectedListId;
 
+  // For non-organizers, don't render if there are no lists and loading is complete
+  if (!isOrganizer && !loading && lists.length === 0) {
+    return null;
+  }
+
   const content = (
     <>
       {/* Header - only show when displaying all lists */}
@@ -305,7 +311,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       )}
 
       {/* Action buttons row */}
-      {showContainer && !inWorkflowMode && (
+      {showContainer && !inWorkflowMode && isOrganizer && (
         <div className="flex items-center gap-2 flex-wrap mb-4">
           <button
             onClick={() => setIsAddListDialogOpen(true)}
@@ -437,7 +443,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                 </button>
 
                 {/* Delete Button */}
-                {!inWorkflowMode && (
+                {!inWorkflowMode && isOrganizer && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
