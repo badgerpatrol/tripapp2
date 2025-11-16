@@ -793,6 +793,7 @@ model ListTemplate {
   forkedFromTemplateId String?
   tags                 String[]   @default([])
   isTripTemplate       Boolean    @default(false)
+  inventory            Boolean    @default(false) // If true, shows in inventory section
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -805,6 +806,7 @@ model ListTemplate {
   @@index([visibility, type, title])
   @@index([forkedFromTemplateId])
   @@index([isTripTemplate])
+  @@index([inventory])
   @@map("list_templates")
 }
 
@@ -815,6 +817,7 @@ model ListInstance {
   sourceTemplateId String?
   title            String
   description      String?
+  inventory        Boolean  @default(false) // If true, shows in inventory section
   createdBy        String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -824,6 +827,7 @@ model ListInstance {
   kitItems  KitItemInstance[]
 
   @@index([tripId, type, title])
+  @@index([inventory])
   @@map("list_instances")
 }
 
@@ -877,6 +881,13 @@ model KitItemTemplate {
   cost        Decimal? @db.Decimal(10, 2)
   url         String?
   orderIndex  Int      @default(0)
+  // Inventory-specific fields
+  date             DateTime?
+  needsRepair      Boolean   @default(false)
+  conditionNotes   String?
+  lost             Boolean   @default(false)
+  lastSeenText     String?
+  lastSeenDate     DateTime?
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -900,6 +911,13 @@ model KitItemInstance {
   packedBy    String?
   packedAt    DateTime?
   orderIndex  Int       @default(0)
+  // Inventory-specific fields
+  date             DateTime?
+  needsRepair      Boolean   @default(false)
+  conditionNotes   String?
+  lost             Boolean   @default(false)
+  lastSeenText     String?
+  lastSeenDate     DateTime?
 
   list ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
 

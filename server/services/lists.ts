@@ -35,6 +35,7 @@ export async function createTemplate(
       visibility: payload.visibility ?? "PRIVATE",
       tags: payload.tags ?? [],
       isTripTemplate: payload.isTripTemplate ?? false,
+      inventory: payload.inventory ?? false,
     },
   });
 
@@ -62,7 +63,16 @@ export async function createTemplate(
         required: item.required ?? true,
         weightGrams: item.weightGrams,
         category: item.category,
+        cost: item.cost,
+        url: item.url,
         orderIndex: item.orderIndex ?? idx,
+        // Inventory fields
+        date: item.date,
+        needsRepair: item.needsRepair ?? false,
+        conditionNotes: item.conditionNotes,
+        lost: item.lost ?? false,
+        lastSeenText: item.lastSeenText,
+        lastSeenDate: item.lastSeenDate,
       })),
     });
   }
@@ -226,6 +236,7 @@ export async function updateTemplate(
         visibility: payload.visibility,
         tags: payload.tags,
         isTripTemplate: payload.isTripTemplate,
+        inventory: payload.inventory,
       },
     });
 
@@ -271,6 +282,13 @@ export async function updateTemplate(
             cost: item.cost,
             url: item.url,
             orderIndex: item.orderIndex ?? idx,
+            // Inventory fields
+            date: item.date,
+            needsRepair: item.needsRepair ?? false,
+            conditionNotes: item.conditionNotes,
+            lost: item.lost ?? false,
+            lastSeenText: item.lastSeenText,
+            lastSeenDate: item.lastSeenDate,
           })),
         });
       }
@@ -587,7 +605,7 @@ export async function createInstanceAdHoc(
   actorId: string,
   payload: CreateAdHocListInput
 ) {
-  const { tripId, type, title, description, todoItems, kitItems } = payload;
+  const { tripId, type, title, description, inventory, todoItems, kitItems } = payload;
 
   // Verify trip membership
   await requireTripMember(actorId, tripId);
@@ -598,6 +616,7 @@ export async function createInstanceAdHoc(
       type,
       title,
       description,
+      inventory: inventory ?? false,
       createdBy: actorId,
     },
   });
@@ -627,8 +646,17 @@ export async function createInstanceAdHoc(
         required: item.required ?? true,
         weightGrams: item.weightGrams,
         category: item.category,
+        cost: item.cost,
+        url: item.url,
         orderIndex: item.orderIndex ?? idx,
         isPacked: false,
+        // Inventory fields
+        date: item.date,
+        needsRepair: item.needsRepair ?? false,
+        conditionNotes: item.conditionNotes,
+        lost: item.lost ?? false,
+        lastSeenText: item.lastSeenText,
+        lastSeenDate: item.lastSeenDate,
       })),
     });
   }

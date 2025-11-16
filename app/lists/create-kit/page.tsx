@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -19,38 +19,39 @@ interface KitItem {
   url: string;
   perPerson: boolean;
   required: boolean;
+  // Inventory fields
+  date: string;
+  needsRepair: boolean;
+  conditionNotes: string;
+  lost: boolean;
+  lastSeenText: string;
+  lastSeenDate: string;
 }
 
 export default function CreateKitListPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPhotoScanOpen, setIsPhotoScanOpen] = useState(false);
+
+  // Check if inventory mode is set via query parameter
+  const inventoryParam = searchParams.get("inventory");
+  const inventoryFromUrl = inventoryParam === "true";
+  const nonInventoryFromUrl = inventoryParam === "false";
+  const hideInventoryCheckbox = inventoryFromUrl || nonInventoryFromUrl;
 
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
   const [tags, setTags] = useState<string>("");
-  const [items, setItems] = useState<KitItem[]>([
-    {
-      id: crypto.randomUUID(),
-      label: "",
-      notes: "",
-      quantity: 1,
-      category: "",
-      weightGrams: "",
-      cost: "",
-      url: "",
-      perPerson: false,
-      required: true,
-    },
-  ]);
+  const [inventory, setInventory] = useState(inventoryFromUrl);
+  const [items, setItems] = useState<KitItem[]>([]);
 
   const addItem = () => {
     setItems([
-      ...items,
       {
         id: crypto.randomUUID(),
         label: "",
@@ -62,14 +63,19 @@ export default function CreateKitListPage() {
         url: "",
         perPerson: false,
         required: true,
+        date: "",
+        needsRepair: false,
+        conditionNotes: "",
+        lost: false,
+        lastSeenText: "",
+        lastSeenDate: "",
       },
+      ...items,
     ]);
   };
 
   const removeItem = (id: string) => {
-    if (items.length > 1) {
-      setItems(items.filter((item) => item.id !== id));
-    }
+    setItems(items.filter((item) => item.id !== id));
   };
 
   const updateItem = (id: string, field: keyof KitItem, value: any) => {
@@ -93,8 +99,17 @@ export default function CreateKitListPage() {
   };
 
   const handlePhotoScanComplete = (scannedItems: KitItemToAdd[]) => {
-    // Add scanned items to the list
-    setItems([...items, ...scannedItems]);
+    // Add scanned items to the list with inventory fields
+    const itemsWithInventoryFields = scannedItems.map(item => ({
+      ...item,
+      date: "",
+      needsRepair: false,
+      conditionNotes: "",
+      lost: false,
+      lastSeenText: "",
+      lastSeenDate: "",
+    }));
+    setItems([...items, ...itemsWithInventoryFields]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,11 +125,6 @@ export default function CreateKitListPage() {
 
     const validItems = items.filter((item) => item.label.trim());
 
-    if (validItems.length === 0) {
-      setError("At least one item is required");
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -125,13 +135,8 @@ export default function CreateKitListPage() {
         .map((t) => t.trim())
         .filter(Boolean);
 
-      const payload = {
-        type: "KIT",
-        title: title.trim(),
-        description: description.trim() || undefined,
-        visibility,
-        tags: tagsArray.length > 0 ? tagsArray : undefined,
-        kitItems: validItems.map((item, idx) => ({
+      const kitItems = validItems.map((item, idx) => {
+        const baseItem = {
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
           quantity: item.quantity || 1,
@@ -142,8 +147,35 @@ export default function CreateKitListPage() {
           perPerson: item.perPerson,
           required: item.required,
           orderIndex: idx,
-        })),
+        };
+
+        // Only add inventory fields if inventory mode is enabled
+        if (inventory) {
+          return {
+            ...baseItem,
+            date: item.date && item.date.trim() ? new Date(item.date).toISOString() : undefined,
+            needsRepair: item.needsRepair || false,
+            conditionNotes: item.conditionNotes && item.conditionNotes.trim() ? item.conditionNotes.trim() : undefined,
+            lost: item.lost || false,
+            lastSeenText: item.lastSeenText && item.lastSeenText.trim() ? item.lastSeenText.trim() : undefined,
+            lastSeenDate: item.lastSeenDate && item.lastSeenDate.trim() ? new Date(item.lastSeenDate).toISOString() : undefined,
+          };
+        }
+
+        return baseItem;
+      });
+
+      const payload = {
+        type: "KIT",
+        title: title.trim(),
+        description: description.trim() || undefined,
+        visibility,
+        tags: tagsArray.length > 0 ? tagsArray : undefined,
+        inventory,
+        kitItems,
       };
+
+      console.log("Sending payload:", payload);
 
       const response = await fetch("/api/lists/templates", {
         method: "POST",
@@ -156,11 +188,16 @@ export default function CreateKitListPage() {
 
       if (!response.ok) {
         const data = await response.json();
+        console.error("API Error:", data);
         throw new Error(data.error || "Failed to create kit list");
       }
 
-      // Redirect to lists page
-      router.push("/lists");
+      // Redirect to kit page - inventory lists go to Inventory tab
+      if (inventory) {
+        router.push("/kit?section=inventory");
+      } else {
+        router.push("/kit");
+      }
     } catch (err: any) {
       console.error("Error creating kit list:", err);
       setError(err.message);
@@ -192,7 +229,7 @@ export default function CreateKitListPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <button
-              onClick={() => router.push("/lists")}
+              onClick={() => router.push("/kit")}
               className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,11 +237,13 @@ export default function CreateKitListPage() {
               </svg>
             </button>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-              Create Kit List
+              {inventoryFromUrl ? "Create Inventory List" : "Create Kit List"}
             </h1>
           </div>
           <p className="text-zinc-600 dark:text-zinc-400 ml-14">
-            Build a reusable packing list template for your trips
+            {inventoryFromUrl
+              ? "Track your gear condition, repairs, and losses"
+              : "Build a reusable packing list template for your trips"}
           </p>
         </div>
 
@@ -282,6 +321,43 @@ export default function CreateKitListPage() {
                   />
                 </div>
               </div>
+
+              {!hideInventoryCheckbox && (
+                <div>
+                  <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={inventory}
+                      onChange={(e) => setInventory(e.target.checked)}
+                      className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                      disabled={loading}
+                    />
+                    <span className="font-medium">Inventory Mode</span>
+                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                      (Track condition, repairs, and loss)
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-4 justify-end pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
+              <Button
+                type="button"
+                onClick={() => router.push("/kit")}
+                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
+                disabled={loading}
+              >
+                {loading ? "Creating..." : inventoryFromUrl ? "Create Inventory List" : "Create Kit List"}
+              </Button>
             </div>
           </div>
 
@@ -301,7 +377,7 @@ export default function CreateKitListPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   </svg>
-                  Scan Photo (AI)
+                  Scan From Photo
                 </Button>
                 <Button
                   type="button"
@@ -447,44 +523,122 @@ export default function CreateKitListPage() {
                           Required
                         </label>
                       </div>
+
+                      {/* Inventory-specific fields - only show when inventory mode is enabled */}
+                      {inventory && (
+                        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700 space-y-3">
+                          <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Inventory Tracking
+                          </h4>
+
+                          {/* Date field */}
+                          <div>
+                            <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                              Date
+                            </label>
+                            <input
+                              type="date"
+                              value={item.date}
+                              onChange={(e) => updateItem(item.id, "date", e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                              disabled={loading}
+                            />
+                          </div>
+
+                          {/* Needs Repair checkbox */}
+                          <div>
+                            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={item.needsRepair}
+                                onChange={(e) => updateItem(item.id, "needsRepair", e.target.checked)}
+                                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
+                                disabled={loading}
+                              />
+                              Needs Repair
+                            </label>
+                          </div>
+
+                          {/* Condition Notes - only show when needsRepair is checked */}
+                          {item.needsRepair && (
+                            <div>
+                              <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                                Condition Notes
+                              </label>
+                              <textarea
+                                value={item.conditionNotes}
+                                onChange={(e) => updateItem(item.id, "conditionNotes", e.target.value)}
+                                placeholder="Describe the repair needed..."
+                                rows={2}
+                                className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                disabled={loading}
+                              />
+                            </div>
+                          )}
+
+                          {/* Lost checkbox */}
+                          <div>
+                            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={item.lost}
+                                onChange={(e) => updateItem(item.id, "lost", e.target.checked)}
+                                className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
+                                disabled={loading}
+                              />
+                              Lost
+                            </label>
+                          </div>
+
+                          {/* Last Seen fields - only show when lost is checked */}
+                          {item.lost && (
+                            <div className="space-y-3 pl-6 border-l-2 border-red-300 dark:border-red-700">
+                              <div>
+                                <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                                  Last Seen (Location/Description)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.lastSeenText}
+                                  onChange={(e) => updateItem(item.id, "lastSeenText", e.target.value)}
+                                  placeholder="e.g., Left at campsite near lake"
+                                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                  disabled={loading}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                                  Last Seen Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={item.lastSeenDate}
+                                  onChange={(e) => updateItem(item.id, "lastSeenDate", e.target.value)}
+                                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                  disabled={loading}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Delete Button */}
-                    {items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                        disabled={loading}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                      disabled={loading}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-4 justify-end">
-            <Button
-              type="button"
-              onClick={() => router.push("/lists")}
-              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
-              disabled={loading}
-            >
-              {loading ? "Creating..." : "Create Kit List"}
-            </Button>
           </div>
         </form>
 

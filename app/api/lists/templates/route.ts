@@ -60,16 +60,20 @@ export async function POST(request: NextRequest) {
     await requireAuth(auth.uid);
 
     const body = await request.json();
+    console.log("Received body:", JSON.stringify(body, null, 2));
+
     const validation = ListTemplateCreate.safeParse(body);
 
     if (!validation.success) {
+      console.error("Validation error:", validation.error);
       const firstError = validation.error.issues[0];
       return NextResponse.json(
-        { error: firstError?.message || "Invalid template data" },
+        { error: firstError?.message || "Invalid template data", issues: validation.error.issues },
         { status: 400 }
       );
     }
 
+    console.log("Creating template with data:", validation.data);
     const template = await createTemplate(auth.uid, validation.data);
 
     return NextResponse.json(

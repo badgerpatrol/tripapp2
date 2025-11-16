@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
@@ -15,6 +15,7 @@ interface ListTemplate {
   listType: ListType;
   visibility: Visibility;
   tags: string[];
+  inventory: boolean;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -42,10 +43,20 @@ type Tab = "my-templates" | "public-gallery" | "inventory";
 
 export default function KitPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("my-templates");
+
+  // Initialize active tab from URL parameter if present
+  const sectionParam = searchParams.get("section");
+  const initialTab: Tab =
+    sectionParam === "inventory" ? "inventory" :
+    sectionParam === "public-gallery" ? "public-gallery" :
+    "my-templates";
+
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
   const [publicTemplates, setPublicTemplates] = useState<ListTemplate[]>([]);
+  const [inventoryTemplates, setInventoryTemplates] = useState<ListTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,9 +65,10 @@ export default function KitPage() {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch both on initial load to get accurate counts
+    // Fetch all on initial load to get accurate counts
     fetchMyTemplates();
     fetchPublicTemplates();
+    fetchInventoryTemplates();
   }, [user]);
 
   useEffect(() => {
@@ -64,8 +76,10 @@ export default function KitPage() {
 
     if (activeTab === "my-templates") {
       fetchMyTemplates();
-    } else {
+    } else if (activeTab === "public-gallery") {
       fetchPublicTemplates();
+    } else if (activeTab === "inventory") {
+      fetchInventoryTemplates();
     }
   }, [activeTab]);
 
@@ -96,11 +110,41 @@ export default function KitPage() {
       }
 
       const data = await response.json();
-      // Filter to only KIT type
-      const kitTemplates = (data.templates || []).filter((t: ListTemplate) => t.type === "KIT");
+      // Filter to only KIT type and not inventory
+      const kitTemplates = (data.templates || []).filter((t: ListTemplate) => t.type === "KIT" && !t.inventory);
       setMyTemplates(kitTemplates);
     } catch (err: any) {
       console.error("Error fetching my templates:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchInventoryTemplates = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/lists/templates", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch templates");
+      }
+
+      const data = await response.json();
+      // Filter to only KIT type and inventory mode
+      const inventoryKits = (data.templates || []).filter((t: ListTemplate) => t.type === "KIT" && t.inventory);
+      setInventoryTemplates(inventoryKits);
+    } catch (err: any) {
+      console.error("Error fetching inventory templates:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -142,7 +186,7 @@ export default function KitPage() {
     return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
   };
 
-  const templates = activeTab === "my-templates" ? myTemplates : activeTab === "public-gallery" ? publicTemplates : [];
+  const templates = activeTab === "my-templates" ? myTemplates : activeTab === "public-gallery" ? publicTemplates : activeTab === "inventory" ? inventoryTemplates : [];
 
   if (authLoading || !user) {
     return (
@@ -170,14 +214,6 @@ export default function KitPage() {
               <p className="text-zinc-600 dark:text-zinc-400">
                 Create and manage reusable packing list templates
               </p>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => window.location.href = "/lists/create-kit"}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                🎒 New Kit List
-              </Button>
             </div>
           </div>
         </div>
@@ -233,7 +269,7 @@ export default function KitPage() {
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
-            Inventory
+            Inventory ({inventoryTemplates.length})
           </button>
         </div>
 
@@ -278,82 +314,112 @@ export default function KitPage() {
         {/* Templates Grid */}
         {!loading && templates.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-zinc-500 dark:text-zinc-400 text-lg">
+            <p className="text-zinc-500 dark:text-zinc-400 text-lg mb-4">
               {activeTab === "my-templates"
                 ? "No kit templates yet. Create your first one!"
                 : activeTab === "public-gallery"
                 ? "No public kit templates found. Try adjusting your search."
-                : "Inventory feature coming soon!"}
+                : "No inventory lists yet. Create your first inventory list!"}
             </p>
+            {activeTab === "inventory" && (
+              <Button
+                onClick={() => window.location.href = "/lists/create-kit?inventory=true"}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                📦 New Inventory List
+              </Button>
+            )}
           </div>
         )}
 
         {!loading && templates.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {templates.map((template) => (
-              <div
-                key={template.id}
-                onClick={() => router.push(`/lists/${template.id}`)}
-                className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{getTypeIcon(template.type)}</span>
-                    <h3 className="font-semibold text-zinc-900 dark:text-white">
-                      {template.title}
-                    </h3>
-                  </div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(template.type)}`}>
-                    {template.type}
-                  </span>
-                </div>
-
-                {/* Description */}
-                {template.description && (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">
-                    {template.description}
-                  </p>
-                )}
-
-                {/* Creator */}
-                {template.owner && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    By {template.owner.displayName || template.owner.email.split('@')[0]}
-                  </div>
-                )}
-
-                {/* Stats */}
-                <div className="flex gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                  <span>{template.kitItems?.length || 0} items</span>
-                  {template.visibility === "PUBLIC" && (
-                    <span className="flex items-center gap-1">
-                      <span>🌐</span> Public
+          <>
+            {activeTab === "my-templates" && (
+              <div className="mb-6 flex justify-end">
+                <Button
+                  onClick={() => window.location.href = "/lists/create-kit?inventory=false"}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  🎒 New Kit List
+                </Button>
+              </div>
+            )}
+            {activeTab === "inventory" && (
+              <div className="mb-6 flex justify-end">
+                <Button
+                  onClick={() => window.location.href = "/lists/create-kit?inventory=true"}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  📦 New Inventory List
+                </Button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() => router.push(`/lists/${template.id}?returnTo=/kit${activeTab !== 'my-templates' ? `?section=${activeTab}` : ''}`)}
+                  className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{getTypeIcon(template.type)}</span>
+                      <h3 className="font-semibold text-zinc-900 dark:text-white">
+                        {template.title}
+                      </h3>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(template.type)}`}>
+                      {template.type}
                     </span>
-                  )}
-                </div>
+                  </div>
 
-                {/* Tags */}
-                {template.tags && template.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {template.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                    {template.tags.length > 3 && (
-                      <span className="px-2 py-1 text-xs text-zinc-500">
-                        +{template.tags.length - 3}
+                  {/* Description */}
+                  {template.description && (
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">
+                      {template.description}
+                    </p>
+                  )}
+
+                  {/* Creator */}
+                  {template.owner && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      By {template.owner.displayName || template.owner.email.split('@')[0]}
+                    </div>
+                  )}
+
+                  {/* Stats */}
+                  <div className="flex gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                    <span>{template.kitItems?.length || 0} items</span>
+                    {template.visibility === "PUBLIC" && (
+                      <span className="flex items-center gap-1">
+                        <span>🌐</span> Public
                       </span>
                     )}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
+
+                  {/* Tags */}
+                  {template.tags && template.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {template.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                      {template.tags.length > 3 && (
+                        <span className="px-2 py-1 text-xs text-zinc-500">
+                          +{template.tags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

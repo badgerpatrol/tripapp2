@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,9 @@ interface ListTemplate {
 export default function EditListPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const templateId = params?.id as string;
+  const returnTo = searchParams.get("returnTo") || `/lists/${templateId}`;
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -223,7 +225,7 @@ export default function EditListPage() {
       }
 
       // Redirect to list view page
-      router.push(`/lists/${templateId}`);
+      router.push(returnTo);
     } catch (err: any) {
       console.error("Error updating TODO list:", err);
       setError(err.message);

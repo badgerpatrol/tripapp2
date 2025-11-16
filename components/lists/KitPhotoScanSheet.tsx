@@ -256,7 +256,7 @@ export default function KitPhotoScanSheet({
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                Scan Photo for Items
+                Scan From Photo
               </h2>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                 {scannedItems

@@ -26,21 +26,17 @@ export default function CreateTodoListPage() {
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
   const [tags, setTags] = useState<string>("");
-  const [items, setItems] = useState<TodoItem[]>([
-    { id: crypto.randomUUID(), label: "", notes: "", actionType: null, actionData: null },
-  ]);
+  const [items, setItems] = useState<TodoItem[]>([]);
 
   const addItem = () => {
     setItems([
-      ...items,
       { id: crypto.randomUUID(), label: "", notes: "", actionType: null, actionData: null },
+      ...items,
     ]);
   };
 
   const removeItem = (id: string) => {
-    if (items.length > 1) {
-      setItems(items.filter((item) => item.id !== id));
-    }
+    setItems(items.filter((item) => item.id !== id));
   };
 
   const updateItem = (id: string, field: keyof TodoItem, value: any) => {
@@ -75,11 +71,6 @@ export default function CreateTodoListPage() {
     }
 
     const validItems = items.filter((item) => item.label.trim());
-
-    if (validItems.length === 0) {
-      setError("At least one task is required");
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -244,6 +235,25 @@ export default function CreateTodoListPage() {
                 </div>
               </div>
             </div>
+
+            {/* Actions */}
+            <div className="flex gap-4 justify-end pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
+              <Button
+                type="button"
+                onClick={() => router.push("/lists")}
+                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Create TODO List"}
+              </Button>
+            </div>
           </div>
 
           {/* Tasks Card */}
@@ -350,41 +360,20 @@ export default function CreateTodoListPage() {
                     </div>
 
                     {/* Delete Button */}
-                    {items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                        disabled={loading}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                      disabled={loading}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-4 justify-end">
-            <Button
-              type="button"
-              onClick={() => router.push("/lists")}
-              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={loading}
-            >
-              {loading ? "Creating..." : "Create TODO List"}
-            </Button>
           </div>
         </form>
       </div>

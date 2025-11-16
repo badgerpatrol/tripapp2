@@ -671,7 +671,14 @@ export const KitItemTemplateInput = z.object({
   category: z.string().optional(),
   cost: z.number().positive().optional(),
   url: z.string().optional().or(z.literal("")),
-  orderIndex: z.number().int().nonnegative().default(0)
+  orderIndex: z.number().int().nonnegative().default(0),
+  // Inventory-specific fields
+  date: z.coerce.date().optional(),
+  needsRepair: z.boolean().default(false),
+  conditionNotes: z.string().optional(),
+  lost: z.boolean().default(false),
+  lastSeenText: z.string().optional(),
+  lastSeenDate: z.coerce.date().optional()
 }).strict();
 
 export const ListTemplateCreate = z.object({
@@ -681,6 +688,7 @@ export const ListTemplateCreate = z.object({
   visibility: VisibilitySchema.default("PRIVATE"),
   tags: z.array(z.string()).max(12).optional(),
   isTripTemplate: z.boolean().default(false),
+  inventory: z.boolean().default(false),
   // Discriminated items by type:
   todoItems: z.array(TodoItemTemplateInput).optional(),
   kitItems: z.array(KitItemTemplateInput).optional()
@@ -705,6 +713,7 @@ export const ListTemplateUpdate = z.object({
   visibility: VisibilitySchema.optional(),
   tags: z.array(z.string()).max(12).optional(),
   isTripTemplate: z.boolean().optional(),
+  inventory: z.boolean().optional(),
   // When updating items, we replace all items
   todoItems: z.array(TodoItemTemplateUpdateInput).optional(),
   kitItems: z.array(KitItemTemplateUpdateInput).optional()
@@ -731,6 +740,7 @@ export const CreateAdHocListSchema = z.object({
   type: ListTypeSchema,
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
+  inventory: z.boolean().default(false),
   todoItems: z.array(TodoItemTemplateInput).optional(),
   kitItems: z.array(KitItemTemplateInput).optional()
 })
