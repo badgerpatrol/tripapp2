@@ -271,7 +271,7 @@ export function AddListDialog({
             }`}
           >
             <span className="flex items-center gap-2">
-              My Templates
+              My Checklists
               {loadingMyTemplates ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
               ) : (
