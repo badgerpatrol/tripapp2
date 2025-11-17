@@ -429,22 +429,6 @@ function EditKitListPageContent() {
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={inventory}
-                    onChange={(e) => setInventory(e.target.checked)}
-                    className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
-                    disabled={saving}
-                  />
-                  <span className="font-medium">Inventory Mode</span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    (Track condition, repairs, and loss)
-                  </span>
-                </label>
-              </div>
             </div>
           </div>
 
