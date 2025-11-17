@@ -128,6 +128,13 @@ enum GroupMemberRole {
   MEMBER
 }
 
+enum LogSeverity {
+  DEBUG
+  INFO
+  WARNING
+  ERROR
+}
+
 enum EventType {
   USER_CREATED
   USER_UPDATED
@@ -958,4 +965,25 @@ model GroupMember {
   @@index([groupId])
   @@index([userId])
   @@map("group_members")
+}
+
+// ============================================================================
+// SYSTEM LOGS
+// ============================================================================
+
+model SystemLog {
+  id         String      @id @default(uuid())
+  datetime   DateTime    @default(now())
+  severity   LogSeverity
+  feature    String      // e.g., "auth", "spend", "trip", "list", etc.
+  eventName  String      // e.g., "user_login", "spend_created", etc.
+  eventText  String      @db.Text
+  metadata   Json?       // Optional additional structured data
+  createdAt  DateTime    @default(now())
+
+  @@index([datetime(sort: Desc)])
+  @@index([severity])
+  @@index([feature])
+  @@index([eventName])
+  @@map("system_logs")
 }

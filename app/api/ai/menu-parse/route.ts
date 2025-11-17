@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
 import { parseMenuImage } from "@/server/ai/menuParser";
 import { logEvent } from "@/server/eventLog";
-import { EventType } from "@/lib/generated/prisma";
+import { createSystemLog } from "@/server/systemLog";
+import { EventType, LogSeverity } from "@/lib/generated/prisma";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -141,6 +142,20 @@ export async function POST(request: NextRequest) {
         success: false,
       });
 
+      // Log error to system log
+      await createSystemLog(
+        LogSeverity.WARNING,
+        "menu-scan",
+        "menu_parse_failed",
+        `Menu parsing failed for trip ${tripId}: ${errorMessage}`,
+        {
+          tripId,
+          userId: auth.uid,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        }
+      );
+
       return NextResponse.json({ error: errorMessage }, { status: 422 });
     }
 
@@ -151,18 +166,43 @@ export async function POST(request: NextRequest) {
       success: true,
     });
 
-    // 10. Return parsed items
+    // 10. Create system log for admin visibility
+    await createSystemLog(
+      LogSeverity.INFO,
+      "menu-scan",
+      "menu_photo_scanned",
+      `Menu photo scanned for trip ${tripId} by user ${auth.uid}. Found ${result.items.length} items using currency ${result.currencyUsed}`,
+      {
+        tripId,
+        userId: auth.uid,
+        imageType: imageTypeMatch,
+        itemCount: result.items.length,
+        currency: result.currencyUsed,
+      }
+    );
+
+    // 11. Return parsed items
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("Menu parse endpoint error:", error);
-    return NextResponse.json(
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to process menu image";
+
+    // Log error to system log
+    await createSystemLog(
+      LogSeverity.ERROR,
+      "menu-scan",
+      "menu_scan_error",
+      `Failed to scan menu photo: ${message}`,
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to process menu image",
-      },
-      { status: 500 }
+        error: message,
+        stack: error instanceof Error ? error.stack : undefined,
+      }
     );
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

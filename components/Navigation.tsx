@@ -31,6 +31,7 @@ export default function Navigation() {
 
   const isGroupsPage = pathname?.startsWith("/groups");
   const isUsersPage = pathname?.startsWith("/admin/users");
+  const isLogsPage = pathname?.startsWith("/admin/logs");
   const isAdmin = userProfile?.role === UserRole.ADMIN;
 
   return (
@@ -98,6 +99,20 @@ export default function Navigation() {
               }`}
             >
               Users
+            </button>
+          )}
+
+          {/* Logs Button - Only visible to admin users */}
+          {isAdmin && (
+            <button
+              onClick={() => router.push("/admin/logs")}
+              className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                isLogsPage
+                  ? "bg-blue-600 text-white"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              }`}
+            >
+              Logs
             </button>
           )}
         </div>

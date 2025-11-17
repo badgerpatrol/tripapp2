@@ -183,8 +183,8 @@ export default function KitPhotoScanSheet({
     }
   };
 
-  const addSelectedItems = () => {
-    if (!scannedItems || selectedItems.size === 0) return;
+  const addSelectedItems = async () => {
+    if (!scannedItems || selectedItems.size === 0 || !user) return;
 
     const itemsToAdd: KitItemToAdd[] = Array.from(selectedItems)
       .map((index) => {
@@ -213,6 +213,32 @@ export default function KitPhotoScanSheet({
         };
       })
       .filter((item): item is KitItemToAdd => item !== null);
+
+    // Log the event
+    try {
+      const idToken = await user.getIdToken();
+      await fetch("/api/system-log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          severity: "INFO",
+          feature: "kit list scan",
+          eventName: "scan results",
+          eventText: `Photo scan completed: ${scannedItems.length} items detected, ${itemsToAdd.length} items added to kit list`,
+          metadata: {
+            listId,
+            totalDetected: scannedItems.length,
+            totalAdded: itemsToAdd.length,
+          },
+        }),
+      });
+    } catch (error) {
+      // Don't fail the operation if logging fails
+      console.error("Failed to log event:", error);
+    }
 
     onItemsSelected(itemsToAdd);
     handleClose();

@@ -7,7 +7,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
 import { logEvent } from "@/server/eventLog";
-import { EventType } from "@/lib/generated/prisma";
+import { createSystemLog } from "@/server/systemLog";
+import { EventType, LogSeverity } from "@/lib/generated/prisma";
 import Anthropic from "@anthropic-ai/sdk";
 
 export const maxDuration = 60; // Allow up to 60s for Claude API processing
@@ -174,7 +175,22 @@ Critical rules to prevent hallucination:
       }
     );
 
-    // 7. Return parsed items
+    // 7. Create system log for admin visibility
+    await createSystemLog(
+      LogSeverity.INFO,
+      "kit-scan",
+      "kit_photo_scanned",
+      `Kit photo scanned for list ${listId} by user ${auth.uid}. Found ${items.length} items${hint ? ` (hint: ${hint})` : ''}`,
+      {
+        listId,
+        userId: auth.uid,
+        imageType,
+        itemCount: items.length,
+        hint: hint || null,
+      }
+    );
+
+    // 8. Return parsed items
     return NextResponse.json({
       items,
     });
@@ -185,6 +201,18 @@ Critical rules to prevent hallucination:
       error instanceof Error
         ? error.message
         : "Failed to parse photo. Please try again.";
+
+    // Log error to system log
+    await createSystemLog(
+      LogSeverity.ERROR,
+      "kit-scan",
+      "kit_scan_error",
+      `Failed to scan kit photo: ${message}`,
+      {
+        error: message,
+        stack: error instanceof Error ? error.stack : undefined,
+      }
+    );
 
     return NextResponse.json({ error: message }, { status: 500 });
   }
