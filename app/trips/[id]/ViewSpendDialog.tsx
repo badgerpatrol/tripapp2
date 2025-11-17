@@ -292,39 +292,43 @@ export default function ViewSpendDialog({
 
           {/* Amount Summary */}
           <div className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-            
+
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
+              {spend.fxRate !== 1 && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Original Amount:
+                    </span>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {spend.currency} {spend.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Exchange Rate:
+                    </span>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        {spend.fxRate.toFixed(6)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+              <div className={`flex justify-between items-center ${spend.fxRate !== 1 ? 'pt-2 border-t border-green-200 dark:border-green-800' : ''}`}>
                 <span className="text-sm text-zinc-600 dark:text-zinc-400">
                   Amount:
                 </span>
                 <div className="text-right">
                   <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {spend.currency} {spend.amount.toFixed(2)}
+                    {spend.fxRate === 1 ? `${spend.currency} ${spend.amount.toFixed(2)}` : `${trip.baseCurrency} ${spend.normalizedAmount.toFixed(2)}`}
                   </span>
                 </div>
               </div>
-              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Exchange Rate:
-                </span>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {spend.fxRate.toFixed(6)}
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Converted Amount:
-                </span>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-              
+
             </div>
           </div>
 
