@@ -60,9 +60,10 @@ interface TripListsPanelProps {
   onOpenList?: (listId: string, listTitle: string) => void;
   selectedListId?: string; // ID of a specific list to show (hides others and container title)
   isOrganizer?: boolean; // If false and no lists exist, component will not render
+  hideContainer?: boolean; // If true, will not render the outer container wrapper (for use when wrapped externally)
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +75,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [isAddListDialogOpen, setIsAddListDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{listId: string; listTitle: string} | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true);
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -291,8 +293,11 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     ? lists.filter(list => list.id === selectedListId)
     : lists;
 
-  // When showing a single list, hide the container wrapper
-  const showContainer = !selectedListId;
+  // When showing a single list or hideContainer is true, hide the container wrapper
+  const showContainer = !selectedListId && !hideContainer;
+
+  // Only show filters when there are 2 or more lists
+  const shouldShowFilters = lists.length >= 2;
 
   // For non-organizers, don't render if there are no lists and loading is complete
   if (!isOrganizer && !loading && lists.length === 0) {
@@ -311,7 +316,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       )}
 
       {/* Action buttons row */}
-      {showContainer && !inWorkflowMode && isOrganizer && (
+      {!inWorkflowMode && isOrganizer && (
         <div className="flex items-center gap-2 flex-wrap mb-4">
           <button
             onClick={() => setIsAddListDialogOpen(true)}
@@ -326,39 +331,61 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         </div>
       )}
 
-      {/* Filter dropdowns */}
-      {showContainer && !inWorkflowMode && (
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="list-type-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Filter by Type
-            </label>
-            <select
-              id="list-type-filter"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-              className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+      {/* Filter dropdowns - collapsible */}
+      {!inWorkflowMode && shouldShowFilters && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">Filters & Sort</span>
+            <button
+              onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+              className="tap-target p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+              aria-label={filtersCollapsed ? "Expand filters" : "Collapse filters"}
             >
-              <option value="ALL">All Lists</option>
-              <option value="TODO">TODO Lists</option>
-              <option value="KIT">Kit Lists</option>
-            </select>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {filtersCollapsed ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
           </div>
-          <div>
-            <label htmlFor="list-completion-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Filter by Status
-            </label>
-            <select
-              id="list-completion-filter"
-              value={completionStatusFilter}
-              onChange={(e) => setCompletionStatusFilter(e.target.value as "all" | "open" | "done")}
-              className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            >
-              <option value="all">All</option>
-              <option value="open">Open</option>
-              <option value="done">Done</option>
-            </select>
-          </div>
+          {!filtersCollapsed && (
+            <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="list-type-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    Filter by Type
+                  </label>
+                  <select
+                    id="list-type-filter"
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+                    className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  >
+                    <option value="ALL">All Lists</option>
+                    <option value="TODO">TODO Lists</option>
+                    <option value="KIT">Kit Lists</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="list-completion-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    Filter by Status
+                  </label>
+                  <select
+                    id="list-completion-filter"
+                    value={completionStatusFilter}
+                    onChange={(e) => setCompletionStatusFilter(e.target.value as "all" | "open" | "done")}
+                    className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  >
+                    <option value="all">All</option>
+                    <option value="open">Open</option>
+                    <option value="done">Done</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
