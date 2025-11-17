@@ -2365,8 +2365,6 @@ export default function TripDetailPage() {
               <SettlementPlanSection
                 tripId={trip.id}
                 baseCurrency={trip.baseCurrency}
-                tripRsvpStatus={trip.rsvpStatus}
-                participants={trip.participants}
                 onToggleSpends={() => setShowSpendsWhenClosed(true)}
                 onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
                 canReopenSpending={canInvite}
