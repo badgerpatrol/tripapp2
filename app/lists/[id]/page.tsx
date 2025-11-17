@@ -155,11 +155,11 @@ function ViewListPageContent() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
           </div>
         </div>
       </div>
@@ -168,11 +168,11 @@ function ViewListPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading template...</p>
+            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading template...</p>
           </div>
         </div>
       </div>
@@ -181,14 +181,14 @@ function ViewListPageContent() {
 
   if (error || !template) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-red-800 dark:text-red-200">{error || "Template not found"}</p>
           </div>
           <Button
             onClick={() => router.push(returnTo)}
-            className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800"
+            className="mt-4 bg-zinc-200 hover:bg-zinc-300 text-zinc-800"
           >
             Back
           </Button>
@@ -198,7 +198,7 @@ function ViewListPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Toast */}
         {toast && (
@@ -225,7 +225,7 @@ function ViewListPageContent() {
         <div className="mb-6">
           <button
             onClick={() => router.push(returnTo)}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -235,12 +235,12 @@ function ViewListPageContent() {
         </div>
 
         {/* Header Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <span className="text-3xl">{getTypeIcon(template.type)}</span>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">
                   {template.title}
                 </h1>
                 <div className="flex items-center gap-3">
@@ -248,7 +248,7 @@ function ViewListPageContent() {
                     {template.type}
                   </span>
                   {template.visibility === "PUBLIC" && (
-                    <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
                       <span>🌐</span> Public
                     </span>
                   )}
@@ -258,7 +258,7 @@ function ViewListPageContent() {
           </div>
 
           {template.description && (
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
               {template.description}
             </p>
           )}
@@ -269,7 +269,7 @@ function ViewListPageContent() {
               {template.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+                  className="px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded"
                 >
                   #{tag}
                 </span>
@@ -318,8 +318,8 @@ function ViewListPageContent() {
         </div>
 
         {/* Items List */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
             {template.type === "TODO" ? "Tasks" : "Items"} (
             {template.type === "TODO"
               ? template.todoItems?.length || 0
@@ -334,18 +334,18 @@ function ViewListPageContent() {
                 .map((item, index) => (
                   <div
                     key={item.id}
-                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+                    className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
                         {index + 1}
                       </span>
                       <div className="flex-1">
-                        <p className="text-gray-900 dark:text-white font-medium">
+                        <p className="text-zinc-900 dark:text-white font-medium">
                           {item.label}
                         </p>
                         {item.notes && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                             {item.notes}
                           </p>
                         )}
@@ -361,27 +361,27 @@ function ViewListPageContent() {
                 .map((item, index) => (
                   <div
                     key={item.id}
-                    className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+                    className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
                         {index + 1}
                       </span>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-gray-900 dark:text-white font-medium">
+                          <p className="text-zinc-900 dark:text-white font-medium">
                             {item.label}
                           </p>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                          <span className="text-sm text-zinc-500 dark:text-zinc-400">
                             × {item.quantity}
                           </span>
                         </div>
                         {item.notes && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                             {item.notes}
                           </p>
                         )}
-                        <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex flex-wrap gap-3 mt-2 text-sm text-zinc-600 dark:text-zinc-400">
                           {item.category && (
                             <span>Category: {item.category}</span>
                           )}
@@ -408,7 +408,7 @@ function ViewListPageContent() {
                 ))}
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+            <p className="text-zinc-500 dark:text-zinc-400 text-center py-8">
               No items in this list yet.
             </p>
           )}
@@ -437,7 +437,7 @@ function ViewListPageContent() {
       {/* Delete Confirmation Dialog */}
       {deleteConfirm.isOpen && deleteConfirm.template && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex items-start gap-4 mb-4">
               <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                 <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,10 +445,10 @@ function ViewListPageContent() {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                   Delete Template
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   Are you sure you want to delete "{deleteConfirm.template.title}"? This action cannot be undone.
                 </p>
               </div>
@@ -457,7 +457,7 @@ function ViewListPageContent() {
             <div className="flex gap-3 justify-end">
               <Button
                 onClick={() => setDeleteConfirm({ isOpen: false, template: null })}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-200"
+                className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
                 disabled={deleting}
               >
                 Cancel

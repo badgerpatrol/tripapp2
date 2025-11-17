@@ -112,6 +112,29 @@ export async function listMyTemplates(ownerId: string) {
 }
 
 /**
+ * Get all templates in the system (admin only).
+ * Used when admin mode is enabled.
+ */
+export async function getAllTemplates() {
+  const templates = await prisma.listTemplate.findMany({
+    include: {
+      todoItems: true,
+      kitItems: true,
+      owner: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return templates;
+}
+
+/**
  * Browse public templates (gallery)
  */
 export async function browsePublicTemplates(query: BrowsePublicTemplatesQuery) {

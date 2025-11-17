@@ -37,4 +37,4 @@
       Deploy to Vercel (git push triggers deployment)
       Add build hook: Vercel runs prisma migrate deploy automatically
       Migrations apply during deployment
-
+30) Use the same 'zinc' style for all pages and forms

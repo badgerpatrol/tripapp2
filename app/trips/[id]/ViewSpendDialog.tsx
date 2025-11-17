@@ -186,7 +186,7 @@ export default function ViewSpendDialog({
                   className={`p-2 rounded-lg transition-all hover:scale-110 ${
                     spend.status === SpendStatus.CLOSED
                       ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                      : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400"
+                      : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-400"
                   }`}
                   title={spend.status === SpendStatus.CLOSED ? "Unlock spend" : "Lock spend"}
                 >
@@ -269,7 +269,7 @@ export default function ViewSpendDialog({
                 className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                   isUserInvolved
                     ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                    : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400"
                 }`}
               >
                 {isUserInvolved ? "Involved" : "Not involved"}

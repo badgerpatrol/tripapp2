@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useAdminMode } from "@/lib/admin/AdminModeContext";
 import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
 
@@ -44,6 +45,7 @@ function ListsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const { isAdminMode } = useAdminMode();
   const tabParam = searchParams.get("tab") as Tab | null;
   const [activeTab, setActiveTab] = useState<Tab>(tabParam || "my-templates");
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
@@ -60,7 +62,7 @@ function ListsPageContent() {
     // Fetch both on initial load to get accurate counts
     fetchMyTemplates();
     fetchPublicTemplates();
-  }, [user]);
+  }, [user, isAdminMode]);
 
   useEffect(() => {
     if (!user) return;
@@ -70,7 +72,7 @@ function ListsPageContent() {
     } else {
       fetchPublicTemplates();
     }
-  }, [activeTab, typeFilter]);
+  }, [activeTab, typeFilter, isAdminMode]);
 
   // Auto-hide toast
   useEffect(() => {
@@ -88,7 +90,8 @@ function ListsPageContent() {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/lists/templates", {
+      const url = isAdminMode ? "/api/lists/templates?adminMode=true" : "/api/lists/templates";
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -317,7 +320,7 @@ function ListsPageContent() {
 
                 {/* Creator */}
                 {template.owner && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
                     By {template.owner.displayName || template.owner.email.split('@')[0]}
                   </div>
                 )}

@@ -190,11 +190,27 @@ export async function deactivateUser(adminUserId: string, targetUserId: string) 
     throw new Error("User is already deactivated");
   }
 
-  // Soft delete by setting deletedAt
+  const newEmail = `${user.email}_del`;
+
+  // Update email in Firebase first
+  try {
+    await adminAuth.updateUser(targetUserId, {
+      email: newEmail,
+    });
+  } catch (firebaseError: any) {
+    console.error("Firebase Admin SDK error during deactivation:", firebaseError);
+    // If user doesn't exist in Firebase, that's okay - continue with database update
+    if (firebaseError.code !== 'auth/user-not-found') {
+      throw new Error(`Failed to update email in Firebase: ${firebaseError.message}`);
+    }
+  }
+
+  // Soft delete by setting deletedAt and appending _del to email
   const deactivatedUser = await prisma.user.update({
     where: { id: targetUserId },
     data: {
       deletedAt: new Date(),
+      email: newEmail,
     },
   });
 
@@ -225,10 +241,29 @@ export async function reactivateUser(adminUserId: string, targetUserId: string) 
     throw new Error("User is not deactivated");
   }
 
+  // Remove _del suffix from email if it exists
+  const emailWithoutSuffix = user.email.endsWith("_del")
+    ? user.email.slice(0, -4)
+    : user.email;
+
+  // Update email in Firebase first
+  try {
+    await adminAuth.updateUser(targetUserId, {
+      email: emailWithoutSuffix,
+    });
+  } catch (firebaseError: any) {
+    console.error("Firebase Admin SDK error during reactivation:", firebaseError);
+    // If user doesn't exist in Firebase, that's okay - continue with database update
+    if (firebaseError.code !== 'auth/user-not-found') {
+      throw new Error(`Failed to update email in Firebase: ${firebaseError.message}`);
+    }
+  }
+
   const reactivatedUser = await prisma.user.update({
     where: { id: targetUserId },
     data: {
       deletedAt: null,
+      email: emailWithoutSuffix,
     },
   });
 

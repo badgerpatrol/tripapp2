@@ -406,6 +406,48 @@ export async function getUserTrips(userId: string) {
 }
 
 /**
+ * Gets all trips in the system (admin only).
+ * Used when admin mode is enabled.
+ */
+export async function getAllTrips() {
+  return prisma.trip.findMany({
+    where: {
+      deletedAt: null,
+    },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          photoURL: true,
+        },
+      },
+      members: {
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          userId: true,
+          role: true,
+          rsvpStatus: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              photoURL: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+/**
  * Calculates settlement balances for a user in a trip.
  * Returns how much the user owes and is owed.
  */

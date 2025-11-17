@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
-import { createTrip, getUserTrips } from "@/server/services/trips";
+import { getAuthTokenFromHeader, requireAuth, hasUserRole } from "@/server/authz";
+import { createTrip, getUserTrips, getAllTrips } from "@/server/services/trips";
 import { CreateTripSchema, CreateTripResponseSchema } from "@/types/schemas";
+import { UserRole } from "@/lib/generated/prisma";
 
 /**
  * POST /api/trips
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/trips
  * Gets all trips for the authenticated user.
+ * If adminMode=true query param is provided and user is admin, returns all trips in the system.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -92,8 +94,26 @@ export async function GET(request: NextRequest) {
     // Verify user exists in database
     await requireAuth(auth.uid);
 
-    // 2. Get user's trips
-    const trips = await getUserTrips(auth.uid);
+    // 2. Check if admin mode is requested
+    const { searchParams } = new URL(request.url);
+    const adminMode = searchParams.get("adminMode") === "true";
+
+    let trips;
+    if (adminMode) {
+      // Verify user is admin
+      const isAdmin = await hasUserRole(auth.uid, UserRole.ADMIN);
+      if (!isAdmin) {
+        return NextResponse.json(
+          { error: "Admin privileges required" },
+          { status: 403 }
+        );
+      }
+      // Get all trips
+      trips = await getAllTrips();
+    } else {
+      // Get user's trips
+      trips = await getUserTrips(auth.uid);
+    }
 
     return NextResponse.json({ trips }, { status: 200 });
   } catch (error) {

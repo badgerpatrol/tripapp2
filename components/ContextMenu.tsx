@@ -88,7 +88,7 @@ export function ContextMenu({ isOpen, onClose, items, position, children }: Cont
       <div
         ref={menuRef}
         style={menuStyle}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[200px]"
+        className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700 py-1 min-w-[200px]"
         role="menu"
         aria-orientation="vertical"
       >
@@ -110,7 +110,7 @@ export function ContextMenu({ isOpen, onClose, items, position, children }: Cont
                 ${
                   item.variant === "danger"
                     ? "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
                 }
                 ${item.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
                 first:rounded-t-lg last:rounded-b-lg

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/lib/auth/AuthContext";
+import { AdminModeProvider } from "@/lib/admin/AdminModeContext";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import "./globals.css";
 
@@ -30,9 +31,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <LayoutWrapper>
-            {children}
-          </LayoutWrapper>
+          <AdminModeProvider>
+            <LayoutWrapper>
+              {children}
+            </LayoutWrapper>
+          </AdminModeProvider>
         </AuthProvider>
       </body>
     </html>
