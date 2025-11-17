@@ -291,35 +291,34 @@ function CreateKitListPageContent() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Visibility
-                  </label>
-                  <select
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value as Visibility)}
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                    disabled={loading}
-                  >
-                    <option value="PRIVATE">Private (only you)</option>
-                    <option value="PUBLIC">Public (share with others)</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="e.g., camping, hiking"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  disabled={loading}
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Tags (comma-separated)
-                  </label>
+              <div>
+                <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
                   <input
-                    type="text"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                    placeholder="e.g., camping, hiking"
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    type="checkbox"
+                    checked={visibility === "PUBLIC"}
+                    onChange={(e) => setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")}
+                    className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
                     disabled={loading}
                   />
-                </div>
+                  <span className="font-medium">Public</span>
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                    (Make this list visible to others)
+                  </span>
+                </label>
               </div>
 
               {!hideInventoryCheckbox && (
