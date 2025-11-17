@@ -32,7 +32,7 @@ export async function createSystemLog(
         feature,
         eventName,
         eventText,
-        metadata: metadata || null,
+        metadata: metadata || undefined,
       },
     });
 
