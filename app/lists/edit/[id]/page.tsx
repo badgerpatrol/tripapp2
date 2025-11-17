@@ -236,12 +236,12 @@ function EditListPageContent() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
           </div>
         </div>
       </div>
@@ -250,12 +250,12 @@ function EditListPageContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading template...</p>
+            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading template...</p>
           </div>
         </div>
       </div>
@@ -263,7 +263,7 @@ function EditListPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
       <Header />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -272,17 +272,17 @@ function EditListPageContent() {
           <div className="flex items-center gap-3 mb-2">
             <button
               onClick={() => router.push(`/lists/${templateId}`)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
               Edit TODO List
             </h1>
           </div>
-          <p className="text-gray-600 dark:text-gray-400 ml-14">
+          <p className="text-zinc-600 dark:text-zinc-400 ml-14">
             Update your TODO list template
           </p>
         </div>
@@ -296,14 +296,14 @@ function EditListPageContent() {
           )}
 
           {/* Basic Info Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
               Basic Information
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                   List Title *
                 </label>
                 <input
@@ -311,14 +311,14 @@ function EditListPageContent() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Pre-Trip Planning Tasks"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                   disabled={saving}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                   Description
                 </label>
                 <textarea
@@ -326,20 +326,20 @@ function EditListPageContent() {
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief description of this TODO list"
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                   disabled={saving}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                     Visibility
                   </label>
                   <select
                     value={visibility}
                     onChange={(e) => setVisibility(e.target.value as Visibility)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                     disabled={saving}
                   >
                     <option value="PRIVATE">Private (only you)</option>
@@ -348,7 +348,7 @@ function EditListPageContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                     Tags (comma-separated)
                   </label>
                   <input
@@ -356,7 +356,7 @@ function EditListPageContent() {
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
                     placeholder="e.g., planning, essentials"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                     disabled={saving}
                   />
                 </div>
@@ -365,9 +365,9 @@ function EditListPageContent() {
           </div>
 
           {/* Tasks Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
                 Tasks ({items.filter((i) => i.label.trim()).length})
               </h2>
               <Button
@@ -384,7 +384,7 @@ function EditListPageContent() {
               {items.map((item, index) => (
                 <div
                   key={item.id}
-                  className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                  className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
                 >
                   {/* Task Header */}
                   <div className="flex items-start gap-3 mb-3">
@@ -394,20 +394,20 @@ function EditListPageContent() {
                         type="button"
                         onClick={() => moveItem(item.id, "up")}
                         disabled={index === 0 || saving}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                         </svg>
                       </button>
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400 text-center">
+                      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center">
                         {index + 1}
                       </span>
                       <button
                         type="button"
                         onClick={() => moveItem(item.id, "down")}
                         disabled={index === items.length - 1 || saving}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -422,7 +422,7 @@ function EditListPageContent() {
                         value={item.label}
                         onChange={(e) => updateItem(item.id, "label", e.target.value)}
                         placeholder="Task description"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                         disabled={saving}
                       />
 
@@ -431,13 +431,13 @@ function EditListPageContent() {
                         onChange={(e) => updateItem(item.id, "notes", e.target.value)}
                         placeholder="Optional notes or details"
                         rows={2}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                         disabled={saving}
                       />
 
                       {/* Action Type */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
                           Action (optional)
                         </label>
                         <select
@@ -449,7 +449,7 @@ function EditListPageContent() {
                               e.target.value || null
                             )
                           }
-                          className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                          className="w-full px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                           disabled={saving}
                         >
                           <option value="">None</option>
@@ -458,7 +458,7 @@ function EditListPageContent() {
                           <option value="INVITE_USERS">Invite Users</option>
                         </select>
                         {item.actionType && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                             {item.actionType === "CREATE_CHOICE" && "Creates a new choice/poll when checked"}
                             {item.actionType === "SET_MILESTONE" && "Sets a milestone date when checked"}
                             {item.actionType === "INVITE_USERS" && "Opens invite dialog when checked"}
@@ -469,7 +469,7 @@ function EditListPageContent() {
                       {/* Milestone Name Parameter */}
                       {item.actionType === "SET_MILESTONE" && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
                             Milestone Name
                           </label>
                           <input
@@ -479,10 +479,10 @@ function EditListPageContent() {
                               updateParameter(item.id, "milestoneName", e.target.value)
                             }
                             placeholder="Enter milestone name"
-                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                             disabled={saving}
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                             The name of the milestone to create (optional)
                           </p>
                         </div>
@@ -491,7 +491,7 @@ function EditListPageContent() {
                       {/* Choice Name Parameter */}
                       {item.actionType === "CREATE_CHOICE" && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
                             Choice Name
                           </label>
                           <input
@@ -501,10 +501,10 @@ function EditListPageContent() {
                               updateParameter(item.id, "choiceName", e.target.value)
                             }
                             placeholder="Enter choice name"
-                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                            className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                             disabled={saving}
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                             The name of the choice to create (optional)
                           </p>
                         </div>
@@ -534,7 +534,7 @@ function EditListPageContent() {
             <Button
               type="button"
               onClick={() => router.push(`/lists/${templateId}`)}
-              className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 dark:text-gray-100 font-medium"
+              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
               disabled={saving}
             >
               Cancel

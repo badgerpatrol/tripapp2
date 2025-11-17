@@ -190,11 +190,27 @@ export async function deactivateUser(adminUserId: string, targetUserId: string) 
     throw new Error("User is already deactivated");
   }
 
-  // Soft delete by setting deletedAt
+  const newEmail = `${user.email}_del`;
+
+  // Update email in Firebase first
+  try {
+    await adminAuth.updateUser(targetUserId, {
+      email: newEmail,
+    });
+  } catch (firebaseError: any) {
+    console.error("Firebase Admin SDK error during deactivation:", firebaseError);
+    // If user doesn't exist in Firebase, that's okay - continue with database update
+    if (firebaseError.code !== 'auth/user-not-found') {
+      throw new Error(`Failed to update email in Firebase: ${firebaseError.message}`);
+    }
+  }
+
+  // Soft delete by setting deletedAt and appending _del to email
   const deactivatedUser = await prisma.user.update({
     where: { id: targetUserId },
     data: {
       deletedAt: new Date(),
+      email: newEmail,
     },
   });
 
@@ -225,10 +241,29 @@ export async function reactivateUser(adminUserId: string, targetUserId: string) 
     throw new Error("User is not deactivated");
   }
 
+  // Remove _del suffix from email if it exists
+  const emailWithoutSuffix = user.email.endsWith("_del")
+    ? user.email.slice(0, -4)
+    : user.email;
+
+  // Update email in Firebase first
+  try {
+    await adminAuth.updateUser(targetUserId, {
+      email: emailWithoutSuffix,
+    });
+  } catch (firebaseError: any) {
+    console.error("Firebase Admin SDK error during reactivation:", firebaseError);
+    // If user doesn't exist in Firebase, that's okay - continue with database update
+    if (firebaseError.code !== 'auth/user-not-found') {
+      throw new Error(`Failed to update email in Firebase: ${firebaseError.message}`);
+    }
+  }
+
   const reactivatedUser = await prisma.user.update({
     where: { id: targetUserId },
     data: {
       deletedAt: null,
+      email: emailWithoutSuffix,
     },
   });
 
@@ -293,6 +328,8 @@ export async function resetUserPassword(
   targetUserId: string,
   newPassword: string
 ) {
+  console.log('[resetUserPassword] Starting password reset for user:', targetUserId);
+
   // Prevent self-password reset through admin panel
   if (adminUserId === targetUserId) {
     throw new Error("You cannot reset your own password through the admin panel");
@@ -312,10 +349,40 @@ export async function resetUserPassword(
     throw new Error("User not found");
   }
 
+  console.log('[resetUserPassword] User found in database:', user.email);
+
   // Update password using Firebase Admin SDK
-  await adminAuth.updateUser(targetUserId, {
-    password: newPassword,
-  });
+  try {
+    console.log('[resetUserPassword] Attempting to update password in Firebase for userId:', targetUserId);
+    await adminAuth.updateUser(targetUserId, {
+      password: newPassword,
+    });
+    console.log('[resetUserPassword] Password updated successfully in Firebase');
+  } catch (firebaseError: any) {
+    console.error("Firebase Admin SDK error:", firebaseError);
+    console.error("Firebase error code:", firebaseError.code);
+    console.error("Firebase error message:", firebaseError.message);
+
+    // If user doesn't exist in Firebase, create them
+    if (firebaseError.code === 'auth/user-not-found') {
+      console.log('[resetUserPassword] User not found in Firebase, creating new Firebase user...');
+      try {
+        await adminAuth.createUser({
+          uid: targetUserId,
+          email: user.email,
+          password: newPassword,
+          displayName: user.displayName || undefined,
+          phoneNumber: user.phoneNumber || undefined,
+        });
+        console.log('[resetUserPassword] Firebase user created successfully with new password');
+      } catch (createError: any) {
+        console.error("Failed to create Firebase user:", createError);
+        throw new Error(`Failed to create Firebase user: ${createError.message}`);
+      }
+    } else {
+      throw new Error(`Failed to update password in Firebase: ${firebaseError.message}`);
+    }
+  }
 
   // Log event
   await logEvent("User", targetUserId, EventType.USER_UPDATED, adminUserId, {

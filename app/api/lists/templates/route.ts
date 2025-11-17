@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
-import { createTemplate, listMyTemplates } from "@/server/services/lists";
+import { getAuthTokenFromHeader, requireAuth, hasUserRole } from "@/server/authz";
+import { createTemplate, listMyTemplates, getAllTemplates } from "@/server/services/lists";
 import { ListTemplateCreate } from "@/types/schemas";
+import { UserRole } from "@/lib/generated/prisma";
 
 /**
  * GET /api/lists/templates
- * Get all templates owned by the authenticated user
+ * Get all templates owned by the authenticated user.
+ * If adminMode=true query param is provided and user is admin, returns all templates in the system.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +23,26 @@ export async function GET(request: NextRequest) {
 
     await requireAuth(auth.uid);
 
-    const templates = await listMyTemplates(auth.uid);
+    // Check if admin mode is requested
+    const { searchParams } = new URL(request.url);
+    const adminMode = searchParams.get("adminMode") === "true";
+
+    let templates;
+    if (adminMode) {
+      // Verify user is admin
+      const isAdmin = await hasUserRole(auth.uid, UserRole.ADMIN);
+      if (!isAdmin) {
+        return NextResponse.json(
+          { error: "Admin privileges required" },
+          { status: 403 }
+        );
+      }
+      // Get all templates
+      templates = await getAllTemplates();
+    } else {
+      // Get user's templates
+      templates = await listMyTemplates(auth.uid);
+    }
 
     return NextResponse.json(
       {

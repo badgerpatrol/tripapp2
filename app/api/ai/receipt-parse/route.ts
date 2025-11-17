@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseReceiptImage } from "@/server/ai/receiptParser";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
 import { logEvent } from "@/server/eventLog";
-import { EventType } from "@/lib/generated/prisma";
+import { createSystemLog } from "@/server/systemLog";
+import { EventType, LogSeverity } from "@/lib/generated/prisma";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -94,7 +95,23 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // 8. Return parsed items
+    // 8. Create system log for admin visibility
+    await createSystemLog(
+      LogSeverity.INFO,
+      "receipt-scan",
+      "receipt_photo_scanned",
+      `Receipt photo scanned for trip ${tripId} by user ${auth.uid}. Found ${result.items.length} items with total ${result.total} ${result.currencyUsed}`,
+      {
+        tripId,
+        userId: auth.uid,
+        imageType,
+        currency: result.currencyUsed,
+        itemCount: result.items.length,
+        total: result.total,
+      }
+    );
+
+    // 9. Return parsed items
     return NextResponse.json({
       items: result.items,
       currency: result.currencyUsed,
@@ -107,6 +124,18 @@ export async function POST(request: NextRequest) {
       error instanceof Error
         ? error.message
         : "Failed to parse receipt. Please try again.";
+
+    // Log error to system log
+    await createSystemLog(
+      LogSeverity.ERROR,
+      "receipt-scan",
+      "receipt_scan_error",
+      `Failed to scan receipt: ${message}`,
+      {
+        error: message,
+        stack: error instanceof Error ? error.stack : undefined,
+      }
+    );
 
     return NextResponse.json({ error: message }, { status: 500 });
   }

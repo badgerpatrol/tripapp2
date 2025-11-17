@@ -44,14 +44,12 @@ export default function KitPhotoScanSheet({
   const [scannedItems, setScannedItems] = useState<ScannedKitItem[] | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [hint, setHint] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    if (isOpen && !capturedImage) {
-      startCamera();
-    }
     return () => {
       stopCamera();
     };
@@ -117,6 +115,7 @@ export default function KitPhotoScanSheet({
     setScannedItems(null);
     setSelectedItems(new Set());
     setError(null);
+    setHint("");
     startCamera();
   };
 
@@ -139,6 +138,7 @@ export default function KitPhotoScanSheet({
         body: JSON.stringify({
           listId,
           image: capturedImage,
+          hint: hint.trim() || undefined,
         }),
       });
 
@@ -183,8 +183,8 @@ export default function KitPhotoScanSheet({
     }
   };
 
-  const addSelectedItems = () => {
-    if (!scannedItems || selectedItems.size === 0) return;
+  const addSelectedItems = async () => {
+    if (!scannedItems || selectedItems.size === 0 || !user) return;
 
     const itemsToAdd: KitItemToAdd[] = Array.from(selectedItems)
       .map((index) => {
@@ -214,6 +214,32 @@ export default function KitPhotoScanSheet({
       })
       .filter((item): item is KitItemToAdd => item !== null);
 
+    // Log the event
+    try {
+      const idToken = await user.getIdToken();
+      await fetch("/api/system-log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          severity: "INFO",
+          feature: "kit list scan",
+          eventName: "scan results",
+          eventText: `Photo scan completed: ${scannedItems.length} items detected, ${itemsToAdd.length} items added to kit list`,
+          metadata: {
+            listId,
+            totalDetected: scannedItems.length,
+            totalAdded: itemsToAdd.length,
+          },
+        }),
+      });
+    } catch (error) {
+      // Don't fail the operation if logging fails
+      console.error("Failed to log event:", error);
+    }
+
     onItemsSelected(itemsToAdd);
     handleClose();
   };
@@ -224,6 +250,7 @@ export default function KitPhotoScanSheet({
     setScannedItems(null);
     setSelectedItems(new Set());
     setError(null);
+    setHint("");
     setIsProcessing(false);
     onClose();
   };
@@ -287,6 +314,19 @@ export default function KitPhotoScanSheet({
           {/* Scanned Items with Checkboxes */}
           {scannedItems && (
             <div className="mb-6">
+              {/* Show the photo for reference */}
+              {capturedImage && (
+                <div className="mb-4">
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <img
+                      src={capturedImage}
+                      alt="Scanned photo"
+                      className="w-full h-auto max-h-[300px] object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Select All / Deselect All Button */}
               <div className="mb-3 flex justify-between items-center">
                 <button
@@ -363,7 +403,7 @@ export default function KitPhotoScanSheet({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <p className="text-sm">Initializing camera...</p>
+                        <p className="text-sm font-medium">Permission needed</p>
                       </div>
                     </div>
                   )}
@@ -381,20 +421,38 @@ export default function KitPhotoScanSheet({
             </div>
           )}
 
+          {/* Hint text field - shown after image is captured/uploaded */}
+          {capturedImage && !scannedItems && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Kit type hint (optional)
+              </label>
+              <input
+                type="text"
+                value={hint}
+                onChange={(e) => setHint(e.target.value)}
+                placeholder="e.g., hiking gear, camping equipment, ski kit..."
+                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Help the AI understand what type of items to look for
+              </p>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex flex-col gap-3">
             {!capturedImage && !scannedItems ? (
               <>
                 <button
                   type="button"
-                  onClick={capturePhoto}
-                  disabled={!isCameraActive}
-                  className="tap-target w-full px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  onClick={isCameraActive ? capturePhoto : startCamera}
+                  className="tap-target w-full px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   </svg>
-                  Take Photo
+                  {isCameraActive ? "Take Photo" : "Enable Camera"}
                 </button>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">

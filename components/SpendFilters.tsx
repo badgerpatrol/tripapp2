@@ -28,12 +28,12 @@ export function SpendFilters({
   onSortOrderChange,
 }: SpendFiltersProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
+    <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4 space-y-4">
       {/* Status Filter */}
       <div>
         <label
           htmlFor="status-filter"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
         >
           Status
         </label>
@@ -41,7 +41,7 @@ export function SpendFilters({
           id="status-filter"
           value={statusFilter}
           onChange={(e) => onStatusFilterChange(e.target.value as SpendStatus | "all")}
-          className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="all">All Statuses</option>
           <option value={SpendStatus.OPEN}>Open</option>
@@ -53,7 +53,7 @@ export function SpendFilters({
       <div>
         <label
           htmlFor="involvement-filter"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
         >
           Involvement
         </label>
@@ -61,7 +61,7 @@ export function SpendFilters({
           id="involvement-filter"
           value={involvementFilter}
           onChange={(e) => onInvolvementFilterChange(e.target.value as "all" | "own" | "involved" | "not-involved")}
-          className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="all">All Spends</option>
           <option value="own">Only My Own</option>
@@ -76,7 +76,7 @@ export function SpendFilters({
         <div>
           <label
             htmlFor="sort-by"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
           >
             Sort by
           </label>
@@ -84,7 +84,7 @@ export function SpendFilters({
             id="sort-by"
             value={sortBy}
             onChange={(e) => onSortByChange(e.target.value as "date" | "amount" | "description")}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="date">Date</option>
             <option value="amount">Amount</option>
@@ -96,7 +96,7 @@ export function SpendFilters({
         <div>
           <label
             htmlFor="sort-order"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
           >
             Order
           </label>
@@ -104,7 +104,7 @@ export function SpendFilters({
             id="sort-order"
             value={sortOrder}
             onChange={(e) => onSortOrderChange(e.target.value as "asc" | "desc")}
-            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="desc">
               {sortBy === "date" ? "Newest First" : "Highest First"}

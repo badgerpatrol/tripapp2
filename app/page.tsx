@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useAdminMode } from "@/lib/admin/AdminModeContext";
 import LoginForm from "@/components/LoginForm";
 import { Button } from "@/components/ui/button";
 
@@ -36,6 +37,7 @@ interface Trip {
 export default function Home() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { isAdminMode } = useAdminMode();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,13 +49,14 @@ export default function Home() {
         return;
       }
 
-      console.log("[DEBUG] Fetching trips for user:", user.uid, user.email);
+      console.log("[DEBUG] Fetching trips for user:", user.uid, user.email, "Admin mode:", isAdminMode);
 
       try {
         const idToken = await user.getIdToken();
         console.log("[DEBUG] Got ID token, making request...");
 
-        const response = await fetch("/api/trips", {
+        const url = isAdminMode ? "/api/trips?adminMode=true" : "/api/trips";
+        const response = await fetch(url, {
           headers: {
             Authorization: `Bearer ${idToken}`,
           },
@@ -90,7 +93,7 @@ export default function Home() {
     } else {
       console.log("[DEBUG] Still loading auth...");
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, isAdminMode]);
 
   if (authLoading || (user && loading)) {
     return (

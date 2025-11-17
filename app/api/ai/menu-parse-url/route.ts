@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
 import { parseMenuUrl } from "@/server/ai/menuUrlParser";
 import { logEvent } from "@/server/eventLog";
-import { EventType } from "@/lib/generated/prisma";
+import { createSystemLog } from "@/server/systemLog";
+import { EventType, LogSeverity } from "@/lib/generated/prisma";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -114,6 +115,21 @@ export async function POST(request: NextRequest) {
         success: false,
       });
 
+      // Log error to system log
+      await createSystemLog(
+        LogSeverity.WARNING,
+        "menu-url-scan",
+        "menu_url_parse_failed",
+        `Menu URL parsing failed for trip ${tripId}: ${errorMessage}`,
+        {
+          tripId,
+          userId: auth.uid,
+          url,
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+        }
+      );
+
       return NextResponse.json({ error: errorMessage }, { status: 422 });
     }
 
@@ -125,18 +141,43 @@ export async function POST(request: NextRequest) {
       success: true,
     });
 
-    // 8. Return parsed items
+    // 8. Create system log for admin visibility
+    await createSystemLog(
+      LogSeverity.INFO,
+      "menu-url-scan",
+      "menu_url_scanned",
+      `Menu URL scanned for trip ${tripId} by user ${auth.uid}. Found ${result.items.length} items from ${url} using currency ${result.currencyUsed}`,
+      {
+        tripId,
+        userId: auth.uid,
+        url,
+        itemCount: result.items.length,
+        currency: result.currencyUsed,
+      }
+    );
+
+    // 9. Return parsed items
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error("Menu parse URL endpoint error:", error);
-    return NextResponse.json(
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to process menu URL";
+
+    // Log error to system log
+    await createSystemLog(
+      LogSeverity.ERROR,
+      "menu-url-scan",
+      "menu_url_scan_error",
+      `Failed to scan menu URL: ${message}`,
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to process menu URL",
-      },
-      { status: 500 }
+        error: message,
+        stack: error instanceof Error ? error.stack : undefined,
+      }
     );
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

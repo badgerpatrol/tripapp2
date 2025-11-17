@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { UserRole } from "@/lib/generated/prisma";
 
 export default function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, userProfile } = useAuth();
 
   if (!user) {
@@ -14,10 +15,23 @@ export default function Navigation() {
   }
 
   const isHomePage = pathname === "/";
-  const isKitPage = pathname?.startsWith("/kit") || pathname === "/lists/create-kit";
-  const isListsPage = pathname?.startsWith("/lists") && pathname !== "/lists/create-kit";
+  const returnTo = searchParams.get("returnTo") || "";
+
+  // Check if we're in kit context (either /kit path or viewing from kit origin)
+  const isKitPage =
+    pathname?.startsWith("/kit") ||
+    pathname === "/lists/create-kit" ||
+    (pathname?.startsWith("/lists") && returnTo.startsWith("/kit"));
+
+  // Check if we're in lists/checklist context
+  const isListsPage =
+    pathname?.startsWith("/lists") &&
+    pathname !== "/lists/create-kit" &&
+    !returnTo.startsWith("/kit");
+
   const isGroupsPage = pathname?.startsWith("/groups");
   const isUsersPage = pathname?.startsWith("/admin/users");
+  const isLogsPage = pathname?.startsWith("/admin/logs");
   const isAdmin = userProfile?.role === UserRole.ADMIN;
 
   return (
@@ -85,6 +99,20 @@ export default function Navigation() {
               }`}
             >
               Users
+            </button>
+          )}
+
+          {/* Logs Button - Only visible to admin users */}
+          {isAdmin && (
+            <button
+              onClick={() => router.push("/admin/logs")}
+              className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                isLogsPage
+                  ? "bg-blue-600 text-white"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              }`}
+            >
+              Logs
             </button>
           )}
         </div>

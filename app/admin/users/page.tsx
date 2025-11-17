@@ -355,7 +355,7 @@ export default function AdminUsersPage() {
       case UserRole.SUPERADMIN:
         return "bg-red-100 text-red-800 border-red-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-zinc-100 text-zinc-800 border-zinc-200";
     }
   };
 
@@ -678,68 +678,70 @@ export default function AdminUsersPage() {
                 )}
               </div>
 
+              {/* Account Status - only for other users, not yourself */}
               {selectedUser.id !== user?.uid && (
-                <>
-                  <div className="mb-4 p-4 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-900">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-sm font-medium mb-1 text-zinc-900 dark:text-white">Account Status</label>
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                          {editSuspended
-                            ? "User is suspended and cannot log in"
-                            : "User can log in normally"}
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editSuspended}
-                          onChange={(e) => setEditSuspended(e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-zinc-200 dark:bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-zinc-300 dark:peer-focus:ring-zinc-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                        <span className="ml-3 text-sm font-medium text-zinc-900 dark:text-white">
-                          {editSuspended ? "Suspended" : "Active"}
-                        </span>
-                      </label>
+                <div className="mb-4 p-4 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-900">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-zinc-900 dark:text-white">Account Status</label>
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                        {editSuspended
+                          ? "User is suspended and cannot log in"
+                          : "User can log in normally"}
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="mb-6 p-4 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-900">
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswordSection(!showPasswordSection)}
-                      className="flex items-center justify-between w-full text-left"
-                    >
-                      <div>
-                        <label className="block text-sm font-medium mb-1 text-zinc-900 dark:text-white">Password Reset</label>
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                          {showPasswordSection
-                            ? "Enter a new password for this user"
-                            : "Click to reset user's password"}
-                        </p>
-                      </div>
-                      <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">
-                        {showPasswordSection ? "Hide" : "Show"}
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editSuspended}
+                        onChange={(e) => setEditSuspended(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-zinc-200 dark:bg-zinc-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-zinc-300 dark:peer-focus:ring-zinc-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                      <span className="ml-3 text-sm font-medium text-zinc-900 dark:text-white">
+                        {editSuspended ? "Suspended" : "Active"}
                       </span>
-                    </button>
-                    {showPasswordSection && (
-                      <div className="mt-4">
-                        <input
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
-                          placeholder="Enter new password (min 6 characters)"
-                          minLength={6}
-                        />
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                          Leave blank to keep current password unchanged
-                        </p>
-                      </div>
-                    )}
+                    </label>
                   </div>
-                </>
+                </div>
+              )}
+
+              {/* Password Reset - available for all users except yourself */}
+              {selectedUser.id !== user?.uid && (
+                <div className="mb-6 p-4 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-zinc-50 dark:bg-zinc-900">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordSection(!showPasswordSection)}
+                    className="flex items-center justify-between w-full text-left"
+                  >
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-zinc-900 dark:text-white">Password Reset</label>
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                        {showPasswordSection
+                          ? "Enter a new password for this user"
+                          : "Click to reset user's password"}
+                      </p>
+                    </div>
+                    <span className="text-blue-600 dark:text-blue-400 text-sm font-medium">
+                      {showPasswordSection ? "Hide" : "Show"}
+                    </span>
+                  </button>
+                  {showPasswordSection && (
+                    <div className="mt-4">
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
+                        placeholder="Enter new password (min 6 characters)"
+                        minLength={6}
+                      />
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                        Leave blank to keep current password unchanged
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="flex gap-3">

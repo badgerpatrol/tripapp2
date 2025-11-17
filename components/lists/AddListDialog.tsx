@@ -237,7 +237,7 @@ export function AddListDialog({
         <>
           <Button
             onClick={onClose}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+            className="bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
             disabled={loading}
           >
             Cancel
@@ -253,12 +253,12 @@ export function AddListDialog({
       }
     >
       <div className="space-y-4">
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-zinc-600 dark:text-zinc-400">
           Choose a template to add to your trip.
         </p>
 
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-4 border-b border-zinc-200 dark:border-zinc-700">
           <button
             onClick={() => {
               setActiveTab("my-templates");
@@ -267,7 +267,7 @@ export function AddListDialog({
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === "my-templates"
                 ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
-                : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
             <span className="flex items-center gap-2">
@@ -287,7 +287,7 @@ export function AddListDialog({
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === "public-gallery"
                 ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
-                : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
             <span className="flex items-center gap-2">
@@ -310,14 +310,14 @@ export function AddListDialog({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
-              className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
             />
           )}
 
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-            className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
           >
             <option value="ALL">All Types</option>
             <option value="TODO">TODO Lists</option>
@@ -341,7 +341,7 @@ export function AddListDialog({
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
           ) : templates.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-8">
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm text-center py-8">
               {activeTab === "my-templates"
                 ? "No templates yet. Create one from the Lists page!"
                 : "No public templates found. Try adjusting your filters."}
@@ -351,10 +351,10 @@ export function AddListDialog({
               {templates.map((template) => (
                 <label
                   key={template.id}
-                  className={`flex items-start p-3 border-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${
+                  className={`flex items-start p-3 border-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer transition-colors ${
                     selectedTemplateId === template.id
                       ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                      : "border-gray-300 dark:border-gray-600"
+                      : "border-zinc-300 dark:border-zinc-600"
                   }`}
                 >
                   <input
@@ -368,7 +368,7 @@ export function AddListDialog({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{getTypeIcon(template.type)}</span>
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
+                      <div className="font-medium text-zinc-900 dark:text-white truncate">
                         {template.title}
                       </div>
                       <span
@@ -382,11 +382,11 @@ export function AddListDialog({
                       </span>
                     </div>
                     {template.description && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
                         {template.description}
                       </div>
                     )}
-                    <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-500 mt-1">
+                    <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-500 mt-1">
                       <span>
                         {template.listType === "TODO"
                           ? `${template.todoItems?.length || 0} tasks`
@@ -403,13 +403,13 @@ export function AddListDialog({
                         {template.tags.slice(0, 3).map((tag) => (
                           <span
                             key={tag}
-                            className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded"
+                            className="px-2 py-0.5 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded"
                           >
                             #{tag}
                           </span>
                         ))}
                         {template.tags.length > 3 && (
-                          <span className="px-2 py-0.5 text-xs text-gray-500">
+                          <span className="px-2 py-0.5 text-xs text-zinc-500">
                             +{template.tags.length - 3}
                           </span>
                         )}
@@ -426,7 +426,7 @@ export function AddListDialog({
         {selectedTemplateId && checkingConflict && (
           <div className="flex items-center justify-center py-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+            <span className="ml-2 text-sm text-zinc-600 dark:text-zinc-400">
               Checking for conflicts...
             </span>
           </div>
@@ -434,11 +434,11 @@ export function AddListDialog({
 
         {selectedTemplateId && !checkingConflict && hasConflict && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
               What if a list with the same name exists?
             </label>
             <div className="space-y-2">
-              <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                 <input
                   type="radio"
                   name="mergeMode"
@@ -448,16 +448,16 @@ export function AddListDialog({
                   className="mt-1 mr-3"
                 />
                 <div>
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-zinc-900 dark:text-white">
                     Create New List
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
                     Add a new list (will add suffix if name exists)
                   </div>
                 </div>
               </label>
 
-              <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                 <input
                   type="radio"
                   name="mergeMode"
@@ -467,16 +467,16 @@ export function AddListDialog({
                   className="mt-1 mr-3"
                 />
                 <div>
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-zinc-900 dark:text-white">
                     Merge (Skip Duplicates)
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
                     Add new items, skip items with matching names
                   </div>
                 </div>
               </label>
 
-              <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                 <input
                   type="radio"
                   name="mergeMode"
@@ -486,16 +486,16 @@ export function AddListDialog({
                   className="mt-1 mr-3"
                 />
                 <div>
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-zinc-900 dark:text-white">
                     Merge (Allow Duplicates)
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
                     Add all items, even if some have matching names
                   </div>
                 </div>
               </label>
 
-              <label className="flex items-start p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
                 <input
                   type="radio"
                   name="mergeMode"
@@ -508,7 +508,7 @@ export function AddListDialog({
                   <div className="font-medium text-red-600 dark:text-red-400">
                     Replace Existing List
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
                     Delete the existing list and create a fresh copy
                   </div>
                 </div>

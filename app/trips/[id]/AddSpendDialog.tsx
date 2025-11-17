@@ -337,63 +337,133 @@ export default function AddSpendDialog({
               </p>
             </div>
 
-            {/* Amount and Currency */}
+            {/* Original Amount and Currency */}
+            {parseFloat(formData.fxRate) !== 1 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+                <div className="min-w-0">
+                  <label
+                    htmlFor="amount"
+                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                  >
+                    Original Amount *
+                  </label>
+                  <input
+                    type="number"
+                    id="amount"
+                    value={formData.amount}
+                    onChange={(e) =>
+                      setFormData({ ...formData, amount: e.target.value })
+                    }
+                    required
+                    min="0.01"
+                    step="0.01"
+                    placeholder="0.00"
+                    readOnly={items.length > 0}
+                    className={`tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                      items.length > 0
+                        ? "bg-zinc-100 dark:bg-zinc-900 cursor-not-allowed"
+                        : "bg-white dark:bg-zinc-800"
+                    }`}
+                  />
+                  {items.length > 0 && (
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      Amount calculated from {items.length} item{items.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <label
+                    htmlFor="currency"
+                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                  >
+                    Currency *
+                  </label>
+                  <input
+                    type="text"
+                    id="currency"
+                    value={formData.currency}
+                    onChange={(e) =>
+                      setFormData({ ...formData, currency: e.target.value.toUpperCase() })
+                    }
+                    required
+                    maxLength={3}
+                    placeholder="GBP"
+                    className="tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  />
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Trip currency: {trip.baseCurrency}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Amount (Converted) - shown when fxRate is 1, or as additional field when fxRate is not 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
               <div className="min-w-0">
                 <label
-                  htmlFor="amount"
+                  htmlFor={parseFloat(formData.fxRate) === 1 ? "amount" : "convertedAmount"}
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                 >
                   Amount *
                 </label>
                 <input
                   type="number"
-                  id="amount"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: e.target.value })
-                  }
-                  required
+                  id={parseFloat(formData.fxRate) === 1 ? "amount" : "convertedAmount"}
+                  value={parseFloat(formData.fxRate) === 1 ? formData.amount : (parseFloat(formData.amount || "0") * parseFloat(formData.fxRate || "1")).toFixed(2)}
+                  onChange={(e) => {
+                    if (parseFloat(formData.fxRate) === 1) {
+                      setFormData({ ...formData, amount: e.target.value });
+                    }
+                  }}
+                  required={parseFloat(formData.fxRate) === 1}
                   min="0.01"
                   step="0.01"
                   placeholder="0.00"
-                  readOnly={items.length > 0}
+                  readOnly={parseFloat(formData.fxRate) !== 1 || items.length > 0}
                   className={`tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                    items.length > 0
+                    parseFloat(formData.fxRate) !== 1 || items.length > 0
                       ? "bg-zinc-100 dark:bg-zinc-900 cursor-not-allowed"
                       : "bg-white dark:bg-zinc-800"
                   }`}
                 />
-                {items.length > 0 && (
+                {parseFloat(formData.fxRate) === 1 && items.length > 0 && (
                   <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                     Amount calculated from {items.length} item{items.length !== 1 ? "s" : ""}
                   </p>
                 )}
+                {parseFloat(formData.fxRate) !== 1 && (
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Converted to {trip.baseCurrency}
+                  </p>
+                )}
               </div>
 
-              <div className="min-w-0">
-                <label
-                  htmlFor="currency"
-                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-                >
-                  Currency *
-                </label>
-                <input
-                  type="text"
-                  id="currency"
-                  value={formData.currency}
-                  onChange={(e) =>
-                    setFormData({ ...formData, currency: e.target.value.toUpperCase() })
-                  }
-                  required
-                  maxLength={3}
-                  placeholder="GBP"
-                  className="tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                />
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  Trip currency: {trip.baseCurrency}
-                </p>
-              </div>
+              {parseFloat(formData.fxRate) === 1 && (
+                <div className="min-w-0">
+                  <label
+                    htmlFor="currency"
+                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                  >
+                    Currency *
+                  </label>
+                  <input
+                    type="text"
+                    id="currency"
+                    value={formData.currency}
+                    onChange={(e) =>
+                      setFormData({ ...formData, currency: e.target.value.toUpperCase() })
+                    }
+                    required
+                    maxLength={3}
+                    placeholder="GBP"
+                    className="tap-target w-full max-w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  />
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Trip currency: {trip.baseCurrency}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* FX Rate and Date */}

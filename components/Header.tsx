@@ -1,13 +1,16 @@
 "use client";
 
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useAdminMode } from "@/lib/admin/AdminModeContext";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { UserRole } from "@/lib/generated/prisma";
 
 export default function Header() {
   const { user, userProfile } = useAuth();
+  const { isAdminMode, toggleAdminMode } = useAdminMode();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -22,6 +25,8 @@ export default function Header() {
   if (!user) {
     return null;
   }
+
+  const isAdmin = userProfile?.role === UserRole.ADMIN || userProfile?.role === UserRole.SUPERADMIN;
 
   return (
     <header className="bg-white dark:bg-zinc-900 fixed top-0 left-0 right-0 z-50">
@@ -43,8 +48,18 @@ export default function Header() {
             </div>
           )}
 
-          {/* Right side - Logout button */}
-          <div className="flex items-center flex-shrink-0">
+          {/* Right side - Admin Mode toggle and Logout button */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isAdmin && (
+              <Button
+                onClick={toggleAdminMode}
+                variant={isAdminMode ? "default" : "outline"}
+                size="sm"
+                className="text-xs sm:text-sm whitespace-nowrap"
+              >
+                Admin Mode
+              </Button>
+            )}
             <Button
               onClick={handleSignOut}
               variant="secondary"

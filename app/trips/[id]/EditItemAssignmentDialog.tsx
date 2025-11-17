@@ -61,6 +61,10 @@ export default function EditItemAssignmentDialog({
   const [loading, setLoading] = useState(false);
   const [customAmount, setCustomAmount] = useState<string>("");
 
+  // Filter state
+  const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "assigned" | "unassigned">("all");
+
   // Determine permissions
   const isSpender = spend.paidBy.id === currentUserId;
   const isAssignmentOwner = assignment.userId === currentUserId;
@@ -217,6 +221,26 @@ export default function EditItemAssignmentDialog({
     }
   };
 
+  // Filter items based on filters
+  const getFilteredItems = () => {
+    let filtered = items;
+
+    // Apply assignment filter
+    if (assignmentFilter === "assigned") {
+      filtered = filtered.filter(item => item.assignedUserId !== null);
+    } else if (assignmentFilter === "unassigned") {
+      filtered = filtered.filter(item => item.assignedUserId === null);
+    }
+
+    return filtered;
+  };
+
+  const filteredItems = getFilteredItems();
+
+  // Count unique lists (if we ever add list associations)
+  // For now, we'll consider showing filters when there are 2+ items
+  const shouldShowFilters = items.length >= 2;
+
   // Calculate real-time totals
   const selectedItems = items.filter(item => selectedItemIds.has(item.id));
   const selectedItemsTotal = selectedItems.reduce((sum, item) => sum + item.cost, 0);
@@ -311,6 +335,52 @@ export default function EditItemAssignmentDialog({
                     Select Items ({selectedItems.length} selected)
                   </label>
 
+                  {/* Filters */}
+                  {shouldShowFilters && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-zinc-600 dark:text-zinc-400">Filters</span>
+                        <button
+                          type="button"
+                          onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+                          className="tap-target p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+                          aria-label={filtersCollapsed ? "Expand filters" : "Collapse filters"}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {filtersCollapsed ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            ) : (
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                            )}
+                          </svg>
+                        </button>
+                      </div>
+                      {!filtersCollapsed && (
+                        <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+                          {/* Assignment Filter */}
+                          <div>
+                            <label
+                              htmlFor="assignment-filter"
+                              className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+                            >
+                              Assignment Status
+                            </label>
+                            <select
+                              id="assignment-filter"
+                              value={assignmentFilter}
+                              onChange={(e) => setAssignmentFilter(e.target.value as "all" | "assigned" | "unassigned")}
+                              className="w-full px-2 py-1.5 text-sm bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="all">All Items</option>
+                              <option value="assigned">Assigned to Someone</option>
+                              <option value="unassigned">Unassigned</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {loading ? (
                     <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
                       Loading items...
@@ -319,9 +389,13 @@ export default function EditItemAssignmentDialog({
                     <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
                       No items available for this spend
                     </div>
+                  ) : filteredItems.length === 0 ? (
+                    <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
+                      No items match the current filters
+                    </div>
                   ) : (
                     <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {items.map((item) => {
+                      {filteredItems.map((item) => {
                         const isSelected = selectedItemIds.has(item.id);
                         const isAssignedToOther = item.assignedUserId && item.assignedUserId !== assignment.userId;
 

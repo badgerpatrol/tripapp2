@@ -42,16 +42,16 @@ function SpendCard({
     <div
       {...longPressHandlers}
       onClick={handleClick}
-      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
     >
       {/* Header: Description & Status */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 dark:text-white truncate">
+          <h3 className="font-medium text-zinc-900 dark:text-white truncate">
             {spend.description}
           </h3>
           {spend.category && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
               {spend.category.name}
             </p>
           )}
@@ -69,7 +69,7 @@ function SpendCard({
                 className={`p-1.5 rounded-lg transition-all hover:scale-110 ${
                   spend.status === SpendStatus.CLOSED
                     ? "bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                    : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400"
+                    : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-400"
                 }`}
                 title={spend.status === SpendStatus.CLOSED ? "Unlock spend" : "Lock spend"}
               >
@@ -92,7 +92,7 @@ function SpendCard({
               className={`px-2 py-1 rounded-full text-xs font-medium ${
                 isUserInvolved(spend)
                   ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                  : "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400"
               }`}
             >
               {isUserInvolved(spend) ? "You're involved" : "Not involved"}
@@ -105,31 +105,31 @@ function SpendCard({
       <div className="grid grid-cols-2 gap-3 mt-3">
         {/* Spender */}
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Paid by</p>
-          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Paid by</p>
+          <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">
             {spend.paidBy.displayName || spend.paidBy.email}
           </p>
         </div>
 
         {/* Amount */}
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Amount</p>
-          <p className="text-sm font-medium text-gray-900 dark:text-white">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Amount</p>
+          <p className="text-sm font-medium text-zinc-900 dark:text-white">
             {spend.currency} {spend.amount.toFixed(2)}
           </p>
         </div>
 
         {/* Date */}
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date</p>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Date</p>
+          <p className="text-sm text-zinc-700 dark:text-zinc-300">
             {new Date(spend.date).toLocaleDateString()}
           </p>
         </div>
 
         {/* Assignment % */}
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Assigned</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Assigned</p>
           <div>
             {getAssignmentBadge(spend.assignedPercentage || 0)}
           </div>
@@ -141,15 +141,15 @@ function SpendCard({
         const userAssignment = spend.assignments?.find(a => a.userId === currentUserId);
         if (userAssignment && userAssignment.shareAmount !== undefined && userAssignment.shareAmount > 0) {
           return (
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">You owe</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                  <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">You owe</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">
                     {((userAssignment.shareAmount / spend.amount) * 100).toFixed(1)}% of total
                   </p>
                 </div>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                <p className="text-lg font-bold text-zinc-900 dark:text-white">
                   {spend.currency} {userAssignment.shareAmount.toFixed(2)}
                 </p>
               </div>
@@ -161,13 +161,13 @@ function SpendCard({
 
       {/* Involved Users Count */}
       {spend.assignments && spend.assignments.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700">
+          <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
             <span>
-              <span className="font-medium text-gray-900 dark:text-white">
+              <span className="font-medium text-zinc-900 dark:text-white">
                 {spend.assignments.length}
               </span>
               {' '}{spend.assignments.length === 1 ? 'person' : 'people'} involved
@@ -398,7 +398,7 @@ export function SpendListView({
 
   if (spends.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
         <p>No spends found</p>
       </div>
     );

@@ -105,16 +105,17 @@ export async function POST(
           });
           console.log(`[rsvp-status] Marked RSVP Deadline milestone as completed (MANUAL) for trip ${tripId}`);
         } else if (newStatus === RsvpWindowStatus.OPEN && rsvpMilestone.isCompleted) {
-          // Reopening RSVP - reset milestone to uncompleted
+          // Reopening RSVP - reset milestone to uncompleted with MANUAL trigger
+          // This prevents auto-close from triggering again even if deadline has passed
           await tx.timelineItem.update({
             where: { id: rsvpMilestone.id },
             data: {
               isCompleted: false,
               completedAt: null,
-              triggerType: null,
+              triggerType: MilestoneTriggerType.MANUAL,
             },
           });
-          console.log(`[rsvp-status] Reset RSVP Deadline milestone to uncompleted for trip ${tripId}`);
+          console.log(`[rsvp-status] Reset RSVP Deadline milestone to uncompleted (MANUAL) for trip ${tripId}`);
         }
       }
 
