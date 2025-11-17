@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { UserRole } from "@/lib/generated/prisma";
 
 export default function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, userProfile } = useAuth();
 
   if (!user) {
@@ -14,8 +15,20 @@ export default function Navigation() {
   }
 
   const isHomePage = pathname === "/";
-  const isKitPage = pathname?.startsWith("/kit") || pathname === "/lists/create-kit";
-  const isListsPage = pathname?.startsWith("/lists") && pathname !== "/lists/create-kit";
+  const returnTo = searchParams.get("returnTo") || "";
+
+  // Check if we're in kit context (either /kit path or viewing from kit origin)
+  const isKitPage =
+    pathname?.startsWith("/kit") ||
+    pathname === "/lists/create-kit" ||
+    (pathname?.startsWith("/lists") && returnTo.startsWith("/kit"));
+
+  // Check if we're in lists/checklist context
+  const isListsPage =
+    pathname?.startsWith("/lists") &&
+    pathname !== "/lists/create-kit" &&
+    !returnTo.startsWith("/kit");
+
   const isGroupsPage = pathname?.startsWith("/groups");
   const isUsersPage = pathname?.startsWith("/admin/users");
   const isAdmin = userProfile?.role === UserRole.ADMIN;
