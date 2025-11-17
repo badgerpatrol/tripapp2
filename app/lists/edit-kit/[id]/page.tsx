@@ -164,7 +164,6 @@ function EditKitListPageContent() {
 
   const addItem = () => {
     setItems([
-      ...items,
       {
         id: crypto.randomUUID(),
         label: "",
@@ -176,7 +175,7 @@ function EditKitListPageContent() {
         url: "",
         perPerson: false,
         required: true,
-        orderIndex: items.length,
+        orderIndex: 0,
         date: "",
         needsRepair: false,
         conditionNotes: "",
@@ -184,6 +183,7 @@ function EditKitListPageContent() {
         lastSeenText: "",
         lastSeenDate: "",
       },
+      ...items,
     ]);
   };
 
@@ -214,11 +214,10 @@ function EditKitListPageContent() {
   };
 
   const handlePhotoScanComplete = (scannedItems: KitItemToAdd[]) => {
-    // Add scanned items to the end of the list with proper order indices and inventory fields
-    const startIndex = items.length;
+    // Add scanned items to the top of the list with proper order indices and inventory fields
     const newItems = scannedItems.map((item, idx) => ({
       ...item,
-      orderIndex: startIndex + idx,
+      orderIndex: idx,
       date: "",
       needsRepair: false,
       conditionNotes: "",
@@ -226,7 +225,7 @@ function EditKitListPageContent() {
       lastSeenText: "",
       lastSeenDate: "",
     }));
-    setItems([...items, ...newItems]);
+    setItems([...newItems, ...items]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -429,6 +428,25 @@ function EditKitListPageContent() {
                 </label>
               </div>
             </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-4 justify-end">
+            <Button
+              type="button"
+              onClick={() => router.push(returnTo)}
+              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
 
           {/* Items Card */}
@@ -711,25 +729,6 @@ function EditKitListPageContent() {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-4 justify-end">
-            <Button
-              type="button"
-              onClick={() => router.push(returnTo)}
-              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
           </div>
         </form>
 

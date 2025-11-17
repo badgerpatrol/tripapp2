@@ -44,6 +44,7 @@ export default function KitPhotoScanSheet({
   const [scannedItems, setScannedItems] = useState<ScannedKitItem[] | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [hint, setHint] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -117,6 +118,7 @@ export default function KitPhotoScanSheet({
     setScannedItems(null);
     setSelectedItems(new Set());
     setError(null);
+    setHint("");
     startCamera();
   };
 
@@ -139,6 +141,7 @@ export default function KitPhotoScanSheet({
         body: JSON.stringify({
           listId,
           image: capturedImage,
+          hint: hint.trim() || undefined,
         }),
       });
 
@@ -224,6 +227,7 @@ export default function KitPhotoScanSheet({
     setScannedItems(null);
     setSelectedItems(new Set());
     setError(null);
+    setHint("");
     setIsProcessing(false);
     onClose();
   };
@@ -287,6 +291,19 @@ export default function KitPhotoScanSheet({
           {/* Scanned Items with Checkboxes */}
           {scannedItems && (
             <div className="mb-6">
+              {/* Show the photo for reference */}
+              {capturedImage && (
+                <div className="mb-4">
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <img
+                      src={capturedImage}
+                      alt="Scanned photo"
+                      className="w-full h-auto max-h-[300px] object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Select All / Deselect All Button */}
               <div className="mb-3 flex justify-between items-center">
                 <button
@@ -378,6 +395,25 @@ export default function KitPhotoScanSheet({
                 </div>
               )}
               <canvas ref={canvasRef} className="hidden" />
+            </div>
+          )}
+
+          {/* Hint text field - shown after image is captured/uploaded */}
+          {capturedImage && !scannedItems && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Kit type hint (optional)
+              </label>
+              <input
+                type="text"
+                value={hint}
+                onChange={(e) => setHint(e.target.value)}
+                placeholder="e.g., hiking gear, camping equipment, ski kit..."
+                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Help the AI understand what type of items to look for
+              </p>
             </div>
           )}
 

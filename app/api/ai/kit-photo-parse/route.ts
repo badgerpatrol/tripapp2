@@ -15,6 +15,7 @@ export const maxDuration = 60; // Allow up to 60s for Claude API processing
 interface KitPhotoParseRequest {
   listId: string;
   image: string; // Data URL (data:image/jpeg;base64,...)
+  hint?: string; // Optional hint about the type of kit
 }
 
 export interface ParsedKitItem {
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = (await request.json()) as KitPhotoParseRequest;
-    const { listId, image } = body;
+    const { listId, image, hint } = body;
 
     if (!listId || !image) {
       return NextResponse.json(
@@ -70,41 +71,49 @@ export async function POST(request: NextRequest) {
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
+    const hintText = hint
+      ? `\n\nThe user has provided this hint about the type of kit: "${hint}"\nUse this hint to help guide your identification, but ONLY list items you can actually see clearly in the photo.`
+      : '';
+
     const prompt = `You are analyzing a photo to identify items that could be added to a packing list or kit list.
 
-Look at the image and identify ALL distinct items you can see. These could be ANY type of object - clothing, gear, equipment, electronics, toiletries, food, tools, accessories, or anything else visible in the photo.
+CRITICAL: Only identify items you can CLEARLY and CONFIDENTLY see in the photo. Do not guess, assume, or hallucinate items that might be present but are not clearly visible. It is much better to miss an item than to list something that isn't actually there.${hintText}
+
+Look at the image carefully and identify distinct items you can see with confidence. These could be ANY type of object - clothing, gear, equipment, electronics, toiletries, food, tools, accessories, or anything else that is clearly visible in the photo.
 
 Return ONLY a raw JSON array with no markdown formatting, code blocks, or explanations.
 
 Each item should have:
-- "name": A short, clear name for the item (REQUIRED)
-- "description": (optional) Additional details about the item if relevant (brand, color, size, condition, etc.)
-- "year": (optional) Approximate year or era the item is from, if identifiable (e.g., "2020", "2015-2018", "1990s")
-- "makeModel": (optional) Manufacturer and model information if visible or identifiable (e.g., "The North Face Summit Series", "MSR PocketRocket 2", "Garmin Fenix 6")
-- "weightGrams": (optional) Estimated weight in grams if you can reasonably estimate it based on the item type and size
+- "name": A short, clear name for the item (REQUIRED) - only include if you can clearly see and identify it
+- "description": (optional) Additional details about the item that you can actually see (color, size, visible condition, etc.) - do not guess or assume
+- "year": (optional) ONLY include if you can clearly see year markings or have very high confidence based on visible features
+- "makeModel": (optional) ONLY include if you can clearly see brand logos, model names, or have very high confidence in the identification
+- "weightGrams": (optional) ONLY include if you have high confidence in the estimate based on clearly visible item characteristics
 
 Example format:
 [
-  {"name":"Hiking boots","description":"Brown leather, ankle height","year":"2018","makeModel":"Salomon Quest 4D GTX","weightGrams":1200},
-  {"name":"Water bottle","weightGrams":150},
-  {"name":"Backpack","description":"Blue, 40L capacity","makeModel":"Osprey Atmos AG 50","weightGrams":2100},
-  {"name":"Headlamp","makeModel":"Petzl Actik Core","weightGrams":75},
-  {"name":"First aid kit"}
+  {"name":"Hiking boots","description":"Brown leather, ankle height"},
+  {"name":"Water bottle","description":"Clear plastic"},
+  {"name":"Blue backpack"},
+  {"name":"Headlamp","description":"Black, mounted on elastic strap"}
 ]
 
-Important:
-- Be specific but concise with item names
-- Only include optional fields (year, makeModel, weightGrams) if you can identify them with reasonable confidence
-- For year: provide your best estimate based on design, style, or visible markings
-- For makeModel: look for brand logos, model names, or distinctive features
-- For weightGrams: use your knowledge of typical item weights (only if you're confident)
-- List each distinct item you can identify
-- Don't group items together - list them separately
+Critical rules to prevent hallucination:
+- ONLY list items you can clearly see in the photo
+- If you're not sure what an item is, either describe it generically or skip it
+- Do NOT assume items exist based on context (e.g., don't list "batteries" just because you see a headlamp)
+- Do NOT guess brand names unless you can clearly see logos or distinctive branding
+- Do NOT estimate weights unless you're very confident
+- Do NOT list items that are partially obscured unless you can clearly identify them
+- When in doubt, leave it out - accuracy is more important than completeness
+- Be conservative with your identifications
+- List each distinct item separately, don't group items together
 - Return valid JSON only, no other text`;
 
     const message = await anthropic.messages.create({
       model: "claude-haiku-4-5",
       max_tokens: 2048,
+      temperature: 0, // Use temperature 0 for more deterministic, conservative output
       messages: [
         {
           role: "user",

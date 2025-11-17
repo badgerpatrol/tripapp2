@@ -407,7 +407,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       {!loading && !error && displayedLists.length === 0 && (
         <div className="text-center py-8">
           <p className="text-zinc-500 dark:text-zinc-400">
-            No lists yet. Add a template to get started!
+            No lists yet. Add one to get started!
           </p>
         </div>
       )}

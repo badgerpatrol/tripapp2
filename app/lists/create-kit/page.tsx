@@ -99,7 +99,7 @@ function CreateKitListPageContent() {
   };
 
   const handlePhotoScanComplete = (scannedItems: KitItemToAdd[]) => {
-    // Add scanned items to the list with inventory fields
+    // Add scanned items to the top of the list with inventory fields
     const itemsWithInventoryFields = scannedItems.map(item => ({
       ...item,
       date: "",
@@ -109,7 +109,7 @@ function CreateKitListPageContent() {
       lastSeenText: "",
       lastSeenDate: "",
     }));
-    setItems([...items, ...itemsWithInventoryFields]);
+    setItems([...itemsWithInventoryFields, ...items]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -339,25 +339,25 @@ function CreateKitListPageContent() {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Actions */}
-            <div className="flex gap-4 justify-end pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
-              <Button
-                type="button"
-                onClick={() => router.push("/kit")}
-                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
-                disabled={loading}
-              >
-                {loading ? "Creating..." : inventoryFromUrl ? "Create Inventory List" : "Create Kit List"}
-              </Button>
-            </div>
+          {/* Actions */}
+          <div className="flex gap-4 justify-end">
+            <Button
+              type="button"
+              onClick={() => router.push("/kit")}
+              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
+              disabled={loading}
+            >
+              {loading ? "Creating..." : inventoryFromUrl ? "Create Inventory List" : "Create Kit List"}
+            </Button>
           </div>
 
           {/* Items Card */}
