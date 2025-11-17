@@ -53,7 +53,7 @@ export default function Header() {
             {isAdmin && (
               <Button
                 onClick={toggleAdminMode}
-                variant={isAdminMode ? "default" : "outline"}
+                variant={isAdminMode ? "primary" : "outline"}
                 size="sm"
                 className="text-xs sm:text-sm whitespace-nowrap"
               >
