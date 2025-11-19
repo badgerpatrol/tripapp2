@@ -263,6 +263,18 @@ function ListsPageContent() {
           </div>
         )}
 
+        {/* New Checklist Button - Always show for My Checklists */}
+        {!loading && activeTab === "my-templates" && (
+          <div className="mb-6 flex justify-end">
+            <Button
+              onClick={() => window.location.href = "/lists/create-todo"}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              ✓ New Checklist
+            </Button>
+          </div>
+        )}
+
         {/* Templates Grid */}
         {!loading && templates.length === 0 && (
           <div className="text-center py-12">
@@ -275,18 +287,7 @@ function ListsPageContent() {
         )}
 
         {!loading && templates.length > 0 && (
-          <>
-            {activeTab === "my-templates" && (
-              <div className="mb-6 flex justify-end">
-                <Button
-                  onClick={() => window.location.href = "/lists/create-todo"}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  ✓ New Checklist
-                </Button>
-              </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {templates.map((template) => (
               <div
                 key={template.id}
@@ -359,8 +360,7 @@ function ListsPageContent() {
                 )}
               </div>
             ))}
-            </div>
-          </>
+          </div>
         )}
       </div>
     </div>
