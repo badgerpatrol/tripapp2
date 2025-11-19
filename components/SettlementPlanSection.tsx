@@ -88,7 +88,6 @@ export default function SettlementPlanSection({
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [editingPayment, setEditingPayment] = useState<any | null>(null);
   const [showEditPaymentDialog, setShowEditPaymentDialog] = useState(false);
-  const [memberRsvpFilter, setMemberRsvpFilter] = useState<"all" | "PENDING" | "ACCEPTED" | "DECLINED" | "MAYBE">("all");
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [recordingPaymentId, setRecordingPaymentId] = useState<string | null>(null);
   const [perPersonTotalsCollapsed, setPerPersonTotalsCollapsed] = useState(true);
@@ -137,15 +136,6 @@ export default function SettlementPlanSection({
     fetchData();
   }, [user, tripId]);
 
-  // Set default filter based on trip RSVP status
-  useEffect(() => {
-    if (tripRsvpStatus === "CLOSED") {
-      setMemberRsvpFilter("ACCEPTED");
-    } else {
-      setMemberRsvpFilter("all");
-    }
-  }, [tripRsvpStatus]);
-
   const formatCurrency = (amount: number) => {
     return `${baseCurrency} ${amount.toFixed(2)}`;
   };
@@ -171,34 +161,15 @@ export default function SettlementPlanSection({
     return `Debt since ${formatDate(dateString)} (${date.toLocaleDateString()})`;
   };
 
-  // Get filtered balances based on RSVP status
+  // Get all balances (no filtering by RSVP status - settlements include everyone)
   const getFilteredBalances = () => {
     if (!balanceData?.balances) return [];
-
-    // Filter by selected RSVP status
-    if (memberRsvpFilter !== "all") {
-      return balanceData.balances.filter((balance) => {
-        const participant = participants.find((p) => p.user.id === balance.userId);
-        return participant?.rsvpStatus === memberRsvpFilter;
-      });
-    }
-
     return balanceData.balances;
   };
 
-  // Get filtered settlements based on RSVP status
+  // Get all settlements (no filtering by RSVP status - settlements include everyone)
   const getFilteredSettlements = () => {
     if (!balanceData?.settlements) return [];
-
-    // Filter by selected RSVP status
-    if (memberRsvpFilter !== "all") {
-      return balanceData.settlements.filter((settlement) => {
-        const fromParticipant = participants.find((p) => p.user.id === settlement.fromUserId);
-        const toParticipant = participants.find((p) => p.user.id === settlement.toUserId);
-        return fromParticipant?.rsvpStatus === memberRsvpFilter && toParticipant?.rsvpStatus === memberRsvpFilter;
-      });
-    }
-
     return balanceData.settlements;
   };
 
@@ -340,28 +311,6 @@ export default function SettlementPlanSection({
 
       {!loading && !error && balanceData && (
         <div className="space-y-6">
-          {/* Total Spent Summary */}
-
-
-          {/* RSVP Filter Dropdown */}
-          <div className="mb-4">
-            <label htmlFor="settlement-member-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Filter by RSVP Status
-            </label>
-            <select
-              id="settlement-member-filter"
-              value={memberRsvpFilter}
-              onChange={(e) => setMemberRsvpFilter(e.target.value as typeof memberRsvpFilter)}
-              className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-            >
-              <option value="all">All Members</option>
-              <option value="ACCEPTED">Accepted</option>
-              <option value="PENDING">Pending</option>
-              <option value="MAYBE">Maybe</option>
-              <option value="DECLINED">Declined</option>
-            </select>
-          </div>
-
           {/* Settlement Plan with Payment Tracking */}
           <div>
 
