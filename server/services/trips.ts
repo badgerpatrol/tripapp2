@@ -700,6 +700,7 @@ export async function getTripOverviewForMember(
         date: s.date,
         status: s.status,
         notes: s.notes,
+        receiptImageData: s.receiptImageData,
         paidBy: s.paidBy,
         category: s.category,
         assignedPercentage: Math.round(assignedPercentage * 10) / 10,

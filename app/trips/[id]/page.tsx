@@ -76,6 +76,7 @@ interface TripDetail {
     date: string;
     status: SpendStatus;
     notes: string | null;
+    receiptImageData?: string | null;
     paidBy: {
       id: string;
       email: string;

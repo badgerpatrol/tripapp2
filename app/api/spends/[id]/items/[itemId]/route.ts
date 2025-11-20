@@ -104,6 +104,8 @@ export async function PUT(
       cost: decimalToNumber(item.cost),
       assignedUserId: item.assignedUserId,
       assignedUser: item.assignedUser || null,
+      source: item.source,
+      photoId: item.photoId,
       createdById: item.createdById,
       createdBy: item.createdBy,
       createdAt: item.createdAt,

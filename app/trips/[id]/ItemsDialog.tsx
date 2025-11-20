@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SpendStatus } from "@/lib/generated/prisma";
+import { SpendStatus, SpendItemSource } from "@/lib/generated/prisma";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 interface SpendItem {
@@ -16,6 +16,8 @@ interface SpendItem {
     email: string;
     displayName: string | null;
   } | null;
+  source: SpendItemSource;
+  photoId: string | null;
   createdById: string;
   createdBy: {
     id: string;
@@ -41,6 +43,7 @@ interface ItemsDialogProps {
     amount: number;
     currency: string;
     status: SpendStatus;
+    receiptImageData?: string | null;
     paidBy: {
       id: string;
       email: string;
@@ -75,6 +78,7 @@ export default function ItemsDialog({
   const [error, setError] = useState<string | null>(null);
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<SpendItem | null>(null);
+  const [viewingPhotoUrl, setViewingPhotoUrl] = useState<string | null>(null);
 
   // Check if user can edit
   const isTripSpendingClosed = (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED;
@@ -171,6 +175,29 @@ export default function ItemsDialog({
   };
 
   if (!isOpen || !spend) return null;
+
+  // Show photo viewer if open
+  if (viewingPhotoUrl) {
+    return (
+      <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+        <div className="relative max-w-4xl w-full max-h-[90vh]">
+          <button
+            onClick={() => setViewingPhotoUrl(null)}
+            className="absolute top-4 right-4 tap-target p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-10"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={viewingPhotoUrl}
+            alt="Receipt"
+            className="w-full h-auto max-h-[90vh] object-contain rounded-lg"
+          />
+        </div>
+      </div>
+    );
+  }
 
   // Show item form if open
   if (showItemForm) {
@@ -336,7 +363,7 @@ export default function ItemsDialog({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                           {item.name}
                         </h4>
@@ -350,6 +377,17 @@ export default function ItemsDialog({
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 mb-2">
                           {item.description}
                         </p>
+                      )}
+                      {item.source === "PHOTO" && spend.receiptImageData && (
+                        <button
+                          onClick={() => setViewingPhotoUrl(spend.receiptImageData || null)}
+                          className="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          View receipt photo
+                        </button>
                       )}
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">

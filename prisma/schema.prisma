@@ -196,6 +196,20 @@ enum EventType {
   GROUP_DELETED
   GROUP_MEMBER_ADDED
   GROUP_MEMBER_REMOVED
+  TAG_CREATED
+  TAG_ADDED
+  TAG_REMOVED
+}
+
+enum TagEntityType {
+  spend
+  checklist_item
+  kit_item
+}
+
+enum SpendItemSource {
+  MANUAL
+  PHOTO
 }
 
 // ============================================================================
@@ -410,15 +424,17 @@ model Spend {
 }
 
 model SpendItem {
-  id               String    @id @default(uuid())
+  id               String           @id @default(uuid())
   spendId          String
-  name             String    // Item name (e.g., "Beer", "Pizza slice")
-  description      String?   // Optional description (0-280 chars)
-  cost             Decimal   @db.Decimal(19, 4) // Item cost in spend currency
-  assignedUserId   String?   // Optional: user assigned to this item
+  name             String           // Item name (e.g., "Beer", "Pizza slice")
+  description      String?          // Optional description (0-280 chars)
+  cost             Decimal          @db.Decimal(19, 4) // Item cost in spend currency
+  assignedUserId   String?          // Optional: user assigned to this item
+  source           SpendItemSource  @default(MANUAL) // Source of the item (MANUAL or PHOTO)
+  photoId          String?          // ID of the photo this item was extracted from (UUID)
   createdById      String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   // Relationships
   spend        Spend             @relation(fields: [spendId], references: [id], onDelete: Cascade)
@@ -429,6 +445,8 @@ model SpendItem {
   @@index([spendId])
   @@index([assignedUserId])
   @@index([createdById])
+  @@index([source])
+  @@index([photoId])
   @@map("spend_items")
 }
 
@@ -986,4 +1004,34 @@ model SystemLog {
   @@index([feature])
   @@index([eventName])
   @@map("system_logs")
+}
+
+// ============================================================================
+// TAGS
+// ============================================================================
+
+model Tag {
+  id         String    @id @default(cuid())
+  name       String    @db.VarChar(80)
+  slug       String    @unique @db.VarChar(100)
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  usageCount Int       @default(0)
+  links      TagLink[]
+
+  @@map("tags")
+}
+
+model TagLink {
+  id         String        @id @default(cuid())
+  tagId      String
+  entityType TagEntityType
+  entityId   String
+  createdBy  String
+  createdAt  DateTime      @default(now())
+  tag        Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("tag_links")
 }

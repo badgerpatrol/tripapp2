@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility, Visibility, ListType, TodoActionType, GroupMemberRole } from "@/lib/generated/prisma";
+import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility, Visibility, ListType, TodoActionType, GroupMemberRole, SpendItemSource } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth Schemas
@@ -296,6 +296,8 @@ export const CreateSpendItemSchema = z.object({
   description: z.string().max(280, "Item description is too long").optional(),
   cost: z.number().nonnegative("Item cost must be non-negative"),
   userId: z.string().uuid("Valid user ID required").optional(), // Optional user assignment
+  source: z.nativeEnum(SpendItemSource).default("MANUAL"),
+  photoId: z.string().uuid().optional(), // ID of the photo this item was extracted from
 });
 
 export const UpdateSpendItemSchema = z.object({
@@ -313,6 +315,8 @@ export const SpendItemResponseSchema = z.object({
   cost: z.number(),
   assignedUserId: z.string().nullable(),
   assignedUser: UserSummarySchema.nullable().optional(),
+  source: z.nativeEnum(SpendItemSource),
+  photoId: z.string().nullable(),
   createdById: z.string(),
   createdBy: UserSummarySchema.optional(),
   createdAt: z.coerce.date(),
