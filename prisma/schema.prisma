@@ -128,6 +128,12 @@ enum GroupMemberRole {
   MEMBER
 }
 
+enum TagEntityType {
+  spend
+  checklist_item
+  kit_item
+}
+
 enum LogSeverity {
   DEBUG
   INFO
@@ -196,6 +202,8 @@ enum EventType {
   GROUP_DELETED
   GROUP_MEMBER_ADDED
   GROUP_MEMBER_REMOVED
+  TAG_ADDED
+  TAG_REMOVED
 }
 
 // ============================================================================
@@ -986,4 +994,39 @@ model SystemLog {
   @@index([feature])
   @@index([eventName])
   @@map("system_logs")
+}
+
+// ============================================================================
+// TAGS - Flexible tagging system for spends, checklist items, kit items
+// ============================================================================
+
+model Tag {
+  id         String    @id @default(uuid())
+  name       String    @unique
+  slug       String    @unique
+  usageCount Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  links TagLink[]
+
+  @@index([name])
+  @@index([slug])
+  @@map("tags")
+}
+
+model TagLink {
+  id         String        @id @default(uuid())
+  tagId      String
+  entityType TagEntityType
+  entityId   String
+  createdBy  String
+  createdAt  DateTime      @default(now())
+
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, entityType, entityId])
+  @@index([tagId])
+  @@index([entityType, entityId])
+  @@map("tag_links")
 }
