@@ -35,6 +35,7 @@ export default function MenuScanSheet({
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [scannedItems, setScannedItems] = useState<ScannedMenuItem[] | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isFileUpload, setIsFileUpload] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -92,6 +93,7 @@ export default function MenuScanSheet({
     ctx.drawImage(video, 0, 0);
     const imageData = canvas.toDataURL("image/jpeg", 0.8);
     setCapturedImage(imageData);
+    setIsFileUpload(false);
     stopCamera();
   };
 
@@ -99,7 +101,16 @@ export default function MenuScanSheet({
     setCapturedImage(null);
     setScannedItems(null);
     setError(null);
+    setIsFileUpload(false);
     startCamera();
+  };
+
+  const goBack = () => {
+    setCapturedImage(null);
+    setScannedItems(null);
+    setError(null);
+    setIsFileUpload(false);
+    // Don't start camera - let user choose
   };
 
   const parseMenu = async () => {
@@ -194,6 +205,7 @@ export default function MenuScanSheet({
     setError(null);
     setIsProcessing(false);
     setIsSaving(false);
+    setIsFileUpload(false);
     onClose();
   };
 
@@ -213,6 +225,8 @@ export default function MenuScanSheet({
     reader.onload = (event) => {
       const fileData = event.target?.result as string;
       setCapturedImage(fileData);
+      setIsFileUpload(true);
+      setError(null); // Clear any camera permission errors
       stopCamera();
     };
     reader.readAsDataURL(file);
@@ -249,8 +263,8 @@ export default function MenuScanSheet({
             </button>
           </div>
 
-          {/* Error Display */}
-          {error && (
+          {/* Error Display - hide camera errors when file is uploaded */}
+          {error && !isFileUpload && (
             <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
@@ -359,11 +373,11 @@ export default function MenuScanSheet({
               <div className="flex flex-col-reverse md:flex-row gap-3">
                 <button
                   type="button"
-                  onClick={retakePhoto}
+                  onClick={isFileUpload ? goBack : retakePhoto}
                   disabled={isSaving}
                   className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Scan Different Menu
+                  {isFileUpload ? "Back" : "Scan Different Menu"}
                 </button>
                 <button
                   type="button"
@@ -384,11 +398,11 @@ export default function MenuScanSheet({
               <div className="flex flex-col-reverse md:flex-row gap-3">
                 <button
                   type="button"
-                  onClick={retakePhoto}
+                  onClick={isFileUpload ? goBack : retakePhoto}
                   disabled={isProcessing}
                   className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Retake Photo
+                  {isFileUpload ? "Back" : "Retake Photo"}
                 </button>
                 <button
                   type="button"
