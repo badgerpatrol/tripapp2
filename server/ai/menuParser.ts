@@ -58,24 +58,30 @@ export async function parseMenuImage(
   };
 
   // Create the prompt for Claude to analyze the menu
-  const prompt = `Extract menu items from this image and return ONLY raw JSON. No markdown formatting, no code blocks, no explanations.
+  const prompt = `Analyze this restaurant menu and extract all menu items.
 
-Output this exact JSON structure:
-{"items":[{"course":"optional course name","name":"item name","description":"optional details","price":"numeric or MP"}],"currency_hint":"£"}
+Return ONLY a JSON object with this structure (no markdown, no code blocks, no explanations):
 
-CRITICAL RULES:
-1. Return ONLY the JSON object - no backtick marks, no json label, no extra text
-2. Read all menu items from the image
-3. For course: use section headers like Starters, Mains, Desserts if visible
-4. For name: extract the dish name only
-5. For description: include dietary info like vegan or calories and brief details
-6. For price: Include the numeric value or MP if Market Price
-7. For currency_hint: include the currency symbol you see
-8. Keep all items even without prices
+{
+  "items": [
+    {
+      "name": "dish name",
+      "description": "optional description",
+      "price": "price value or MP",
+      "course": "optional section like Starters, Mains, etc"
+    }
+  ],
+  "currency_hint": "currency symbol like £, $, €"
+}
 
-${currencyHint ? `Expected currency: ${currencyHint}` : ""}
+Rules:
+- Return ONLY the JSON object, nothing else
+- Extract ALL items you can see
+- Include items even if they don't have prices
+- For prices: use the numeric value or "MP" for market price
+${currencyHint ? `- Expected currency: ${currencyHint}` : ""}
 
-Output format: Pure JSON only, starting with curly brace and ending with curly brace`;
+Output the JSON object now:`;
 
   // Call Claude Vision API with image or document based on file type
   const message = await anthropic.messages.create({
@@ -115,6 +121,14 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
   const responseText =
     message.content[0].type === "text" ? message.content[0].text : "";
 
+  if (!responseText) {
+    console.error("Empty response from Claude API");
+    console.error("Full message:", JSON.stringify(message, null, 2));
+    throw new Error(
+      `Menu parsing failed: Claude returned an empty response. The ${isPDF ? "PDF" : "image"} may be unreadable or in an unsupported format.`
+    );
+  }
+
   // Strip markdown code blocks if present (Claude sometimes wraps JSON in ```)
   let cleanedText = responseText.trim();
   if (cleanedText.startsWith("```")) {
@@ -126,9 +140,18 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
   try {
     rawResponse = JSON.parse(cleanedText);
   } catch (parseError) {
-    console.error("Failed to parse Claude response:", responseText);
+    console.error("JSON parsing failed");
+    console.error("Raw response:", responseText);
+    console.error("Cleaned text:", cleanedText);
+    console.error("Parse error:", parseError);
+
+    // Return a more helpful error message with truncated response
+    const preview = responseText.length > 200
+      ? responseText.substring(0, 200) + "..."
+      : responseText;
+
     throw new Error(
-      "Failed to parse menu data. Please try again with a clearer image."
+      `Menu parsing failed: Unable to parse AI response as JSON. Response preview: "${preview}". The ${isPDF ? "PDF" : "image"} may contain non-menu content or be formatted in an unexpected way.`
     );
   }
 
@@ -136,8 +159,14 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
   const validationResult = MenuParseResponseSchema.safeParse(rawResponse);
   if (!validationResult.success) {
     console.error("Menu parse validation failed:", validationResult.error);
+    console.error("Raw response object:", JSON.stringify(rawResponse, null, 2));
+
+    const issues = validationResult.error.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join("; ");
+
     throw new Error(
-      "Invalid menu data format. Please try again with a clearer image."
+      `Menu parsing failed: AI response doesn't match expected format. Validation errors: ${issues}. The ${isPDF ? "PDF" : "image"} may not contain a standard menu layout.`
     );
   }
 
@@ -193,8 +222,9 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
   const validItems = normalizedItems.filter((item) => item.name);
 
   if (validItems.length === 0) {
+    console.error("No valid items after parsing. Original response had", parsedResponse.items.length, "items");
     throw new Error(
-      "No valid menu items found. Please ensure the menu is clear and readable."
+      `Menu parsing failed: No valid menu items could be extracted. AI found ${parsedResponse.items.length} items but none had valid names. The ${isPDF ? "PDF" : "image"} may not contain a readable menu or may be in an unexpected format.`
     );
   }
 
