@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import MenuScanSheet from "./MenuScanSheet";
 import MenuUrlSheet from "./MenuUrlSheet";
+import MenuPlaywrightSheet from "./MenuPlaywrightSheet";
 import MenuGoogleSheetSheet from "./MenuGoogleSheetSheet";
 
 interface ChoiceItem {
@@ -45,6 +46,7 @@ export default function ManageChoiceDialog({
   const [showAddItem, setShowAddItem] = useState(false);
   const [showMenuScan, setShowMenuScan] = useState(false);
   const [showMenuUrl, setShowMenuUrl] = useState(false);
+  const [showMenuPlaywright, setShowMenuPlaywright] = useState(false);
   const [showGoogleSheet, setShowGoogleSheet] = useState(false);
   const [tab, setTab] = useState<"details" | "items">(initialTab);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -841,6 +843,15 @@ export default function ManageChoiceDialog({
                         Read from URL
                       </button>
                       <button
+                        onClick={() => setShowMenuPlaywright(true)}
+                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-purple-500 hover:text-purple-600 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        Read from URL (JS)
+                       </button>
+                       <button>
                         onClick={() => setShowGoogleSheet(true)}
                         className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
                       >
@@ -899,6 +910,17 @@ export default function ManageChoiceDialog({
         />
       )}
 
+      {/* Menu Playwright Sheet (for JS-heavy sites) */}
+      {choiceId && (
+        <MenuPlaywrightSheet
+          tripId={tripId}
+          choiceId={choiceId}
+          tripCurrency={tripCurrency}
+          isOpen={showMenuPlaywright}
+          onClose={() => setShowMenuPlaywright(false)}
+          onItemsAdded={() => {
+            setShowMenuPlaywright(false);
+            fetchChoice(); // Reload items after Playwright parsing
       {/* Google Sheet Sheet */}
       {choiceId && (
         <MenuGoogleSheetSheet
