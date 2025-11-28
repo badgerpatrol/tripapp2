@@ -26,6 +26,7 @@ interface ManageChoiceDialogProps {
   tripCurrency: string;
   onSuccess: () => void;
   initialTab?: "details" | "items";
+  onDataLoaded?: () => void;
 }
 
 export default function ManageChoiceDialog({
@@ -36,6 +37,7 @@ export default function ManageChoiceDialog({
   tripCurrency,
   onSuccess,
   initialTab = "details",
+  onDataLoaded,
 }: ManageChoiceDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -130,6 +132,7 @@ export default function ManageChoiceDialog({
       setError(err.message);
     } finally {
       setLoading(false);
+      onDataLoaded?.();
     }
   };
 

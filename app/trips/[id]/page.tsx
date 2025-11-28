@@ -153,6 +153,7 @@ export default function TripDetailPage() {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items">("details");
   const [createChoiceInitialName, setCreateChoiceInitialName] = useState("");
+  const [loadingChoiceSetup, setLoadingChoiceSetup] = useState<string | null>(null);
 
   // List workflow modal state
   const [isListWorkflowModalOpen, setIsListWorkflowModalOpen] = useState(false);
@@ -2240,16 +2241,15 @@ export default function TripDetailPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                setLoadingChoiceSetup(choice.id);
                                 setSelectedChoiceId(choice.id);
                                 setIsManageChoiceDialogOpen(true);
                               }}
-                              className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0 self-start"
-                              title="Manage choice"
+                              disabled={loadingChoiceSetup === choice.id}
+                              className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap flex-shrink-0 self-start disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Set up choice"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
+                              {loadingChoiceSetup === choice.id ? "Loading..." : "Set up"}
                             </button>
                           )}
                         </div>
@@ -3089,11 +3089,15 @@ export default function TripDetailPage() {
             setIsManageChoiceDialogOpen(false);
             setSelectedChoiceId(null);
             setManageChoiceInitialTab("details");
+            setLoadingChoiceSetup(null);
             fetchChoices();
           }}
           onSuccess={() => {
             fetchChoices();
             fetchTrip(); // Refresh timeline to show updated/new milestones
+          }}
+          onDataLoaded={() => {
+            setLoadingChoiceSetup(null);
           }}
         />
       )}
