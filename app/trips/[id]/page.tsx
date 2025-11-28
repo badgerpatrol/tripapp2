@@ -139,6 +139,9 @@ export default function TripDetailPage() {
   const [editingTimelineDate, setEditingTimelineDate] = useState<string>("");
   const [deletingTimelineItemId, setDeletingTimelineItemId] = useState<string | null>(null);
   const [togglingTimelineItemId, setTogglingTimelineItemId] = useState<string | null>(null);
+  const [isRsvpResponding, setIsRsvpResponding] = useState<"ACCEPTED" | "DECLINED" | "MAYBE" | null>(null);
+  const [isTogglingRsvpStatus, setIsTogglingRsvpStatus] = useState(false);
+  const [isTogglingSpendStatus, setIsTogglingSpendStatus] = useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
   const [newMilestoneDescription, setNewMilestoneDescription] = useState("");
@@ -1378,6 +1381,7 @@ export default function TripDetailPage() {
 
     console.log("Toggle spend status:", { currentStatus, isClosing, tripSpendStatus: trip.spendStatus, confirmClearSettlements });
 
+    setIsTogglingSpendStatus(true);
     try {
       const idToken = await user.getIdToken();
       const response = await fetch(`/api/trips/${tripId}/spend-status`, {
@@ -1395,6 +1399,7 @@ export default function TripDetailPage() {
 
       // Check if confirmation is required
       if (data.requiresConfirmation && !confirmClearSettlements) {
+        setIsTogglingSpendStatus(false);
         const confirmed = window.confirm(
           `⚠️ WARNING: ${data.message}\n\nThis action cannot be undone. All payment records will be permanently deleted.`
         );
@@ -1431,12 +1436,15 @@ export default function TripDetailPage() {
     } catch (err) {
       console.error("Error toggling trip spend status:", err);
       alert(`Failed to toggle spending status: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsTogglingSpendStatus(false);
     }
   };
 
   const handleRsvpResponse = async (status: "ACCEPTED" | "DECLINED" | "MAYBE") => {
     if (!user) return;
 
+    setIsRsvpResponding(status);
     try {
       const idToken = await user.getIdToken();
       const response = await fetch(`/api/trips/${tripId}/members/${user.uid}`, {
@@ -1458,6 +1466,8 @@ export default function TripDetailPage() {
     } catch (err) {
       console.error("Error updating RSVP:", err);
       setError(err instanceof Error ? err.message : "Failed to update RSVP. Please try again.");
+    } finally {
+      setIsRsvpResponding(null);
     }
   };
 
@@ -1469,8 +1479,7 @@ export default function TripDetailPage() {
 
     console.log("Current RSVP status:", currentStatus, "isClosing:", isClosing);
 
-
-
+    setIsTogglingRsvpStatus(true);
     try {
       const idToken = await user.getIdToken();
       console.log("Sending request to toggle RSVP status");
@@ -1510,6 +1519,8 @@ export default function TripDetailPage() {
     } catch (err) {
       console.error("Error toggling RSVP status:", err);
       alert(`Failed to toggle RSVP status: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsTogglingRsvpStatus(false);
     }
   };
 
@@ -1833,30 +1844,33 @@ export default function TripDetailPage() {
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => handleRsvpResponse("ACCEPTED")}
-                      className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                      disabled={isRsvpResponding !== null}
+                      className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Accept
+                      {isRsvpResponding === "ACCEPTED" ? "Working..." : "Accept"}
                     </button>
                     <button
                       onClick={() => handleRsvpResponse("MAYBE")}
-                      className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                      disabled={isRsvpResponding !== null}
+                      className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Maybe
+                      {isRsvpResponding === "MAYBE" ? "Working..." : "Maybe"}
                     </button>
                     <button
                       onClick={() => handleRsvpResponse("DECLINED")}
-                      className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                      disabled={isRsvpResponding !== null}
+                      className="tap-target flex-1 min-w-[140px] px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                      Decline
+                      {isRsvpResponding === "DECLINED" ? "Working..." : "Decline"}
                     </button>
                   </div>
                 ) : (
@@ -1956,24 +1970,24 @@ export default function TripDetailPage() {
               <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-current/20">
                 <button
                   onClick={() => handleRsvpResponse("ACCEPTED")}
-                  disabled={trip.userRsvpStatus === "ACCEPTED"}
+                  disabled={trip.userRsvpStatus === "ACCEPTED" || isRsvpResponding !== null}
                   className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                 >
-                  Accept
+                  {isRsvpResponding === "ACCEPTED" ? "Working..." : "Accept"}
                 </button>
                 <button
                   onClick={() => handleRsvpResponse("MAYBE")}
-                  disabled={trip.userRsvpStatus === "MAYBE"}
+                  disabled={trip.userRsvpStatus === "MAYBE" || isRsvpResponding !== null}
                   className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                 >
-                  Maybe
+                  {isRsvpResponding === "MAYBE" ? "Working..." : "Maybe"}
                 </button>
                 <button
                   onClick={() => handleRsvpResponse("DECLINED")}
-                  disabled={trip.userRsvpStatus === "DECLINED"}
+                  disabled={trip.userRsvpStatus === "DECLINED" || isRsvpResponding !== null}
                   className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                 >
-                  Decline
+                  {isRsvpResponding === "DECLINED" ? "Working..." : "Decline"}
                 </button>
               </div>
             ) : (
@@ -2021,13 +2035,14 @@ export default function TripDetailPage() {
             <div className="flex items-center gap-2 flex-wrap mb-4">
               <button
                 onClick={handleToggleRsvpStatus}
-                className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
+                disabled={isTogglingRsvpStatus}
+                className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
                   trip.rsvpStatus === "CLOSED"
                     ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
                     : "bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400"
                 }`}
               >
-                {trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP
+                {isTogglingRsvpStatus ? "Working..." : `${trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP`}
               </button>
               {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
                 <button
@@ -2370,6 +2385,7 @@ export default function TripDetailPage() {
                 onToggleSpends={() => setShowSpendsWhenClosed(true)}
                 onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
                 canReopenSpending={canInvite}
+                isReopeningSpending={isTogglingSpendStatus}
                 collapsed={collapsedSections.settlement}
                 onToggleCollapse={() => toggleSection('settlement')}
               />
@@ -2429,7 +2445,8 @@ export default function TripDetailPage() {
                   {canInvite && (
                     <button
                       onClick={() => handleToggleTripSpendStatus()}
-                      className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
+                      disabled={isTogglingSpendStatus}
+                      className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
                         (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
                           ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
                           : (trip.totalUnassigned || 0) > 0.00
@@ -2437,7 +2454,7 @@ export default function TripDetailPage() {
                           : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
                       }`}
                     >
-                      {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending
+                      {isTogglingSpendStatus ? "Working..." : `${(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending`}
                     </button>
                   )}
                   </div>
