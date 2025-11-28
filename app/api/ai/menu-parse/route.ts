@@ -12,21 +12,21 @@ import { prisma } from "@/lib/prisma";
  */
 const MenuParseRequestSchema = z.object({
   tripId: z.string().uuid(),
-  image: z.string().min(1), // Base64 data URL
+  image: z.string().min(1), // Base64 data URL (image or PDF)
   currencyHint: z.string().optional(),
 });
 
 /**
  * POST /api/ai/menu-parse
  *
- * Parses a restaurant menu image using Claude Vision API
+ * Parses a restaurant menu image or PDF using Claude Vision API
  * Requires: authenticated user who is a member of the trip
  * Premium feature: Can be gated by feature flags (future implementation)
  *
  * Request body:
  * {
  *   tripId: string (UUID),
- *   image: string (base64 data URL),
+ *   image: string (base64 data URL - supports images and PDFs),
  *   currencyHint?: string (optional currency code or symbol)
  * }
  *
@@ -89,22 +89,36 @@ export async function POST(request: NextRequest) {
     //   );
     // }
 
-    // 6. Extract base64 data from data URL
-    if (!image.startsWith("data:image/")) {
+    // 6. Extract base64 data from data URL (supports both images and PDFs)
+    const isImage = image.startsWith("data:image/");
+    const isPDF = image.startsWith("data:application/pdf");
+
+    if (!isImage && !isPDF) {
       return NextResponse.json(
-        { error: "Invalid image format. Must be a data URL." },
+        { error: "Invalid file format. Must be an image or PDF data URL." },
         { status: 400 }
       );
     }
 
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-    const imageTypeMatch = image.match(/^data:image\/(\w+);base64,/)?.[1];
+    let base64Data: string;
+    let fileType: string;
+    let mediaType: string;
 
-    if (!imageTypeMatch) {
-      return NextResponse.json(
-        { error: "Could not detect image type" },
-        { status: 400 }
-      );
+    if (isPDF) {
+      base64Data = image.replace(/^data:application\/pdf;base64,/, "");
+      fileType = "pdf";
+      mediaType = "application/pdf";
+    } else {
+      base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+      const imageTypeMatch = image.match(/^data:image\/(\w+);base64,/)?.[1];
+      if (!imageTypeMatch) {
+        return NextResponse.json(
+          { error: "Could not detect image type" },
+          { status: 400 }
+        );
+      }
+      fileType = imageTypeMatch;
+      mediaType = `image/${imageTypeMatch}`;
     }
 
     // 7. Log the menu parse request
@@ -114,7 +128,8 @@ export async function POST(request: NextRequest) {
       EventType.CHOICE_MENU_SCANNED,
       auth.uid,
       {
-        imageType: imageTypeMatch,
+        fileType,
+        mediaType,
         currencyHint,
         tripCurrency: trip.baseCurrency,
       }
@@ -125,7 +140,8 @@ export async function POST(request: NextRequest) {
     try {
       result = await parseMenuImage({
         imageBase64: base64Data,
-        imageType: imageTypeMatch,
+        imageType: fileType,
+        mediaType,
         currencyHint,
         tripCurrency: trip.baseCurrency,
       });
@@ -170,12 +186,13 @@ export async function POST(request: NextRequest) {
     await createSystemLog(
       LogSeverity.INFO,
       "menu-scan",
-      "menu_photo_scanned",
-      `Menu photo scanned for trip ${tripId} by user ${auth.uid}. Found ${result.items.length} items using currency ${result.currencyUsed}`,
+      "menu_file_scanned",
+      `Menu ${isPDF ? "PDF" : "photo"} scanned for trip ${tripId} by user ${auth.uid}. Found ${result.items.length} items using currency ${result.currencyUsed}`,
       {
         tripId,
         userId: auth.uid,
-        imageType: imageTypeMatch,
+        fileType,
+        mediaType,
         itemCount: result.items.length,
         currency: result.currencyUsed,
       }

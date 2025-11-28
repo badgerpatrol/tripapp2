@@ -10,6 +10,7 @@ import { parsePriceToMinor, prefixCourse } from "@/lib/menu";
 interface ParseMenuOptions {
   imageBase64: string;
   imageType: string;
+  mediaType: string;
   currencyHint?: string;
   tripCurrency?: string;
 }
@@ -23,7 +24,7 @@ interface ParsedMenuItem {
 }
 
 /**
- * Parses a restaurant menu image using Claude Vision API
+ * Parses a restaurant menu image or PDF using Claude Vision API
  *
  * @param options - Options for parsing the menu
  * @returns Structured menu items with normalized prices
@@ -32,7 +33,7 @@ interface ParsedMenuItem {
 export async function parseMenuImage(
   options: ParseMenuOptions
 ): Promise<{ items: ParsedMenuItem[]; currencyUsed: string }> {
-  const { imageBase64, imageType, currencyHint, tripCurrency = "GBP" } = options;
+  const { imageBase64, imageType, mediaType, currencyHint, tripCurrency = "GBP" } = options;
 
   // Initialize Anthropic client
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -41,6 +42,9 @@ export async function parseMenuImage(
   }
 
   const anthropic = new Anthropic({ apiKey });
+
+  // Determine if this is a PDF
+  const isPDF = mediaType === "application/pdf";
 
   // Map to valid media types
   const validMediaType = (
@@ -73,7 +77,7 @@ ${currencyHint ? `Expected currency: ${currencyHint}` : ""}
 
 Output format: Pure JSON only, starting with curly brace and ending with curly brace`;
 
-  // Call Claude Vision API
+  // Call Claude Vision API with image or document based on file type
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5", // Claude 3.5 Sonnet with vision support
     max_tokens: 2048, // More tokens for larger menus
@@ -81,14 +85,23 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
       {
         role: "user",
         content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: validMediaType(imageType),
-              data: imageBase64,
-            },
-          },
+          isPDF
+            ? {
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: imageBase64,
+                },
+              }
+            : {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: validMediaType(imageType),
+                  data: imageBase64,
+                },
+              },
           {
             type: "text",
             text: prompt,
