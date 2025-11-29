@@ -100,8 +100,29 @@ export default function StandaloneTripPage() {
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [choices, setChoices] = useState<any[]>([]);
 
   const tripId = params.id as string;
+
+  const fetchChoices = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${tripId}/choices`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setChoices(data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching choices:", err);
+    }
+  }, [user, tripId]);
 
   const fetchTrip = useCallback(async () => {
     if (!user) return;
@@ -150,10 +171,11 @@ export default function StandaloneTripPage() {
   useEffect(() => {
     if (!authLoading && user) {
       fetchTrip();
+      fetchChoices();
     } else if (!authLoading && !user) {
       setLoading(false);
     }
-  }, [user, authLoading, fetchTrip]);
+  }, [user, authLoading, fetchTrip, fetchChoices]);
 
   // Show loading state while checking authentication
   if (authLoading || (user && loading)) {
@@ -509,6 +531,70 @@ export default function StandaloneTripPage() {
                           </span>
                         </div>
                       ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Choices Section */}
+            {choices.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
+                  Choices
+                </h2>
+                <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {choices.map((choice) => (
+                      <div
+                        key={choice.id}
+                        className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4"
+                      >
+                        <div className="mb-3">
+                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+                            {choice.name}
+                          </h3>
+                          {choice.datetime && (
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                              {new Date(choice.datetime).toLocaleString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          )}
+                          {choice.location && (
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                              📍 {choice.location}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              choice.status === "OPEN"
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                : choice.status === "CLOSED"
+                                ? "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                                : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                            }`}
+                          >
+                            {choice.status}
+                          </span>
+                          {choice._count && (
+                            <>
+                              <span className="text-zinc-600 dark:text-zinc-400">
+                                {choice._count.items || 0} items
+                              </span>
+                              <span className="text-zinc-600 dark:text-zinc-400">
+                                {choice._count.votes || 0} votes
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
