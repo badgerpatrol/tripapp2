@@ -174,9 +174,10 @@ export async function requireUserRole(
   const user = await requireAuth(userId);
 
   const roleHierarchy = {
-    [UserRole.USER]: 0,
-    [UserRole.ADMIN]: 1,
-    [UserRole.SUPERADMIN]: 2,
+    [UserRole.VIEWER]: 0,
+    [UserRole.USER]: 1,
+    [UserRole.ADMIN]: 2,
+    [UserRole.SUPERADMIN]: 3,
   };
 
   const userRoleLevel = roleHierarchy[user.role];

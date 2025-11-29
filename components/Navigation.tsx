@@ -14,6 +14,12 @@ export default function Navigation() {
     return null;
   }
 
+  // VIEWER role has read-only access and doesn't see the main menu
+  const isViewer = userProfile?.role === UserRole.VIEWER;
+  if (isViewer) {
+    return null;
+  }
+
   const isHomePage = pathname === "/";
   const returnTo = searchParams.get("returnTo") || "";
 

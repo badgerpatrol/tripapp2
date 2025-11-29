@@ -350,6 +350,8 @@ export default function AdminUsersPage() {
 
   const getRoleBadgeColor = (role: UserRole) => {
     switch (role) {
+      case UserRole.VIEWER:
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case UserRole.ADMIN:
         return "bg-purple-100 text-purple-800 border-purple-200";
       case UserRole.SUPERADMIN:
@@ -669,6 +671,7 @@ export default function AdminUsersPage() {
                   className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
                   disabled={selectedUser.id === user?.uid}
                 >
+                  <option value={UserRole.VIEWER}>Viewer (Read-only)</option>
                   <option value={UserRole.USER}>User</option>
                   <option value={UserRole.ADMIN}>Admin</option>
                   <option value={UserRole.SUPERADMIN}>Super Admin</option>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, hasUserRole } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireUserRole, hasUserRole } from "@/server/authz";
 import { createTrip, getUserTrips, getAllTrips } from "@/server/services/trips";
 import { CreateTripSchema, CreateTripResponseSchema } from "@/types/schemas";
 import { UserRole } from "@/lib/generated/prisma";
@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user exists in database
-    await requireAuth(auth.uid);
+    // Verify user exists and has at least USER role (VIEWER cannot create trips)
+    await requireUserRole(auth.uid, UserRole.USER);
 
     // 2. Parse and validate request body
     const body = await request.json();
@@ -63,6 +63,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
     console.error("Error creating trip:", error);
+
+    // Handle authorization errors
+    if (error instanceof Error && error.message.startsWith("Forbidden:")) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
