@@ -106,6 +106,9 @@ export default function StandaloneTripPage() {
   const fetchTrip = useCallback(async () => {
     if (!user) return;
 
+    setLoading(true);
+    setError(null);
+
     try {
       const idToken = await user.getIdToken();
       const response = await fetch(`/api/trips/${tripId}`, {
