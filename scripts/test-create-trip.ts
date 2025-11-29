@@ -42,7 +42,7 @@ async function testCreateTrip(idToken: string) {
     console.log("Response body:", JSON.stringify(data, null, 2));
 
     if (data.success) {
-      console.log("\n✅ Trip created successfully!");
+      console.log("\n✅ Event created successfully!");
       console.log("Trip ID:", data.trip.id);
 
       // Test GET endpoint

@@ -115,7 +115,7 @@ async function createOrUpdateSignUpViewer(
 
 /**
  * Creates default timeline items for a new trip.
- * Timeline includes: trip created, RSVP deadline, spending window, trip dates, settlement complete
+ * Timeline includes: event created, RSVP deadline, spending window, trip dates, settlement complete
  */
 async function createDefaultTimelineItems(
   tripId: string,
@@ -126,10 +126,10 @@ async function createDefaultTimelineItems(
   const now = new Date();
   const timelineItems = [];
 
-  // 1. Trip Created (completed)
+  // 1. Event Created (completed)
   timelineItems.push({
     tripId,
-    title: "Trip Created",
+    title: "Event Created",
     description: "Trip planning has begun",
     date: now,
     isCompleted: true,
@@ -176,7 +176,7 @@ async function createDefaultTimelineItems(
   if (startDate) {
     timelineItems.push({
       tripId,
-      title: "Trip Starts",
+      title: "Event Starts",
       description: "The trip begins!",
       date: startDate,
       isCompleted: false,
@@ -189,7 +189,7 @@ async function createDefaultTimelineItems(
   if (endDate) {
     timelineItems.push({
       tripId,
-      title: "Trip Ends",
+      title: "Event Ends",
       description: "The trip concludes",
       date: endDate,
       isCompleted: false,
@@ -366,10 +366,10 @@ async function updateDependentTimelineItems(
 
   // Add trip start/end dates if provided
   if (startDate !== undefined) {
-    dateUpdates["Trip Starts"] = startDate;
+    dateUpdates["Event Starts"] = startDate;
   }
   if (endDate !== undefined) {
-    dateUpdates["Trip Ends"] = endDate;
+    dateUpdates["Event Ends"] = endDate;
   }
 
   // Update each matching timeline item
@@ -1383,14 +1383,14 @@ async function triggerMilestoneChecks(tripId: string, milestoneTitle: string) {
       console.log(`[triggerMilestoneChecks] Settlement Deadline check - placeholder for future implementation`);
       break;
 
-    case "Trip Starts":
+    case "Event Starts":
       // TODO: Implement checkTripStart(tripId) for any start-of-trip actions
-      console.log(`[triggerMilestoneChecks] Trip Starts check - placeholder for future implementation`);
+      console.log(`[triggerMilestoneChecks] Event Starts check - placeholder for future implementation`);
       break;
 
-    case "Trip Ends":
+    case "Event Ends":
       // TODO: Implement checkTripEnd(tripId) for any end-of-trip actions
-      console.log(`[triggerMilestoneChecks] Trip Ends check - placeholder for future implementation`);
+      console.log(`[triggerMilestoneChecks] Event Ends check - placeholder for future implementation`);
       break;
 
     default:

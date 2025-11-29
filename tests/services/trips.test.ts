@@ -102,9 +102,9 @@ describe("Trip Service", () => {
       // Should have multiple timeline items
       expect(timelineItems.length).toBeGreaterThan(5);
 
-      // First item should be "Trip Created" and completed
+      // First item should be "Event Created" and completed
       const firstItem = timelineItems[0];
-      expect(firstItem.title).toBe("Trip Created");
+      expect(firstItem.title).toBe("Event Created");
       expect(firstItem.isCompleted).toBe(true);
       expect(firstItem.completedAt).toBeDefined();
 
@@ -116,10 +116,10 @@ describe("Trip Service", () => {
 
       // Should have trip start and end
       const startItem = timelineItems.find((item) =>
-        item.title.includes("Trip Starts")
+        item.title.includes("Event Starts")
       );
       const endItem = timelineItems.find((item) =>
-        item.title.includes("Trip Ends")
+        item.title.includes("Event Ends")
       );
       expect(startItem).toBeDefined();
       expect(endItem).toBeDefined();
@@ -149,7 +149,7 @@ describe("Trip Service", () => {
       expect(timelineItems.length).toBeGreaterThan(0);
 
       const firstItem = timelineItems.find((item) => item.order === 0);
-      expect(firstItem?.title).toBe("Trip Created");
+      expect(firstItem?.title).toBe("Event Created");
     });
 
     it("should set RSVP deadline to 1 week before start if that's in the future", async () => {

@@ -1344,16 +1344,19 @@ export default function TripDetailPage() {
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
-  // Get filtered participants based on RSVP status
+  // Get filtered participants based on RSVP status (excludes VIEWER role members)
   const getFilteredParticipants = () => {
     if (!trip?.participants) return [];
 
-    // Filter by selected RSVP status
+    // First filter out VIEWER role members
+    const nonViewerParticipants = trip.participants.filter((p) => p.role !== "VIEWER");
+
+    // Then filter by selected RSVP status
     if (memberRsvpFilter !== "all") {
-      return trip.participants.filter((p) => p.rsvpStatus === memberRsvpFilter);
+      return nonViewerParticipants.filter((p) => p.rsvpStatus === memberRsvpFilter);
     }
 
-    return trip.participants;
+    return nonViewerParticipants;
   };
 
   // Check if current user can finalize (close/reopen) a specific spend
@@ -2384,8 +2387,8 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Spends or Settlement Plan (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (
+        {/* Spends or Settlement Plan (for accepted members) - hide for viewers if no spends */}
+        {trip.userRsvpStatus === "ACCEPTED" && (userProfile?.role !== "VIEWER" || (trip.spends && trip.spends.length > 0)) && (
           <>
             {/* Show Settlement Plan when spending is closed and not toggled to show spends */}
             {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && !showSpendsWhenClosed ? (
@@ -2444,8 +2447,8 @@ export default function TripDetailPage() {
                       <span className="sm:hidden">Settlement</span>
                     </button>
                   )}
-                  {/* Only show Add Spend button when spending is open */}
-                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
+                  {/* Only show Add Spend button when spending is open and user is not a viewer */}
+                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && userProfile?.role !== "VIEWER" && (
                     <button
                       onClick={() => setIsAddSpendDialogOpen(true)}
                       className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
@@ -2644,14 +2647,9 @@ export default function TripDetailPage() {
               <div className="space-y-3">
               {trip.timeline.map((item) => {
                 const isEditing = editingTimelineItemId === item.id;
-                const canEdit = canInvite && item.title !== "Trip Created";
-                // System milestones that cannot be deleted
-                const isSystemMilestone = [
-                  "Trip Created",
-                  "RSVP Deadline",
-                  "Spending Window Closes",
-                  "Settlement Deadline"
-                ].includes(item.title);
+                const canEdit = canInvite && item.title !== "Event Created";
+                // Only "Event Created" cannot be deleted - all deadlines can be deleted by organizers
+                const isSystemMilestone = item.title === "Event Created";
 
                 return (
                   <div

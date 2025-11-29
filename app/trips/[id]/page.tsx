@@ -2648,13 +2648,10 @@ export default function TripDetailPage() {
               <div className="space-y-3">
               {trip.timeline.map((item) => {
                 const isEditing = editingTimelineItemId === item.id;
-                const canEdit = canInvite && !isViewer && item.title !== "Trip Created";
+                const canEdit = canInvite && !isViewer && item.title !== "Event Created";
                 // System milestones that cannot be deleted
                 const isSystemMilestone = [
-                  "Trip Created",
-                  "RSVP Deadline",
-                  "Spending Window Closes",
-                  "Settlement Deadline"
+                  "Event Created"
                 ].includes(item.title);
 
                 return (
