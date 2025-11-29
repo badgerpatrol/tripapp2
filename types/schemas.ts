@@ -600,7 +600,16 @@ export type AuthToken = z.infer<typeof AuthTokenSchema>;
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 export type SignUpResponse = z.infer<typeof SignUpResponseSchema>;
 export type SignInResponse = z.infer<typeof SignInResponseSchema>;
-export type CreateTripInput = z.infer<typeof CreateTripSchema>;
+export type CreateTripInput = {
+  name: string;
+  description?: string;
+  baseCurrency?: string;
+  startDate?: Date;
+  endDate?: Date;
+  location?: string;
+  signUpMode?: boolean;
+  signUpPassword?: string;
+};
 export type UpdateTripInput = z.infer<typeof UpdateTripSchema>;
 export type TripResponse = z.infer<typeof TripResponseSchema>;
 export type CreateTripResponse = z.infer<typeof CreateTripResponseSchema>;

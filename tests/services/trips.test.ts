@@ -13,6 +13,7 @@ describe("Trip Service", () => {
       data: {
         id: testUserId,
         email: testEmail,
+        displayName: "Test User",
       },
     });
   });
