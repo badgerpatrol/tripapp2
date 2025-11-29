@@ -129,6 +129,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
       data: {
         name: data.name,
         description: data.description || null,
+        imageData: data.imageData || null,
         baseCurrency: data.baseCurrency || "USD",
         startDate: data.startDate || null,
         endDate: data.endDate || null,
@@ -276,6 +277,7 @@ export async function updateTrip(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
+        ...(data.imageData !== undefined && { imageData: data.imageData }),
         ...(data.baseCurrency !== undefined && { baseCurrency: data.baseCurrency }),
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),

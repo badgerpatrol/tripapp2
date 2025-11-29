@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { CreateTripSchema, type CreateTripInput } from "@/types/schemas";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface ListTemplate {
   id: string;
@@ -32,6 +33,7 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   const [baseCurrency, setBaseCurrency] = useState("GBP");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [imageData, setImageData] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,6 +85,7 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
         name: name.trim(),
         description: description.trim() || undefined,
         location: location.trim() || undefined,
+        imageData: imageData || undefined,
         baseCurrency: baseCurrency || "USD",
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
@@ -269,6 +272,13 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           placeholder="e.g., Summer Vacation 2025"
         />
       </Field>
+
+      {/* Trip Image */}
+      <ImageUpload
+        label="Trip Image (optional)"
+        currentImage={imageData}
+        onImageChange={setImageData}
+      />
 
       {/* Location */}
       <Field label="Location" htmlFor="location">

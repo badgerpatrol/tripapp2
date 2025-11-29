@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "trips" ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+ALTER TABLE "trips" ADD COLUMN IF NOT EXISTS "imageData" TEXT;

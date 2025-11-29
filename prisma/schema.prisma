@@ -283,6 +283,8 @@ model Trip {
   id           String      @id @default(uuid())
   name         String
   description  String?
+  imageUrl     String?     // URL for trip image
+  imageData    String?     @db.Text // Base64 encoded trip image
   baseCurrency String      @default("USD")
   startDate    DateTime?
   endDate      DateTime?

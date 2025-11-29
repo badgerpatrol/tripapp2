@@ -12,6 +12,7 @@ interface Trip {
   id: string;
   name: string;
   description: string | null;
+  imageData: string | null;
   baseCurrency: string;
   startDate: string | null;
   endDate: string | null;
@@ -216,16 +217,27 @@ export default function Home() {
                 <a
                   key={trip.id}
                   href={`/trips/${trip.id}`}
-                  className="block bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-600 transition-all"
+                  className="block rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-600 transition-all overflow-hidden"
                 >
-                  <div className="flex justify-between items-start mb-3 gap-2 min-w-0">
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1 min-w-0 break-words">
-                      {trip.name}
-                    </h3>
-                    <span className="px-2 py-1 text-xs font-medium rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
-                      PENDING
-                    </span>
-                  </div>
+                  {trip.imageData && (
+                    <div className="relative w-full h-32">
+                      <img
+                        src={trip.imageData}
+                        alt={trip.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-b from-blue-600/40 to-blue-800/60"></div>
+                    </div>
+                  )}
+                  <div className={`p-6 ${trip.imageData ? '' : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20'}`}>
+                    <div className="flex justify-between items-start mb-3 gap-2 min-w-0">
+                      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1 min-w-0 break-words">
+                        {trip.name}
+                      </h3>
+                      <span className="px-2 py-1 text-xs font-medium rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 flex-shrink-0">
+                        PENDING
+                      </span>
+                    </div>
 
                   <div className="mb-4 p-3 bg-white/70 dark:bg-zinc-800/70 rounded-lg">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
@@ -254,10 +266,11 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
-                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      Click to view invitation and respond →
-                    </p>
+                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        Click to view invitation and respond →
+                      </p>
+                    </div>
                   </div>
                 </a>
               ))}
@@ -317,31 +330,42 @@ export default function Home() {
                   <a
                     key={trip.id}
                     href={`/trips/${trip.id}`}
-                    className="block bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
+                    className="block bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all overflow-hidden"
                   >
-                    <div className="flex justify-between items-start mb-4 gap-2 min-w-0">
-                      <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1 min-w-0 break-words">
-                        {trip.name}
-                      </h3>
-                      <div className="flex gap-1.5">
-                        {userRsvp === "MAYBE" && (
-                          <span className="px-2 py-1 text-xs font-medium rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
-                            MAYBE
-                          </span>
-                        )}
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded ${
-                            trip.status === "PLANNING"
-                              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                              : trip.status === "ACTIVE"
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                              : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                          }`}
-                        >
-                          {trip.status}
-                        </span>
+                    {trip.imageData && (
+                      <div className="relative w-full h-32">
+                        <img
+                          src={trip.imageData}
+                          alt={trip.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40"></div>
                       </div>
-                    </div>
+                    )}
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-4 gap-2 min-w-0">
+                        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 flex-1 min-w-0 break-words">
+                          {trip.name}
+                        </h3>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          {userRsvp === "MAYBE" && (
+                            <span className="px-2 py-1 text-xs font-medium rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
+                              MAYBE
+                            </span>
+                          )}
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded ${
+                              trip.status === "PLANNING"
+                                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                : trip.status === "ACTIVE"
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                            }`}
+                          >
+                            {trip.status}
+                          </span>
+                        </div>
+                      </div>
 
                     {trip.description && (
                       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">
@@ -373,6 +397,7 @@ export default function Home() {
                           : `${trip.members.length} people`}
                         </span>
                       </div>
+                    </div>
                     </div>
                   </a>
                 );

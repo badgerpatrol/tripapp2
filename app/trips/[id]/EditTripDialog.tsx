@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface EditTripDialogProps {
   trip: {
     id: string;
     name: string;
     description: string | null;
+    imageData: string | null;
     baseCurrency: string;
     startDate: string | null;
     endDate: string | null;
@@ -33,6 +35,7 @@ export default function EditTripDialog({
     startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
     endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
   });
+  const [imageData, setImageData] = useState<string | null>(trip.imageData || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -66,6 +69,7 @@ export default function EditTripDialog({
       const payload: any = {
         name: formData.name,
         description: formData.description || null,
+        imageData: imageData || null,
         baseCurrency: formData.baseCurrency,
       };
 
@@ -248,6 +252,13 @@ export default function EditTripDialog({
                 placeholder="What's this trip about?"
               />
             </div>
+
+            {/* Trip Image */}
+            <ImageUpload
+              label="Trip Image (optional)"
+              currentImage={imageData}
+              onImageChange={setImageData}
+            />
 
             {/* Trip URL */}
             <div>

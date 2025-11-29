@@ -54,6 +54,7 @@ export const SignInResponseSchema = z.object({
 export const CreateTripSchema = z.object({
   name: z.string().min(1, "Trip name is required").max(200, "Trip name is too long"),
   description: z.string().optional(),
+  imageData: z.string().optional(), // Base64 encoded trip image
   baseCurrency: z.string().length(3, "Currency must be a 3-letter code (e.g., USD)").default("USD"),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
@@ -74,6 +75,7 @@ export const CreateTripSchema = z.object({
 export const UpdateTripSchema = z.object({
   name: z.string().min(1, "Trip name is required").max(200, "Trip name is too long").optional(),
   description: z.string().optional(),
+  imageData: z.string().optional(), // Base64 encoded trip image
   baseCurrency: z.string().length(3, "Currency must be a 3-letter code (e.g., USD)").optional(),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
