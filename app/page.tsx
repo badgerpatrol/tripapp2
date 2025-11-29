@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useAdminMode } from "@/lib/admin/AdminModeContext";
 import LoginForm from "@/components/LoginForm";
 import { Button } from "@/components/ui/button";
+import { UserRole } from "@/lib/generated/prisma";
 
 interface Trip {
   id: string;
@@ -36,8 +37,9 @@ interface Trip {
 
 export default function Home() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const { isAdminMode } = useAdminMode();
+  const canCreateTrip = userProfile && userProfile.role !== UserRole.VIEWER;
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,29 +160,31 @@ export default function Home() {
                 Plot world domination
               </p>
             </div>
-            <div className="flex gap-3">
-              <Button
-                variant="primary"
-                onClick={() => router.push("/trips/new")}
-                leftIcon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                }
-              >
-                New Trip
-              </Button>
-            </div>
+            {canCreateTrip && (
+              <div className="flex gap-3">
+                <Button
+                  variant="primary"
+                  onClick={() => router.push("/trips/new")}
+                  leftIcon={
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                  }
+                >
+                  New Trip
+                </Button>
+              </div>
+            )}
           </div>
 
         {error && (
@@ -281,14 +285,16 @@ export default function Home() {
               No trips yet
             </h3>
             <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-              Create your first trip to start planning!
+              {!canCreateTrip ? "You have read-only access." : "Create your first trip to start planning!"}
             </p>
-            <Button
-              variant="primary"
-              onClick={() => router.push("/trips/new")}
-            >
-              Create Trip
-            </Button>
+            {canCreateTrip && (
+              <Button
+                variant="primary"
+                onClick={() => router.push("/trips/new")}
+              >
+                Create Trip
+              </Button>
+            )}
           </div>
         ) : acceptedTrips.length > 0 ? (
           <div>

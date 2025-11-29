@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { SpendStatus } from "@/lib/generated/prisma";
+import { SpendStatus, UserRole } from "@/lib/generated/prisma";
 import Header from "@/components/Header";
 import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
@@ -114,7 +114,8 @@ interface TripDetail {
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
+  const isViewer = userProfile?.role === UserRole.VIEWER;
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1332,7 +1333,7 @@ export default function TripDetailPage() {
 
   // Check if current user can finalize (close/reopen) a specific spend
   const canUserFinalizeSpend = (spend: { paidBy: { id: string } }) => {
-    if (!user) return false;
+    if (!user || isViewer) return false;
 
     // User can finalize if they are:
     // 1. The spender (person who paid for the spend)
@@ -1345,7 +1346,7 @@ export default function TripDetailPage() {
 
   // Check if current user can delete a specific spend
   const canUserDeleteSpend = (spend: { paidBy: { id: string } }) => {
-    if (!user) return false;
+    if (!user || isViewer) return false;
 
     // User can delete if they are:
     // 1. The spender (person who paid for the spend)
@@ -1649,7 +1650,7 @@ export default function TripDetailPage() {
                   {trip.name}
                 </h1>
               </div>
-              {isOwner && (
+              {isOwner && !isViewer && (
                 <button
                   onClick={() => setIsEditDialogOpen(true)}
                   className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2 flex-shrink-0"
@@ -1746,7 +1747,7 @@ export default function TripDetailPage() {
               <TripListsPanel
                 key={listsRefreshKey}
                 tripId={trip.id}
-                isOrganizer={canInvite}
+                isOrganizer={canInvite && !isViewer}
                 hideContainer={true}
                 onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
                 onOpenCreateChoice={(choiceName) => {
@@ -2017,7 +2018,7 @@ export default function TripDetailPage() {
           </div>
 
           {/* Action buttons row */}
-          {!collapsedSections.members && canInvite && (
+          {!collapsedSections.members && canInvite && !isViewer && (
             <div className="flex items-center gap-2 flex-wrap mb-4">
               <button
                 onClick={handleToggleRsvpStatus}
@@ -2103,7 +2104,7 @@ export default function TripDetailPage() {
                   >
                     {member.rsvpStatus}
                   </span>
-                  {member.role !== "OWNER" && canInvite && (
+                  {member.role !== "OWNER" && canInvite && !isViewer && (
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(member.user.id, member.user.displayName || member.user.email)}
@@ -2177,7 +2178,7 @@ export default function TripDetailPage() {
             {!collapsedSections.choices && (
               <>
                 <div className="flex items-center gap-2 flex-wrap mb-4">
-                  {canInvite && (
+                  {canInvite && !isViewer && (
                     <button
                       onClick={() => setIsCreateChoiceDialogOpen(true)}
                       className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
@@ -2417,8 +2418,8 @@ export default function TripDetailPage() {
                       <span className="sm:hidden">Settlement</span>
                     </button>
                   )}
-                  {/* Only show Add Spend button when spending is open */}
-                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
+                  {/* Only show Add Spend button when spending is open and user is not a viewer */}
+                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && !isViewer && (
                     <button
                       onClick={() => setIsAddSpendDialogOpen(true)}
                       className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
@@ -2426,7 +2427,7 @@ export default function TripDetailPage() {
                       Add Spend
                     </button>
                   )}
-                  {canInvite && (
+                  {canInvite && !isViewer && (
                     <button
                       onClick={() => handleToggleTripSpendStatus()}
                       className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap ${
@@ -2539,7 +2540,7 @@ export default function TripDetailPage() {
             </div>
             
             {/* Add Milestone Form */}
-              {canInvite && (
+              {canInvite && !isViewer && (
                 <div className="mt-4">
                   {!isAddingMilestone ? (
                     <button
@@ -2617,7 +2618,7 @@ export default function TripDetailPage() {
               <div className="space-y-3">
               {trip.timeline.map((item) => {
                 const isEditing = editingTimelineItemId === item.id;
-                const canEdit = canInvite && item.title !== "Trip Created";
+                const canEdit = canInvite && !isViewer && item.title !== "Trip Created";
                 // System milestones that cannot be deleted
                 const isSystemMilestone = [
                   "Trip Created",
@@ -2635,7 +2636,7 @@ export default function TripDetailPage() {
                         : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
                     }`}
                   >
-                    {canInvite ? (
+                    {canInvite && !isViewer ? (
                       <button
                         onClick={() => handleToggleTimelineItem(item.id)}
                         disabled={togglingTimelineItemId === item.id}
