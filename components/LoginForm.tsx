@@ -38,8 +38,12 @@ export function getAuthErrorMessage(error: AuthError): string {
   }
 }
 
-export default function LoginForm() {
-  const [email, setEmail] = useState('');
+interface LoginFormProps {
+  defaultEmail?: string;
+}
+
+export default function LoginForm({ defaultEmail }: LoginFormProps) {
+  const [email, setEmail] = useState(defaultEmail || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

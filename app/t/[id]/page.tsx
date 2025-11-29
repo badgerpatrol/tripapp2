@@ -114,7 +114,7 @@ interface TripDetail {
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +160,7 @@ export default function TripDetailPage() {
   const [listWorkflowDescription, setListWorkflowDescription] = useState("");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
+  const [listsCount, setListsCount] = useState<number | null>(null);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -360,7 +361,8 @@ export default function TripDetailPage() {
 
   // Show login form if not authenticated
   if (!user) {
-    return <LoginForm />;
+    const viewerEmail = `trip_${tripId.slice(0, 8)}_viewer@tripplanner.local`;
+    return <LoginForm defaultEmail={viewerEmail} />;
   }
 
   // Show error state
@@ -1342,16 +1344,19 @@ export default function TripDetailPage() {
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
-  // Get filtered participants based on RSVP status
+  // Get filtered participants based on RSVP status (excludes VIEWER role members)
   const getFilteredParticipants = () => {
     if (!trip?.participants) return [];
 
-    // Filter by selected RSVP status
+    // First filter out VIEWER role members
+    const nonViewerParticipants = trip.participants.filter((p) => p.role !== "VIEWER");
+
+    // Then filter by selected RSVP status
     if (memberRsvpFilter !== "all") {
-      return trip.participants.filter((p) => p.rsvpStatus === memberRsvpFilter);
+      return nonViewerParticipants.filter((p) => p.rsvpStatus === memberRsvpFilter);
     }
 
-    return trip.participants;
+    return nonViewerParticipants;
   };
 
   // Check if current user can finalize (close/reopen) a specific spend
@@ -1742,8 +1747,8 @@ export default function TripDetailPage() {
           </div>
         </div>
         
-        {/* Lists Section (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (
+        {/* Lists Section (for accepted members) - hide for non-organizers if no lists */}
+        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (listsCount !== null && listsCount > 0)) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
             {/* Header row with title and toggle */}
             <div className="flex items-start justify-between gap-3 mb-3">
@@ -1772,6 +1777,7 @@ export default function TripDetailPage() {
                 tripId={trip.id}
                 isOrganizer={canInvite}
                 hideContainer={true}
+                onListsLoaded={setListsCount}
                 onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
                 onOpenCreateChoice={(choiceName) => {
                   setIsCreateChoiceDialogOpen(true);
@@ -1895,8 +1901,8 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Current RSVP Status (for users who have responded) */}
-        {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
+        {/* Current RSVP Status (for users who have responded) - hide for viewers */}
+        {userProfile?.role !== "VIEWER" && (trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
           <div className={`rounded-xl shadow-sm border p-6 md:p-8 mb-6 ${
             trip.userRsvpStatus === "ACCEPTED"
               ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
@@ -2306,8 +2312,8 @@ export default function TripDetailPage() {
             )}
           </div>
         )}
-        {/* Balance Summary (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined || trip.totalUnassigned !== undefined) && (
+        {/* Balance Summary (for accepted members) - hide for non-organizers if no spend */}
+        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (trip.totalSpent !== undefined && trip.totalSpent > 0)) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Balance Summary</h2>
@@ -2381,8 +2387,8 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Spends or Settlement Plan (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (
+        {/* Spends or Settlement Plan (for accepted members) - hide for viewers if no spends */}
+        {trip.userRsvpStatus === "ACCEPTED" && (userProfile?.role !== "VIEWER" || (trip.spends && trip.spends.length > 0)) && (
           <>
             {/* Show Settlement Plan when spending is closed and not toggled to show spends */}
             {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && !showSpendsWhenClosed ? (
@@ -2441,8 +2447,8 @@ export default function TripDetailPage() {
                       <span className="sm:hidden">Settlement</span>
                     </button>
                   )}
-                  {/* Only show Add Spend button when spending is open */}
-                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && (
+                  {/* Only show Add Spend button when spending is open and user is not a viewer */}
+                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && userProfile?.role !== "VIEWER" && (
                     <button
                       onClick={() => setIsAddSpendDialogOpen(true)}
                       className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
@@ -2641,14 +2647,9 @@ export default function TripDetailPage() {
               <div className="space-y-3">
               {trip.timeline.map((item) => {
                 const isEditing = editingTimelineItemId === item.id;
-                const canEdit = canInvite && item.title !== "Trip Created";
-                // System milestones that cannot be deleted
-                const isSystemMilestone = [
-                  "Trip Created",
-                  "RSVP Deadline",
-                  "Spending Window Closes",
-                  "Settlement Deadline"
-                ].includes(item.title);
+                const canEdit = canInvite && item.title !== "Event Created";
+                // Only "Event Created" cannot be deleted - all deadlines can be deleted by organizers
+                const isSystemMilestone = item.title === "Event Created";
 
                 return (
                   <div

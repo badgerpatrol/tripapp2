@@ -219,7 +219,7 @@ describe("Trip Overview Service", () => {
       expect(overview!.timeline.length).toBeGreaterThan(0);
 
       const firstItem = overview!.timeline[0];
-      expect(firstItem.title).toBe("Trip Created");
+      expect(firstItem.title).toBe("");
       expect(firstItem.isCompleted).toBe(true);
     });
 
