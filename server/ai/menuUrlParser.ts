@@ -6,6 +6,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MenuParseResponseSchema, type MenuParseResponse } from "@/types/menu";
 import { parsePriceToMinor, prefixCourse } from "@/lib/menu";
+import { createSystemLog } from "@/server/systemLog";
+import { LogSeverity } from "@/lib/generated/prisma";
 
 interface ParseMenuUrlOptions {
   url: string;
@@ -82,21 +84,69 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
   }
 
   // Call Claude API to parse the website content
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 4096, // More tokens for larger menus
-    messages: [
+  const modelUsed = "claude-sonnet-4-5-20250929";
+  const startTime = Date.now();
+  let message;
+
+  try {
+    message = await anthropic.messages.create({
+      model: modelUsed,
+      max_tokens: 4096, // More tokens for larger menus
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Here is the HTML content from a restaurant website:\n\n${websiteContent.substring(0, 50000)}\n\n${prompt}`,
+            },
+          ],
+        },
+      ],
+    });
+
+    // Log successful API call
+    const durationMs = Date.now() - startTime;
+    await createSystemLog(
+      LogSeverity.INFO,
+      "ai",
+      "menu_url_parse_api_call",
+      `Menu URL parsing API call succeeded with ${modelUsed}`,
       {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `Here is the HTML content from a restaurant website:\n\n${websiteContent.substring(0, 50000)}\n\n${prompt}`,
-          },
-        ],
-      },
-    ],
-  });
+        model: modelUsed,
+        callType: "menu_url",
+        status: "success",
+        durationMs,
+        url,
+      }
+    );
+  } catch (apiError: any) {
+    console.error("Anthropic API error:", {
+      message: apiError?.message,
+      status: apiError?.status,
+      error: apiError?.error,
+    });
+
+    // Log API failure
+    const errorMessage = apiError?.message || apiError?.error?.message || "Unknown error";
+    await createSystemLog(
+      LogSeverity.ERROR,
+      "ai",
+      "menu_url_parse_api_call",
+      `Menu URL parsing API call failed with ${modelUsed}`,
+      {
+        model: modelUsed,
+        callType: "menu_url",
+        status: "failed",
+        reason: errorMessage,
+        errorStatus: apiError?.status,
+        durationMs: Date.now() - startTime,
+        url,
+      }
+    );
+
+    throw new Error(`Failed to analyze menu from URL: ${errorMessage}`);
+  }
 
   // Parse the response
   const responseText =

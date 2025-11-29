@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { SpendStatus } from "@/lib/generated/prisma";
 import Header from "@/components/Header";
@@ -115,6 +115,7 @@ interface TripDetail {
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -349,6 +350,15 @@ export default function TripDetailPage() {
       router.push("/");
     }
   }, [user, authLoading, fetchTrip, fetchChoices, router]);
+
+  // Open invite dialog if query param is present (e.g., after creating trip from receipt scan)
+  useEffect(() => {
+    if (trip && searchParams.get("openInvite") === "true") {
+      setIsInviteDialogOpen(true);
+      // Clear the query param to prevent reopening on navigation
+      router.replace(`/trips/${trip.id}`, { scroll: false });
+    }
+  }, [trip, searchParams, router]);
 
   if (authLoading || loading) {
     return (

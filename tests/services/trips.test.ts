@@ -151,6 +151,25 @@ describe("Trip Service", () => {
       expect(firstItem?.title).toBe("Trip Created");
     });
 
+    it("should create only 'Trip Created' milestone when minimalMilestones is true", async () => {
+      const tripData = { name: "Receipt Scan Trip" };
+      const trip = await createTrip(testUserId, tripData, true);
+
+      const timelineItems = await prisma.timelineItem.findMany({
+        where: { tripId: trip.id },
+      });
+
+      // Should only have one timeline item
+      expect(timelineItems.length).toBe(1);
+
+      // Should be "Trip Created" and completed
+      const firstItem = timelineItems[0];
+      expect(firstItem.title).toBe("Trip Created");
+      expect(firstItem.isCompleted).toBe(true);
+      expect(firstItem.completedAt).toBeDefined();
+      expect(firstItem.order).toBe(0);
+    });
+
     it("should set RSVP deadline to 1 week before start if that's in the future", async () => {
       // Start date 30 days in the future
       const startDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

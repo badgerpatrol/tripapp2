@@ -7,6 +7,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ReceiptParseResponseSchema, type ReceiptParseResponse, type ParsedReceiptItem } from "@/types/receipt";
 import { parsePriceToMinor } from "@/lib/menu";
+import { createSystemLog } from "@/server/systemLog";
+import { LogSeverity } from "@/lib/generated/prisma";
 
 interface ParseReceiptOptions {
   imageBase64: string;
@@ -47,7 +49,7 @@ export async function parseReceiptImage(
   };
 
   // Create the prompt for Claude to analyze the receipt
-  const buildPrompt = (attemptNumber: number, previousError?: string) => `You are analyzing a receipt image to extract purchased items. Your task is to identify what was bought, how many of each item, and what each item cost.
+  const prompt = `You are analyzing a receipt image to extract purchased items. Your task is to identify what was bought, how many of each item, and what each item cost.
 
 Return ONLY raw JSON with no markdown formatting, no code blocks, no explanations.
 
@@ -87,20 +89,19 @@ Important notes:
 - Focus on the actual purchased items, filtering out the surrounding receipt noise
 - Return ONLY the JSON object - no backticks, no "json" label, no extra text
 ${currencyHint ? `- Expected currency: ${currencyHint}` : ""}
-${previousError ? `\n\nPREVIOUS ATTEMPT FAILED (Attempt ${attemptNumber}/3): ${previousError}\nPlease look more carefully at the receipt and ensure all items are captured correctly and add up to the total.` : ""}
 
 Output format: Pure JSON only, starting with { and ending with }`;
 
-  // Retry logic: attempt up to 3 times if items don't match total
-  const MAX_ATTEMPTS = 3;
-  let lastError: string | undefined;
+  console.log("Receipt parsing - trying Sonnet first");
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    console.log(`Receipt parsing attempt ${attempt}/${MAX_ATTEMPTS}`);
+  // Try Sonnet first, fall back to Haiku if busy
+  let message;
+  let modelUsed = "claude-sonnet-4-5-20250929";
+  const startTime = Date.now();
 
-    // Call Claude Vision API
-    const message = await anthropic.messages.create({
-      model: "claude-haiku-4-5", // Claude Haiku with vision support
+  try {
+    message = await anthropic.messages.create({
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 2048,
       messages: [
         {
@@ -116,159 +117,262 @@ Output format: Pure JSON only, starting with { and ending with }`;
             },
             {
               type: "text",
-              text: buildPrompt(attempt, lastError),
+              text: prompt,
             },
           ],
         },
       ],
     });
+  } catch (apiError: any) {
+    console.error("Anthropic API error with Sonnet:", {
+      message: apiError?.message,
+      status: apiError?.status,
+      error: apiError?.error,
+      type: apiError?.error?.type,
+    });
 
-    // Parse the response
-    const responseText =
-      message.content[0].type === "text" ? message.content[0].text : "";
+    // Check if it's an overload error or rate limit
+    const isOverloaded = apiError?.message?.includes("overloaded") ||
+                        apiError?.error?.type === "overloaded_error" ||
+                        apiError?.status === 529;
+    const isRateLimit = apiError?.status === 429;
 
-    // Strip markdown code blocks if present (Claude sometimes wraps JSON in ```)
-    let cleanedText = responseText.trim();
-    if (cleanedText.startsWith("```")) {
-      // Remove markdown code blocks
-      cleanedText = cleanedText.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
-    }
+    // If Sonnet is busy, try Haiku once
+    if (isOverloaded || isRateLimit) {
+      console.log("Sonnet is busy, falling back to Haiku");
 
-    let rawResponse: any;
-    try {
-      rawResponse = JSON.parse(cleanedText);
-    } catch (parseError) {
-      console.error("Failed to parse Claude response:", responseText);
-      if (attempt === MAX_ATTEMPTS) {
-        throw new Error(
-          "Failed to parse receipt data. Please try again with a clearer image."
-        );
-      }
-      lastError = "JSON parsing failed";
-      continue;
-    }
+      // Log Sonnet failure
+      await createSystemLog(
+        LogSeverity.WARNING,
+        "ai",
+        "receipt_parse_api_call",
+        `Receipt parsing API call failed with ${modelUsed}`,
+        {
+          model: modelUsed,
+          callType: "receipt",
+          status: "failed",
+          reason: isOverloaded ? "overloaded" : "rate_limit",
+          errorStatus: apiError?.status,
+          durationMs: Date.now() - startTime,
+        }
+      );
 
-    // Validate with Zod schema
-    const validationResult = ReceiptParseResponseSchema.safeParse(rawResponse);
-    if (!validationResult.success) {
-      console.error("Receipt parse validation failed:", validationResult.error);
-      if (attempt === MAX_ATTEMPTS) {
-        throw new Error(
-          "Invalid receipt data format. Please try again with a clearer image."
-        );
-      }
-      lastError = "Schema validation failed";
-      continue;
-    }
+      modelUsed = "claude-3-haiku-20240307";
 
-    const parsedResponse: ReceiptParseResponse = validationResult.data;
-
-    // Determine currency to use
-    const detectedCurrency = parsedResponse.currency_hint || currencyHint;
-    const currencyToUse = detectedCurrency || tripCurrency;
-
-    // Parse total if present
-    let totalMinor: number | undefined;
-    if (parsedResponse.total) {
       try {
-        const priceStr = parsedResponse.total.trim();
-        const isNumericPrice = /^[£$€¥₹A-Z]*\s*[\d,]+\.?\d*$/.test(priceStr);
-        if (isNumericPrice) {
-          const parsed = parsePriceToMinor(parsedResponse.total, currencyToUse);
-          totalMinor = parsed.minor;
-        }
-      } catch (error) {
-        console.warn(`Failed to parse receipt total "${parsedResponse.total}":`, error);
-      }
-    }
+        message = await anthropic.messages.create({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 2048,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: validMediaType(imageType),
+                    data: imageBase64,
+                  },
+                },
+                {
+                  type: "text",
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+        });
+      } catch (haikuError: any) {
+        console.error("Anthropic API error with Haiku fallback:", {
+          message: haikuError?.message,
+          status: haikuError?.status,
+          error: haikuError?.error,
+        });
 
-    // Normalize items
-    const normalizedItems = parsedResponse.items
-      .map((item) => {
-        // Parse price to minor units
-        let costMinor: number;
-        let currency = currencyToUse;
-
-        const priceStr = item.unitPrice.trim();
-        const isNumericPrice = /^[£$€¥₹A-Z]*\s*[\d,]+\.?\d*$/.test(priceStr);
-
-        if (!isNumericPrice) {
-          console.warn(`Skipping non-numeric price "${item.unitPrice}" for item "${item.name}"`);
-          return null;
-        }
-
-        try {
-          const parsed = parsePriceToMinor(item.unitPrice, currencyToUse);
-          costMinor = parsed.minor;
-          currency = parsed.currency;
-        } catch (error) {
-          console.warn(`Failed to parse price "${item.unitPrice}":`, error);
-          return null;
-        }
-
-        return {
-          name: item.name.trim().substring(0, 80), // Match spend item name limit
-          ...(item.description && { description: item.description.trim().substring(0, 280) }), // Match spend item description limit
-          costMinor,
-          currency,
-          quantity: item.quantity,
-        };
-      })
-      .filter((item): item is ParsedReceiptItem => item !== null);
-
-    if (normalizedItems.length === 0) {
-      if (attempt === MAX_ATTEMPTS) {
-        throw new Error(
-          "No valid receipt items found. Please ensure the receipt is clear and readable."
+        // Log Haiku failure
+        await createSystemLog(
+          LogSeverity.ERROR,
+          "ai",
+          "receipt_parse_api_call",
+          `Receipt parsing API call failed with ${modelUsed}`,
+          {
+            model: modelUsed,
+            callType: "receipt",
+            status: "failed",
+            reason: haikuError?.message || "Unknown error",
+            errorStatus: haikuError?.status,
+            durationMs: Date.now() - startTime,
+          }
         );
-      }
-      lastError = "No valid items found";
-      continue;
-    }
 
-    // Validate total: calculate sum of all items and compare with receipt total
-    const calculatedTotal = normalizedItems.reduce(
-      (sum, item) => sum + (item.costMinor * item.quantity),
-      0
-    );
-
-    if (totalMinor !== undefined) {
-      const difference = Math.abs(calculatedTotal - totalMinor);
-      const percentageDiff = (difference / totalMinor) * 100;
-
-      // If difference is more than 1% or more than 10 minor units, retry
-      if (difference > 10 && percentageDiff > 1) {
-        const errorMessage = `Items sum to ${(calculatedTotal / 100).toFixed(2)}, ` +
-          `but receipt total is ${(totalMinor / 100).toFixed(2)} ${currencyToUse}. ` +
-          `Difference: ${(difference / 100).toFixed(2)} (${percentageDiff.toFixed(1)}%)`;
-
-        console.warn(`Receipt total validation warning (attempt ${attempt}/${MAX_ATTEMPTS}): ${errorMessage}`);
-
-        if (attempt < MAX_ATTEMPTS) {
-          lastError = errorMessage;
-          continue; // Retry
-        } else {
-          // On final attempt, log warning but accept the result
-          console.warn(`Final attempt: Accepting result despite total mismatch`);
-        }
-      } else {
-        console.log(
-          `Receipt total validated: Items sum to ${(calculatedTotal / 100).toFixed(2)}, ` +
-          `receipt total is ${(totalMinor / 100).toFixed(2)} ${currencyToUse}`
-        );
+        throw new Error("The AI service is currently busy. Please try again in a moment.");
       }
     } else {
-      console.warn("Receipt total not found on receipt, skipping validation");
-    }
+      // Non-overload error, log details and throw with specific message
+      const errorMessage = apiError?.message || apiError?.error?.message || "Unknown error";
+      console.error("Non-overload API error details:", errorMessage);
 
-    // Success! Return the result
-    return {
-      items: normalizedItems,
-      currencyUsed: currencyToUse,
-      total: totalMinor,
-    };
+      // Log non-overload error
+      await createSystemLog(
+        LogSeverity.ERROR,
+        "ai",
+        "receipt_parse_api_call",
+        `Receipt parsing API call failed with ${modelUsed}`,
+        {
+          model: modelUsed,
+          callType: "receipt",
+          status: "failed",
+          reason: errorMessage,
+          errorStatus: apiError?.status,
+          durationMs: Date.now() - startTime,
+        }
+      );
+
+      throw new Error(`Failed to analyze receipt: ${errorMessage}`);
+    }
   }
 
-  // This should never be reached, but just in case
-  throw new Error("Failed to parse receipt after multiple attempts");
+  // Log successful API call
+  const durationMs = Date.now() - startTime;
+  await createSystemLog(
+    LogSeverity.INFO,
+    "ai",
+    "receipt_parse_api_call",
+    `Receipt parsing API call succeeded with ${modelUsed}`,
+    {
+      model: modelUsed,
+      callType: "receipt",
+      status: "success",
+      durationMs,
+    }
+  );
+
+  console.log(`Receipt parsed successfully using ${modelUsed}`);
+
+  // Parse the response
+  const responseText =
+    message.content[0].type === "text" ? message.content[0].text : "";
+
+  // Strip markdown code blocks if present (Claude sometimes wraps JSON in ```)
+  let cleanedText = responseText.trim();
+  if (cleanedText.startsWith("```")) {
+    // Remove markdown code blocks
+    cleanedText = cleanedText.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "");
+  }
+
+  let rawResponse: any;
+  try {
+    rawResponse = JSON.parse(cleanedText);
+  } catch (parseError) {
+    console.error("Failed to parse Claude response:", responseText);
+    throw new Error(
+      "Failed to parse receipt data. Please try again with a clearer image."
+    );
+  }
+
+  // Validate with Zod schema
+  const validationResult = ReceiptParseResponseSchema.safeParse(rawResponse);
+  if (!validationResult.success) {
+    console.error("Receipt parse validation failed:", validationResult.error);
+    throw new Error(
+      "Invalid receipt data format. Please try again with a clearer image."
+    );
+  }
+
+  const parsedResponse: ReceiptParseResponse = validationResult.data;
+
+  // Determine currency to use
+  const detectedCurrency = parsedResponse.currency_hint || currencyHint;
+  const currencyToUse = detectedCurrency || tripCurrency;
+
+  // Parse total if present
+  let totalMinor: number | undefined;
+  if (parsedResponse.total) {
+    try {
+      const priceStr = parsedResponse.total.trim();
+      const isNumericPrice = /^[£$€¥₹A-Z]*\s*[\d,]+\.?\d*$/.test(priceStr);
+      if (isNumericPrice) {
+        const parsed = parsePriceToMinor(parsedResponse.total, currencyToUse);
+        totalMinor = parsed.minor;
+      }
+    } catch (error) {
+      console.warn(`Failed to parse receipt total "${parsedResponse.total}":`, error);
+    }
+  }
+
+  // Normalize items
+  const normalizedItems = parsedResponse.items
+    .map((item) => {
+      // Parse price to minor units
+      let costMinor: number;
+      let currency = currencyToUse;
+
+      const priceStr = item.unitPrice.trim();
+      const isNumericPrice = /^[£$€¥₹A-Z]*\s*[\d,]+\.?\d*$/.test(priceStr);
+
+      if (!isNumericPrice) {
+        console.warn(`Skipping non-numeric price "${item.unitPrice}" for item "${item.name}"`);
+        return null;
+      }
+
+      try {
+        const parsed = parsePriceToMinor(item.unitPrice, currencyToUse);
+        costMinor = parsed.minor;
+        currency = parsed.currency;
+      } catch (error) {
+        console.warn(`Failed to parse price "${item.unitPrice}":`, error);
+        return null;
+      }
+
+      return {
+        name: item.name.trim().substring(0, 80), // Match spend item name limit
+        ...(item.description && { description: item.description.trim().substring(0, 280) }), // Match spend item description limit
+        costMinor,
+        currency,
+        quantity: item.quantity,
+      };
+    })
+    .filter((item): item is ParsedReceiptItem => item !== null);
+
+  if (normalizedItems.length === 0) {
+    throw new Error(
+      "No valid receipt items found. Please ensure the receipt is clear and readable."
+    );
+  }
+
+  // Validate total: calculate sum of all items and compare with receipt total
+  const calculatedTotal = normalizedItems.reduce(
+    (sum, item) => sum + (item.costMinor * item.quantity),
+    0
+  );
+
+  if (totalMinor !== undefined) {
+    const difference = Math.abs(calculatedTotal - totalMinor);
+    const percentageDiff = (difference / totalMinor) * 100;
+
+    // Log warning if difference is more than 1% or more than 10 minor units
+    if (difference > 10 && percentageDiff > 1) {
+      console.warn(
+        `Receipt total validation warning: Items sum to ${(calculatedTotal / 100).toFixed(2)}, ` +
+        `but receipt total is ${(totalMinor / 100).toFixed(2)} ${currencyToUse}. ` +
+        `Difference: ${(difference / 100).toFixed(2)} (${percentageDiff.toFixed(1)}%). ` +
+        `This may indicate missing items or incorrect parsing.`
+      );
+    } else {
+      console.log(
+        `Receipt total validated: Items sum to ${(calculatedTotal / 100).toFixed(2)}, ` +
+        `receipt total is ${(totalMinor / 100).toFixed(2)} ${currencyToUse}`
+      );
+    }
+  } else {
+    console.warn("Receipt total not found on receipt, skipping validation");
+  }
+
+  // Return the result
+  return {
+    items: normalizedItems,
+    currencyUsed: currencyToUse,
+    total: totalMinor,
+  };
 }

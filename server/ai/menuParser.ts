@@ -6,6 +6,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MenuParseResponseSchema, type MenuParseResponse } from "@/types/menu";
 import { parsePriceToMinor, prefixCourse } from "@/lib/menu";
+import { createSystemLog } from "@/server/systemLog";
+import { LogSeverity } from "@/lib/generated/prisma";
 
 interface ParseMenuOptions {
   imageBase64: string;
@@ -74,29 +76,75 @@ ${currencyHint ? `Expected currency: ${currencyHint}` : ""}
 Output format: Pure JSON only, starting with curly brace and ending with curly brace`;
 
   // Call Claude Vision API
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5", // Claude 3.5 Sonnet with vision support
-    max_tokens: 2048, // More tokens for larger menus
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: validMediaType(imageType),
-              data: imageBase64,
+  const modelUsed = "claude-haiku-4-5";
+  const startTime = Date.now();
+  let message;
+
+  try {
+    message = await anthropic.messages.create({
+      model: modelUsed,
+      max_tokens: 2048, // More tokens for larger menus
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: validMediaType(imageType),
+                data: imageBase64,
+              },
             },
-          },
-          {
-            type: "text",
-            text: prompt,
-          },
-        ],
-      },
-    ],
-  });
+            {
+              type: "text",
+              text: prompt,
+            },
+          ],
+        },
+      ],
+    });
+
+    // Log successful API call
+    const durationMs = Date.now() - startTime;
+    await createSystemLog(
+      LogSeverity.INFO,
+      "ai",
+      "menu_parse_api_call",
+      `Menu parsing API call succeeded with ${modelUsed}`,
+      {
+        model: modelUsed,
+        callType: "menu",
+        status: "success",
+        durationMs,
+      }
+    );
+  } catch (apiError: any) {
+    console.error("Anthropic API error:", {
+      message: apiError?.message,
+      status: apiError?.status,
+      error: apiError?.error,
+    });
+
+    // Log API failure
+    const errorMessage = apiError?.message || apiError?.error?.message || "Unknown error";
+    await createSystemLog(
+      LogSeverity.ERROR,
+      "ai",
+      "menu_parse_api_call",
+      `Menu parsing API call failed with ${modelUsed}`,
+      {
+        model: modelUsed,
+        callType: "menu",
+        status: "failed",
+        reason: errorMessage,
+        errorStatus: apiError?.status,
+        durationMs: Date.now() - startTime,
+      }
+    );
+
+    throw new Error(`Failed to analyze menu: ${errorMessage}`);
+  }
 
   // Parse the response
   const responseText =

@@ -189,6 +189,7 @@ export default function HomeReceiptScanDialog({
             name: newTripName.trim(),
             baseCurrency: "USD",
             status: "PLANNING",
+            minimalMilestones: true, // Only create "Trip Created" milestone for receipt scans
           }),
         });
 
@@ -295,9 +296,9 @@ export default function HomeReceiptScanDialog({
         }
       }
 
-      // Success - navigate to trip
+      // Success - navigate to trip with invite dialog open
       handleClose();
-      router.push(`/trips/${tripId}`);
+      router.push(`/trips/${tripId}?openInvite=true`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to process receipt");
     } finally {
@@ -353,43 +354,41 @@ export default function HomeReceiptScanDialog({
             </div>
           )}
 
-          {/* Trip Selection - Show before extracting data */}
-          {capturedImage && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Add to Trip *
-              </label>
-              <select
-                value={selectedTripId}
-                onChange={(e) => setSelectedTripId(e.target.value)}
-                disabled={isProcessing || loadingTrips}
-                className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
-              >
-                <option value="new">Create New Trip</option>
-                {trips.map((trip) => (
-                  <option key={trip.id} value={trip.id}>
-                    {trip.name}
-                  </option>
-                ))}
-              </select>
+          {/* Trip Selection - Always visible */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              Add to Trip *
+            </label>
+            <select
+              value={selectedTripId}
+              onChange={(e) => setSelectedTripId(e.target.value)}
+              disabled={isProcessing || loadingTrips}
+              className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+            >
+              <option value="new">Create New Trip</option>
+              {trips.map((trip) => (
+                <option key={trip.id} value={trip.id}>
+                  {trip.name}
+                </option>
+              ))}
+            </select>
 
-              {selectedTripId === "new" && (
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    New Trip Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newTripName}
-                    onChange={(e) => setNewTripName(e.target.value)}
-                    disabled={isProcessing}
-                    placeholder="Spend 1/1/2024 12:00 PM"
-                    className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
-                  />
-                </div>
-              )}
-            </div>
-          )}
+            {selectedTripId === "new" && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  New Trip Name *
+                </label>
+                <input
+                  type="text"
+                  value={newTripName}
+                  onChange={(e) => setNewTripName(e.target.value)}
+                  disabled={isProcessing}
+                  placeholder="Spend 1/1/2024 12:00 PM"
+                  className="tap-target w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:opacity-50"
+                />
+              </div>
+            )}
+          </div>
 
           {/* Camera/Image Display */}
           <div className="mb-6">
