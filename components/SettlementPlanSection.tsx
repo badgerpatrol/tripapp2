@@ -24,6 +24,7 @@ interface SettlementPlanSectionProps {
   onToggleSpends: () => void;
   onReopenSpending?: () => void;
   canReopenSpending?: boolean;
+  isReopeningSpending?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -76,6 +77,7 @@ export default function SettlementPlanSection({
   onToggleSpends,
   onReopenSpending,
   canReopenSpending = false,
+  isReopeningSpending = false,
   collapsed = false,
   onToggleCollapse,
 }: SettlementPlanSectionProps) {
@@ -309,10 +311,10 @@ export default function SettlementPlanSection({
           {canReopenSpending && onReopenSpending && (
             <button
               onClick={onReopenSpending}
-              className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 text-xs sm:text-sm whitespace-nowrap"
+              disabled={isReopeningSpending}
+              className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400 text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="hidden sm:inline">Reopen</span>
-              <span className="sm:hidden">Reopen</span>
+              {isReopeningSpending ? "Working..." : "Reopen"}
             </button>
           )}
         </div>
