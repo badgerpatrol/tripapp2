@@ -2837,7 +2837,6 @@ export default function TripDetailPage() {
           onDelete={handleDeleteSpend}
           onViewItems={handleViewItems}
           isDeletingSpend={isDeletingSpend}
-          loadingAssignmentId={loadingAssignmentId}
         />
       )}
 
