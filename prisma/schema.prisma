@@ -228,6 +228,7 @@ model User {
 
   // Relationships
   tripsCreated       Trip[]            @relation("TripCreator")
+  tripsAsSignUpViewer Trip[]           @relation("TripSignUpViewer")
   tripMemberships    TripMember[]
   spendsCreated      Spend[]           @relation("SpendPayer")
   spendAssignments   SpendAssignment[]
@@ -289,6 +290,9 @@ model Trip {
   status       TripStatus  @default(PLANNING)
   spendStatus  SpendStatus @default(OPEN) // Controls whether any spend can be added/edited on this trip
   rsvpStatus   RsvpWindowStatus @default(OPEN) // Controls whether RSVPs can be changed
+  signUpMode   Boolean     @default(false) // When true, creates a viewer user for sign-up access
+  signUpViewerUserId String? // The viewer user created for sign-up mode
+  signUpPassword String?    // Password for the sign-up viewer account
   createdById  String
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -296,6 +300,7 @@ model Trip {
 
   // Relationships
   createdBy    User           @relation("TripCreator", fields: [createdById], references: [id])
+  signUpViewerUser User?      @relation("TripSignUpViewer", fields: [signUpViewerUserId], references: [id])
   members      TripMember[]
   spends       Spend[]
   settlements  Settlement[]

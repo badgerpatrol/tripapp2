@@ -47,6 +47,7 @@ async function testUpdateTrip() {
       baseCurrency: "USD",
       startDate: new Date("2025-12-01"),
       endDate: new Date("2025-12-10"),
+      signUpMode: false,
     };
 
     const trip = await createTrip(testUserId, tripData);

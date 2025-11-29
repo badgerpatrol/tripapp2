@@ -35,6 +35,10 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Sign-up mode state
+  const [signUpMode, setSignUpMode] = useState(false);
+  const [signUpPassword, setSignUpPassword] = useState("");
+
   // Template selection state
   const [templates, setTemplates] = useState<ListTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -86,6 +90,8 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
         baseCurrency: baseCurrency || "USD",
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
+        signUpMode,
+        signUpPassword: signUpMode && signUpPassword.trim() ? signUpPassword.trim() : undefined,
       };
 
       // Validate with Zod
@@ -333,6 +339,48 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           placeholder="Add any details about your trip..."
         />
       </Field>
+
+      {/* Sign-up Mode */}
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            id="signUpMode"
+            checked={signUpMode}
+            onChange={(e) => setSignUpMode(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
+          />
+          <div>
+            <label
+              htmlFor="signUpMode"
+              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            >
+              Enable Sign-up Mode
+            </label>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              Creates a shared viewer account that others can use to view this trip without individual invitations.
+            </p>
+          </div>
+        </div>
+
+        {signUpMode && (
+          <div className="ml-7 space-y-3">
+            <Field label="Viewer Password" htmlFor="signUpPassword">
+              <Input
+                id="signUpPassword"
+                type="text"
+                value={signUpPassword}
+                onChange={(e) => setSignUpPassword(e.target.value)}
+                placeholder="Leave empty for auto-generated password"
+                minLength={6}
+              />
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Optional. Min 6 characters. A password will be auto-generated if left empty.
+              </p>
+            </Field>
+          </div>
+        )}
+      </div>
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-2 min-w-0">

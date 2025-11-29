@@ -19,10 +19,10 @@ describe("Trip Overview Service", () => {
     // Create test users
     await prisma.user.createMany({
       data: [
-        { id: ownerUserId, email: "owner@test.com" },
-        { id: inviteeUserId, email: "invitee@test.com" },
-        { id: memberUserId, email: "member@test.com" },
-        { id: nonMemberUserId, email: "nonmember@test.com" },
+        { id: ownerUserId, email: "owner@test.com", displayName: "Owner" },
+        { id: inviteeUserId, email: "invitee@test.com", displayName: "Invitee" },
+        { id: memberUserId, email: "member@test.com", displayName: "Member" },
+        { id: nonMemberUserId, email: "nonmember@test.com", displayName: "Non-Member" },
       ],
     });
 
@@ -33,6 +33,7 @@ describe("Trip Overview Service", () => {
       baseCurrency: "USD",
       startDate: new Date("2025-06-01"),
       endDate: new Date("2025-06-10"),
+      signUpMode: false,
     });
 
     testTripId = trip.id;

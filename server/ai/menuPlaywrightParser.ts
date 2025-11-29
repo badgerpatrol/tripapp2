@@ -4,9 +4,15 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { chromium } from "playwright";
 import { MenuParseResponseSchema, type MenuParseResponse } from "@/types/menu";
 import { parsePriceToMinor, prefixCourse } from "@/lib/menu";
+
+// Dynamic import for playwright to avoid build-time bundling issues
+// Playwright should only be used at runtime on the server
+const getChromium = async () => {
+  const { chromium } = await import("playwright");
+  return chromium;
+};
 
 interface ParseMenuPlaywrightOptions {
   url: string;
@@ -69,6 +75,7 @@ Output format: Pure JSON only, starting with curly brace and ending with curly b
   let browser;
 
   try {
+    const chromium = await getChromium();
     browser = await chromium.launch({
       headless: true,
       args: [
