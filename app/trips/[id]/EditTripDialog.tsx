@@ -12,6 +12,8 @@ interface EditTripDialogProps {
     baseCurrency: string;
     startDate: string | null;
     endDate: string | null;
+    signUpMode?: boolean;
+    signUpPassword?: string | null;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -32,6 +34,8 @@ export default function EditTripDialog({
     baseCurrency: trip.baseCurrency,
     startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
     endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
+    signUpMode: trip.signUpMode || false,
+    signUpPassword: trip.signUpPassword || "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -66,6 +70,7 @@ export default function EditTripDialog({
         name: formData.name,
         description: formData.description || null,
         baseCurrency: formData.baseCurrency,
+        signUpMode: formData.signUpMode,
       };
 
       // Only include dates if they are set
@@ -81,6 +86,11 @@ export default function EditTripDialog({
         payload.endDate = null;
       }
 
+      // Include sign-up password if sign-up mode is enabled and password is provided
+      if (formData.signUpMode && formData.signUpPassword.trim()) {
+        payload.signUpPassword = formData.signUpPassword.trim();
+      }
+
       const response = await fetch(`/api/trips/${trip.id}`, {
         method: "PUT",
         headers: {
@@ -94,9 +104,15 @@ export default function EditTripDialog({
         const errorData = await response
           .json()
           .catch(() => ({ error: "Unknown error" }));
-        throw new Error(
-          errorData.error || `Failed to update trip (${response.status})`
-        );
+
+        // Format validation details if present
+        let errorMessage = errorData.error || `Failed to update trip (${response.status})`;
+        if (errorData.details && Array.isArray(errorData.details)) {
+          const detailMessages = errorData.details.map((d: any) => `${d.path?.join('.')}: ${d.message}`).join(', ');
+          errorMessage = `${errorMessage}: ${detailMessages}`;
+        }
+
+        throw new Error(errorMessage);
       }
 
       // Success!
@@ -117,8 +133,13 @@ export default function EditTripDialog({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleDelete = async () => {
@@ -325,6 +346,67 @@ export default function EditTripDialog({
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Sign-up Mode */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="signUpMode"
+                  name="signUpMode"
+                  checked={formData.signUpMode}
+                  onChange={handleChange}
+                  className="mt-1 h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
+                />
+                <div>
+                  <label
+                    htmlFor="signUpMode"
+                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                  >
+                    Enable Sign-up Mode
+                  </label>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                    Creates a shared viewer account that others can use to view this trip without individual invitations.
+                  </p>
+                </div>
+              </div>
+
+              {formData.signUpMode && (
+                <div className="ml-7 space-y-3">
+                  <div>
+                    <label
+                      htmlFor="signUpPassword"
+                      className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                    >
+                      Viewer Password
+                    </label>
+                    <input
+                      type="text"
+                      id="signUpPassword"
+                      name="signUpPassword"
+                      value={formData.signUpPassword}
+                      onChange={handleChange}
+                      placeholder={trip.signUpPassword ? "Current password shown" : "Leave empty for auto-generated"}
+                      minLength={6}
+                      className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    />
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                      Min 6 characters. Change the password or leave as-is.
+                    </p>
+                  </div>
+                  {trip.signUpPassword && (
+                    <div className="p-3 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                      <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                        <span className="font-medium">Current password:</span>{" "}
+                        <code className="bg-zinc-200 dark:bg-zinc-600 px-1 py-0.5 rounded">
+                          {trip.signUpPassword}
+                        </code>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Delete Confirmation */}

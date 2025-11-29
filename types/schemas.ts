@@ -58,6 +58,11 @@ export const CreateTripSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   location: z.string().optional(),
+  signUpMode: z.boolean().optional().default(false),
+  signUpPassword: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().min(6, "Password must be at least 6 characters").optional()
+  ),
 }).refine(
   (data) => {
     if (data.startDate && data.endDate) {
@@ -73,11 +78,16 @@ export const CreateTripSchema = z.object({
 
 export const UpdateTripSchema = z.object({
   name: z.string().min(1, "Trip name is required").max(200, "Trip name is too long").optional(),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
   baseCurrency: z.string().length(3, "Currency must be a 3-letter code (e.g., USD)").optional(),
-  startDate: z.coerce.date().optional().nullable(),
-  endDate: z.coerce.date().optional().nullable(),
-  location: z.string().optional().nullable(),
+  startDate: z.coerce.date().nullable().optional(),
+  endDate: z.coerce.date().nullable().optional(),
+  location: z.string().nullable().optional(),
+  signUpMode: z.boolean().optional(),
+  signUpPassword: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().min(6, "Password must be at least 6 characters").nullable().optional()
+  ),
 }).refine(
   (data) => {
     if (data.startDate && data.endDate) {

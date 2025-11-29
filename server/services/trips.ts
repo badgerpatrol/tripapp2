@@ -1,7 +1,117 @@
 import { prisma } from "@/lib/prisma";
-import { TripMemberRole, TripStatus, EventType, MilestoneTriggerType } from "@/lib/generated/prisma";
+import { TripMemberRole, TripStatus, EventType, MilestoneTriggerType, UserRole } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
+import { adminAuth } from "@/lib/firebase/admin";
 import type { CreateTripInput, UpdateTripInput } from "@/types/schemas";
+import crypto from "crypto";
+
+/**
+ * Generates a unique username for sign-up mode viewer accounts.
+ * Format: trip_<tripId-short>_viewer
+ */
+function generateSignUpUsername(tripId: string): string {
+  const shortId = tripId.slice(0, 8);
+  return `trip_${shortId}_viewer`;
+}
+
+/**
+ * Generates a random password for sign-up mode.
+ */
+function generateRandomPassword(): string {
+  return crypto.randomBytes(6).toString("base64").slice(0, 10);
+}
+
+/**
+ * Creates or updates a viewer user for sign-up mode.
+ * Returns the user ID and password.
+ */
+async function createOrUpdateSignUpViewer(
+  tripId: string,
+  tripName: string,
+  existingUserId?: string | null,
+  newPassword?: string | null
+): Promise<{ userId: string; password: string }> {
+  const username = generateSignUpUsername(tripId);
+  const email = `${username}@tripplanner.local`;
+  const password = newPassword || generateRandomPassword();
+  const displayName = `${tripName} Viewer`;
+
+  if (existingUserId) {
+    // Update existing user's password if needed
+    if (newPassword) {
+      try {
+        await adminAuth.updateUser(existingUserId, {
+          password: newPassword,
+          displayName,
+        });
+      } catch (firebaseError: any) {
+        console.error("Failed to update Firebase user:", firebaseError);
+        // If user doesn't exist in Firebase, recreate them
+        if (firebaseError.code === 'auth/user-not-found') {
+          await adminAuth.createUser({
+            uid: existingUserId,
+            email,
+            password,
+            displayName,
+          });
+        } else {
+          throw new Error(`Failed to update sign-up viewer: ${firebaseError.message}`);
+        }
+      }
+    }
+
+    // Update displayName in database
+    await prisma.user.update({
+      where: { id: existingUserId },
+      data: { displayName },
+    });
+
+    return { userId: existingUserId, password };
+  }
+
+  // Create new Firebase user
+  let firebaseUser;
+  try {
+    firebaseUser = await adminAuth.createUser({
+      email,
+      password,
+      displayName,
+    });
+  } catch (firebaseError: any) {
+    // If email already exists, find and return that user
+    if (firebaseError.code === 'auth/email-already-exists') {
+      const existingFirebaseUser = await adminAuth.getUserByEmail(email);
+      // Update the password for the existing user
+      await adminAuth.updateUser(existingFirebaseUser.uid, {
+        password,
+        displayName,
+      });
+      firebaseUser = existingFirebaseUser;
+    } else {
+      throw new Error(`Failed to create sign-up viewer: ${firebaseError.message}`);
+    }
+  }
+
+  // Create or update user in database
+  const dbUser = await prisma.user.upsert({
+    where: { id: firebaseUser.uid },
+    create: {
+      id: firebaseUser.uid,
+      email,
+      displayName,
+      role: UserRole.VIEWER,
+      timezone: "UTC",
+      language: "en",
+      defaultCurrency: "GBP",
+    },
+    update: {
+      displayName,
+      role: UserRole.VIEWER,
+    },
+  });
+
+  return { userId: dbUser.id, password };
+}
 
 /**
  * Creates default timeline items for a new trip.
@@ -116,15 +226,16 @@ async function createDefaultTimelineItems(
 /**
  * Creates a new trip with the authenticated user as owner.
  * Seeds default timeline items and logs the creation event.
+ * If signUpMode is enabled, creates a viewer user for the trip.
  *
  * @param userId - Firebase UID of the user creating the trip
  * @param data - Trip creation data
- * @returns Created trip object
+ * @returns Created trip object with signUpPassword if signUpMode is enabled
  */
 export async function createTrip(userId: string, data: CreateTripInput) {
   // Use a transaction to ensure all operations succeed or fail together
   const trip = await prisma.$transaction(async (tx) => {
-    // Create the trip
+    // Create the trip first (without sign-up mode fields - we'll update after)
     const newTrip = await tx.trip.create({
       data: {
         name: data.name,
@@ -134,6 +245,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
         endDate: data.endDate || null,
         status: TripStatus.PLANNING,
         createdById: userId,
+        signUpMode: data.signUpMode || false,
       },
     });
 
@@ -162,15 +274,52 @@ export async function createTrip(userId: string, data: CreateTripInput) {
     return newTrip;
   });
 
+  // Handle sign-up mode (outside transaction to use Firebase Admin SDK)
+  let signUpPassword: string | null = null;
+  if (data.signUpMode) {
+    const { userId: viewerUserId, password } = await createOrUpdateSignUpViewer(
+      trip.id,
+      data.name,
+      null,
+      data.signUpPassword
+    );
+    signUpPassword = password;
+
+    // Update trip with viewer user ID and password
+    await prisma.trip.update({
+      where: { id: trip.id },
+      data: {
+        signUpViewerUserId: viewerUserId,
+        signUpPassword: password,
+      },
+    });
+
+    // Add the viewer as a trip member with VIEWER role
+    await prisma.tripMember.create({
+      data: {
+        tripId: trip.id,
+        userId: viewerUserId,
+        role: TripMemberRole.VIEWER,
+        rsvpStatus: "ACCEPTED",
+      },
+    });
+  }
+
   // Log the event (outside transaction for idempotency)
   await logEvent("Trip", trip.id, EventType.TRIP_CREATED, userId, {
     name: trip.name,
     baseCurrency: trip.baseCurrency,
     startDate: trip.startDate,
     endDate: trip.endDate,
+    signUpMode: data.signUpMode || false,
   });
 
-  return trip;
+  // Return trip with sign-up password if applicable
+  return {
+    ...trip,
+    signUpPassword,
+    signUpMode: data.signUpMode || false,
+  };
 }
 
 /**
@@ -247,12 +396,13 @@ async function updateDependentTimelineItems(
 
 /**
  * Updates a trip's basic details and recalculates dependent timeline items.
+ * Handles sign-up mode changes (creating/updating viewer user).
  * Logs an EventLog entry with changes.
  *
  * @param tripId - ID of the trip to update
  * @param userId - Firebase UID of the user updating the trip
  * @param data - Trip update data
- * @returns Updated trip object
+ * @returns Updated trip object with signUpPassword if applicable
  */
 export async function updateTrip(
   tripId: string,
@@ -270,7 +420,7 @@ export async function updateTrip(
 
   // Use a transaction to ensure all operations succeed or fail together
   const result = await prisma.$transaction(async (tx) => {
-    // Update the trip
+    // Update the trip (excluding signUpMode fields which are handled separately)
     const updatedTrip = await tx.trip.update({
       where: { id: tripId },
       data: {
@@ -279,7 +429,7 @@ export async function updateTrip(
         ...(data.baseCurrency !== undefined && { baseCurrency: data.baseCurrency }),
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
-        // Note: location field not in Trip schema yet - will need migration to add
+        ...(data.signUpMode !== undefined && { signUpMode: data.signUpMode }),
       },
     });
 
@@ -296,6 +446,100 @@ export async function updateTrip(
 
     return { updatedTrip, affectedTimelineItems };
   });
+
+  // Handle sign-up mode changes (outside transaction to use Firebase Admin SDK)
+  let signUpPassword: string | null = existingTrip.signUpPassword;
+  const tripName = data.name || existingTrip.name;
+
+  // Case 1: Enabling sign-up mode (was off, now on)
+  if (data.signUpMode === true && !existingTrip.signUpMode) {
+    const { userId: viewerUserId, password } = await createOrUpdateSignUpViewer(
+      tripId,
+      tripName,
+      existingTrip.signUpViewerUserId,
+      data.signUpPassword
+    );
+    signUpPassword = password;
+
+    // Update trip with viewer user ID and password
+    await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        signUpViewerUserId: viewerUserId,
+        signUpPassword: password,
+      },
+    });
+
+    // Add the viewer as a trip member if not already a member
+    const existingMembership = await prisma.tripMember.findUnique({
+      where: {
+        tripId_userId: {
+          tripId,
+          userId: viewerUserId,
+        },
+      },
+    });
+
+    if (!existingMembership) {
+      await prisma.tripMember.create({
+        data: {
+          tripId,
+          userId: viewerUserId,
+          role: TripMemberRole.VIEWER,
+          rsvpStatus: "ACCEPTED",
+        },
+      });
+    }
+  }
+  // Case 2: Sign-up mode is on and password is being changed
+  else if (
+    existingTrip.signUpMode &&
+    data.signUpPassword !== undefined &&
+    data.signUpPassword !== null &&
+    data.signUpPassword !== existingTrip.signUpPassword
+  ) {
+    const { password } = await createOrUpdateSignUpViewer(
+      tripId,
+      tripName,
+      existingTrip.signUpViewerUserId,
+      data.signUpPassword
+    );
+    signUpPassword = password;
+
+    // Update trip with new password
+    await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        signUpPassword: password,
+      },
+    });
+  }
+  // Case 3: Disabling sign-up mode (was on, now off) - keep the user but clear the link
+  else if (data.signUpMode === false && existingTrip.signUpMode) {
+    // Remove the viewer from the trip (soft delete the membership)
+    if (existingTrip.signUpViewerUserId) {
+      await prisma.tripMember.updateMany({
+        where: {
+          tripId,
+          userId: existingTrip.signUpViewerUserId,
+        },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+    }
+
+    // Clear sign-up mode fields on the trip
+    await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        signUpViewerUserId: null,
+        signUpPassword: null,
+      },
+    });
+
+    signUpPassword = null;
+  }
 
   // Log the event (outside transaction for idempotency)
   const changes: Record<string, any> = {};
@@ -314,6 +558,9 @@ export async function updateTrip(
   if (data.endDate !== undefined && data.endDate?.getTime() !== existingTrip.endDate?.getTime()) {
     changes.endDate = { old: existingTrip.endDate, new: data.endDate };
   }
+  if (data.signUpMode !== undefined && data.signUpMode !== existingTrip.signUpMode) {
+    changes.signUpMode = { old: existingTrip.signUpMode, new: data.signUpMode };
+  }
 
   if (Object.keys(changes).length > 0 || result.affectedTimelineItems.length > 0) {
     await logEvent("Trip", tripId, EventType.TRIP_UPDATED, userId, {
@@ -322,7 +569,11 @@ export async function updateTrip(
     });
   }
 
-  return result.updatedTrip;
+  // Return updated trip with sign-up password if applicable
+  return {
+    ...result.updatedTrip,
+    signUpPassword,
+  };
 }
 
 /**
@@ -650,6 +901,9 @@ export async function getTripOverviewForMember(
     },
   });
 
+  // Only show sign-up mode info to owners
+  const isOwner = userMembership?.role === "OWNER";
+
   return {
     id: trip.id,
     name: trip.name,
@@ -660,6 +914,9 @@ export async function getTripOverviewForMember(
     status: trip.status,
     spendStatus: trip.spendStatus,
     rsvpStatus: trip.rsvpStatus,
+    // Sign-up mode fields (only visible to owners)
+    signUpMode: isOwner ? trip.signUpMode : undefined,
+    signUpPassword: isOwner ? trip.signUpPassword : undefined,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,
     participants: trip.members.map((m) => ({

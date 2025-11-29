@@ -116,9 +116,12 @@ export async function PUT(
 
     // 3. Parse and validate request body
     const body = await request.json();
+    console.log("[PUT /api/trips] Request body:", JSON.stringify(body, null, 2));
+
     const validationResult = UpdateTripSchema.safeParse(body);
 
     if (!validationResult.success) {
+      console.log("[PUT /api/trips] Validation failed:", validationResult.error.issues);
       return NextResponse.json(
         {
           error: "Invalid trip data",
@@ -127,6 +130,8 @@ export async function PUT(
         { status: 400 }
       );
     }
+
+    console.log("[PUT /api/trips] Validated data:", JSON.stringify(validationResult.data, null, 2));
 
     // 4. Update the trip
     const updatedTrip = await updateTrip(tripId, auth.uid, validationResult.data);
@@ -140,8 +145,9 @@ export async function PUT(
     );
   } catch (error) {
     console.error("Error updating trip:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to update trip. Please try again.";
     return NextResponse.json(
-      { error: "Failed to update trip. Please try again." },
+      { error: errorMessage },
       { status: 500 }
     );
   }
