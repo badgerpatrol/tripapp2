@@ -161,6 +161,7 @@ export default function TripDetailPage() {
   const [listWorkflowDescription, setListWorkflowDescription] = useState("");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
+  const [listsCount, setListsCount] = useState<number | null>(null); // null = not yet loaded
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -1719,8 +1720,8 @@ export default function TripDetailPage() {
           </div>
         </div>
         
-        {/* Lists Section (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (
+        {/* Lists Section (for accepted members) - only show for organizers or when lists exist */}
+        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (listsCount !== null && listsCount > 0)) ? (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
             {/* Header row with title and toggle */}
             <div className="flex items-start justify-between gap-3 mb-3">
@@ -1763,10 +1764,22 @@ export default function TripDetailPage() {
                   setListWorkflowDescription(`Complete tasks in ${listTitle}`);
                   setIsListWorkflowModalOpen(true);
                 }}
+                onListsLoaded={setListsCount}
               />
             )}
           </div>
-        )}
+        ) : trip.userRsvpStatus === "ACCEPTED" && !canInvite && listsCount === null ? (
+          /* Hidden TripListsPanel to fetch list count for non-organizers */
+          <div className="hidden">
+            <TripListsPanel
+              key={listsRefreshKey}
+              tripId={trip.id}
+              isOrganizer={false}
+              hideContainer={true}
+              onListsLoaded={setListsCount}
+            />
+          </div>
+        ) : null}
         
         {/*
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 mb-6">

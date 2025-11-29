@@ -61,9 +61,10 @@ interface TripListsPanelProps {
   selectedListId?: string; // ID of a specific list to show (hides others and container title)
   isOrganizer?: boolean; // If false and no lists exist, component will not render
   hideContainer?: boolean; // If true, will not render the outer container wrapper (for use when wrapped externally)
+  onListsLoaded?: (count: number) => void; // Callback when lists are loaded, reports the count
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,6 +113,11 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       const data = await response.json();
       const fetchedLists = data.instances || [];
       setLists(fetchedLists);
+
+      // Notify parent of list count
+      if (onListsLoaded) {
+        onListsLoaded(fetchedLists.length);
+      }
 
       // In workflow mode, expand the selected list or the first list by default
       if (inWorkflowMode && fetchedLists.length > 0 && !expandedListId) {
