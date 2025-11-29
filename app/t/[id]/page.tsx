@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { SpendStatus } from "@/lib/generated/prisma";
+import LoginForm from "@/components/LoginForm";
 import EditTripDialog from "../../trips/[id]/EditTripDialog";
 import InviteUsersDialog from "../../trips/[id]/InviteUsersDialog";
 import AddSpendDialog from "../../trips/[id]/AddSpendDialog";
@@ -344,16 +345,21 @@ export default function TripDetailPage() {
       fetchTrip();
       fetchChoices();
     } else if (!authLoading && !user) {
-      router.push("/");
+      setLoading(false);
     }
-  }, [user, authLoading, fetchTrip, fetchChoices, router]);
+  }, [user, authLoading, fetchTrip, fetchChoices]);
 
-  if (authLoading || loading) {
+  if (authLoading || (user && loading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
         <div className="text-zinc-600 dark:text-zinc-400">Loading trip...</div>
       </div>
     );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <LoginForm />;
   }
 
   if (error || !trip) {
