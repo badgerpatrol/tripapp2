@@ -349,7 +349,8 @@ export default function TripDetailPage() {
     }
   }, [user, authLoading, fetchTrip, fetchChoices]);
 
-  if (authLoading || (user && loading)) {
+  // Show loading if auth is loading OR if we have a user but no trip yet (and no error)
+  if (authLoading || (user && !trip && !error)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
         <div className="text-zinc-600 dark:text-zinc-400">Loading trip...</div>
@@ -362,11 +363,29 @@ export default function TripDetailPage() {
     return <LoginForm />;
   }
 
-  if (error || !trip) {
+  // Show error state
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
         <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error || "Trip not found"}</p>
+          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+          <a
+            href="/trips"
+            className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
+            Back to Trips
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Show trip not found (only if we have a user, no error, and no trip)
+  if (!trip) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400 mb-4">Trip not found</p>
           <a
             href="/trips"
             className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
