@@ -6,17 +6,20 @@ import type { CreateTripInput, UpdateTripInput } from "@/types/schemas";
 /**
  * Creates default timeline items for a new trip.
  * Timeline includes: trip created, RSVP deadline, spending window, trip dates, settlement complete
+ *
+ * @param minimalMilestones - If true, only creates the "Trip Created" milestone (useful for simple spend tracking)
  */
 async function createDefaultTimelineItems(
   tripId: string,
   userId: string,
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
+  minimalMilestones: boolean = false
 ) {
   const now = new Date();
   const timelineItems = [];
 
-  // 1. Trip Created (completed)
+  // 1. Trip Created (completed) - always created
   timelineItems.push({
     tripId,
     title: "Trip Created",
@@ -27,6 +30,11 @@ async function createDefaultTimelineItems(
     order: 0,
     createdById: userId,
   });
+
+  // If minimal milestones requested (e.g., from receipt scan), only return Trip Created
+  if (minimalMilestones) {
+    return timelineItems;
+  }
 
   // Calculate dates based on trip dates if provided
   // RSVP deadline: 1 week before start if still in future, otherwise start date
@@ -119,9 +127,10 @@ async function createDefaultTimelineItems(
  *
  * @param userId - Firebase UID of the user creating the trip
  * @param data - Trip creation data
+ * @param minimalMilestones - If true, only creates the "Trip Created" milestone (useful for simple spend tracking)
  * @returns Created trip object
  */
-export async function createTrip(userId: string, data: CreateTripInput) {
+export async function createTrip(userId: string, data: CreateTripInput, minimalMilestones: boolean = false) {
   // Use a transaction to ensure all operations succeed or fail together
   const trip = await prisma.$transaction(async (tx) => {
     // Create the trip
@@ -152,7 +161,8 @@ export async function createTrip(userId: string, data: CreateTripInput) {
       newTrip.id,
       userId,
       data.startDate,
-      data.endDate
+      data.endDate,
+      minimalMilestones
     );
 
     await tx.timelineItem.createMany({
@@ -700,6 +710,7 @@ export async function getTripOverviewForMember(
         date: s.date,
         status: s.status,
         notes: s.notes,
+        receiptImageData: s.receiptImageData,
         paidBy: s.paidBy,
         category: s.category,
         assignedPercentage: Math.round(assignedPercentage * 10) / 10,

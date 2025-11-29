@@ -7,6 +7,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ReceiptParseResponseSchema, type ReceiptParseResponse, type ParsedReceiptItem } from "@/types/receipt";
 import { parsePriceToMinor } from "@/lib/menu";
+import { createSystemLog } from "@/server/systemLog";
+import { LogSeverity } from "@/lib/generated/prisma";
 
 interface ParseReceiptOptions {
   imageBase64: string;
@@ -52,7 +54,7 @@ export async function parseReceiptImage(
 Return ONLY raw JSON with no markdown formatting, no code blocks, no explanations.
 
 Required JSON structure:
-{"items":[{"name":"item name","description":"optional details","quantity":1,"unitPrice":"12.50"}],"currency_hint":"£","total":"45.50"}
+{"items":[{"name":"item name","description":"optional details","quantity":1,"unitPrice":"12.50"}],"currency_hint":"GBP","total":"45.50"}
 
 Your task:
 1. Identify all purchased items on the receipt (products, food items, etc.)
@@ -65,7 +67,7 @@ Your task:
 3. Also identify:
    - Service charges, tips, or gratuity (treat as separate items with quantity: 1)
    - Delivery or other fees (treat as separate items with quantity: 1)
-   - The currency symbol used (£, $, €, etc.)
+   - The currency as a 3-letter ISO code (USD, GBP, EUR, JPY, etc.) - NOT a symbol like $ or £
    - The final total amount paid
 
 4. Do NOT include:
@@ -74,6 +76,12 @@ Your task:
    - Payment method information
    - Dates or times
    - The final total line itself (but DO extract the total value for the "total" field)
+
+CRITICAL VALIDATION:
+- If a total is shown on the receipt, you MUST verify that the sum of (quantity × unitPrice) for all items equals the total
+- Double-check your math: add up all items and ensure they match the receipt total
+- If the items don't add up to the total, you've missed items or made a calculation error - look more carefully at the receipt
+- Common mistakes: missing items, wrong quantities, wrong prices, including items that shouldn't be there
 
 Important notes:
 - The unitPrice should ALWAYS be the price for ONE unit of the item, not the total for multiple units
@@ -84,30 +92,163 @@ ${currencyHint ? `- Expected currency: ${currencyHint}` : ""}
 
 Output format: Pure JSON only, starting with { and ending with }`;
 
-  // Call Claude Vision API
-  const message = await anthropic.messages.create({
-    model: "claude-haiku-4-5", // Claude Haiku with vision support
-    max_tokens: 2048,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: validMediaType(imageType),
-              data: imageBase64,
+  console.log("Receipt parsing - trying Sonnet first");
+
+  // Try Sonnet first, fall back to Haiku if busy
+  let message;
+  let modelUsed = "claude-sonnet-4-5-20250929";
+  const startTime = Date.now();
+
+  try {
+    message = await anthropic.messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 2048,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: validMediaType(imageType),
+                data: imageBase64,
+              },
             },
-          },
+            {
+              type: "text",
+              text: prompt,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (apiError: any) {
+    console.error("Anthropic API error with Sonnet:", {
+      message: apiError?.message,
+      status: apiError?.status,
+      error: apiError?.error,
+      type: apiError?.error?.type,
+    });
+
+    // Check if it's an overload error or rate limit
+    const isOverloaded = apiError?.message?.includes("overloaded") ||
+                        apiError?.error?.type === "overloaded_error" ||
+                        apiError?.status === 529;
+    const isRateLimit = apiError?.status === 429;
+
+    // If Sonnet is busy, try Haiku once
+    if (isOverloaded || isRateLimit) {
+      console.log("Sonnet is busy, falling back to Haiku");
+
+      // Log Sonnet failure
+      await createSystemLog(
+        LogSeverity.WARNING,
+        "ai",
+        "receipt_parse_api_call",
+        `Receipt parsing API call failed with ${modelUsed}`,
+        {
+          model: modelUsed,
+          callType: "receipt",
+          status: "failed",
+          reason: isOverloaded ? "overloaded" : "rate_limit",
+          errorStatus: apiError?.status,
+          durationMs: Date.now() - startTime,
+        }
+      );
+
+      modelUsed = "claude-3-haiku-20240307";
+
+      try {
+        message = await anthropic.messages.create({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 2048,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: validMediaType(imageType),
+                    data: imageBase64,
+                  },
+                },
+                {
+                  type: "text",
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+        });
+      } catch (haikuError: any) {
+        console.error("Anthropic API error with Haiku fallback:", {
+          message: haikuError?.message,
+          status: haikuError?.status,
+          error: haikuError?.error,
+        });
+
+        // Log Haiku failure
+        await createSystemLog(
+          LogSeverity.ERROR,
+          "ai",
+          "receipt_parse_api_call",
+          `Receipt parsing API call failed with ${modelUsed}`,
           {
-            type: "text",
-            text: prompt,
-          },
-        ],
-      },
-    ],
-  });
+            model: modelUsed,
+            callType: "receipt",
+            status: "failed",
+            reason: haikuError?.message || "Unknown error",
+            errorStatus: haikuError?.status,
+            durationMs: Date.now() - startTime,
+          }
+        );
+
+        throw new Error("The AI service is currently busy. Please try again in a moment.");
+      }
+    } else {
+      // Non-overload error, log details and throw with specific message
+      const errorMessage = apiError?.message || apiError?.error?.message || "Unknown error";
+      console.error("Non-overload API error details:", errorMessage);
+
+      // Log non-overload error
+      await createSystemLog(
+        LogSeverity.ERROR,
+        "ai",
+        "receipt_parse_api_call",
+        `Receipt parsing API call failed with ${modelUsed}`,
+        {
+          model: modelUsed,
+          callType: "receipt",
+          status: "failed",
+          reason: errorMessage,
+          errorStatus: apiError?.status,
+          durationMs: Date.now() - startTime,
+        }
+      );
+
+      throw new Error(`Failed to analyze receipt: ${errorMessage}`);
+    }
+  }
+
+  // Log successful API call
+  const durationMs = Date.now() - startTime;
+  await createSystemLog(
+    LogSeverity.INFO,
+    "ai",
+    "receipt_parse_api_call",
+    `Receipt parsing API call succeeded with ${modelUsed}`,
+    {
+      model: modelUsed,
+      callType: "receipt",
+      status: "success",
+      durationMs,
+    }
+  );
+
+  console.log(`Receipt parsed successfully using ${modelUsed}`);
 
   // Parse the response
   const responseText =
@@ -210,7 +351,7 @@ Output format: Pure JSON only, starting with { and ending with }`;
     const difference = Math.abs(calculatedTotal - totalMinor);
     const percentageDiff = (difference / totalMinor) * 100;
 
-    // Log warning if difference is more than 1% or more than 10 minor units (e.g., 10 pence)
+    // Log warning if difference is more than 1% or more than 10 minor units
     if (difference > 10 && percentageDiff > 1) {
       console.warn(
         `Receipt total validation warning: Items sum to ${(calculatedTotal / 100).toFixed(2)}, ` +
@@ -228,6 +369,7 @@ Output format: Pure JSON only, starting with { and ending with }`;
     console.warn("Receipt total not found on receipt, skipping validation");
   }
 
+  // Return the result
   return {
     items: normalizedItems,
     currencyUsed: currencyToUse,

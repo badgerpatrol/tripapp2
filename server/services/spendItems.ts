@@ -217,6 +217,8 @@ export async function createSpendItem(spendId: string, userId: string, data: Cre
         description: data.description || null,
         cost: new Decimal(data.cost),
         assignedUserId: data.userId || null,
+        source: data.source || "MANUAL",
+        photoId: data.photoId || null,
         createdById: userId,
       },
       include: {

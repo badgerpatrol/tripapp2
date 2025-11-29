@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Create trip using service
-    const trip = await createTrip(auth.uid, validation.data);
+    // If minimalMilestones is true (e.g., from receipt scan), only create "Trip Created" milestone
+    const minimalMilestones = body.minimalMilestones === true;
+    const trip = await createTrip(auth.uid, validation.data, minimalMilestones);
 
     // 4. Return response
     const response = CreateTripResponseSchema.parse({
