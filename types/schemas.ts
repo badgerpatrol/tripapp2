@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility, Visibility, ListType, TodoActionType, GroupMemberRole } from "@/lib/generated/prisma";
+import { UserRole, SubscriptionTier, SpendStatus, ChoiceStatus, ChoiceVisibility, ChoiceItemType, Visibility, ListType, TodoActionType, GroupMemberRole } from "@/lib/generated/prisma";
 
 // ============================================================================
 // Auth Schemas
@@ -470,6 +470,7 @@ export const CreateChoiceItemSchema = z.object({
   maxTotal: z.number().int().positive().optional(),
   allergens: z.array(z.string()).optional(),
   isActive: z.boolean().default(true),
+  itemType: z.nativeEnum(ChoiceItemType).default("NORMAL"),
 });
 
 export const UpdateChoiceItemSchema = z.object({
@@ -481,6 +482,7 @@ export const UpdateChoiceItemSchema = z.object({
   maxTotal: z.number().int().positive().optional().nullable(),
   allergens: z.array(z.string()).optional().nullable(),
   isActive: z.boolean().optional(),
+  itemType: z.nativeEnum(ChoiceItemType).optional(),
 });
 
 export const ChoiceItemResponseSchema = z.object({
@@ -494,6 +496,7 @@ export const ChoiceItemResponseSchema = z.object({
   maxTotal: z.number().nullable(),
   allergens: z.array(z.string()).nullable(),
   isActive: z.boolean(),
+  itemType: z.nativeEnum(ChoiceItemType),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -545,6 +548,7 @@ export const RespondentsResponseSchema = z.object({
 export const ItemReportSchema = z.object({
   itemId: z.string(),
   name: z.string(),
+  itemType: z.nativeEnum(ChoiceItemType),
   qtyTotal: z.number(),
   totalPrice: z.number().nullable(),
   distinctUsers: z.number(),
@@ -557,6 +561,7 @@ export const ItemsReportResponseSchema = z.object({
 
 export const UserSelectionLineSchema = z.object({
   itemName: z.string(),
+  itemType: z.nativeEnum(ChoiceItemType),
   quantity: z.number(),
   linePrice: z.number().nullable(),
   note: z.string().nullable(),
@@ -568,6 +573,7 @@ export const UserReportSchema = z.object({
   note: z.string().nullable(),
   lines: z.array(UserSelectionLineSchema),
   userTotalPrice: z.number().nullable(),
+  isNotParticipating: z.boolean().default(false),
 });
 
 export const UsersReportResponseSchema = z.object({

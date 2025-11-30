@@ -4,7 +4,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { ChoiceStatus, Prisma, EventType, MilestoneTriggerType } from "@/lib/generated/prisma";
+import { ChoiceStatus, ChoiceItemType, Prisma, EventType, MilestoneTriggerType } from "@/lib/generated/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
 import { logEvent } from "@/server/eventLog";
 
@@ -39,6 +39,7 @@ export interface CreateChoiceItemData {
   maxTotal?: number;
   allergens?: string[];
   isActive?: boolean;
+  itemType?: ChoiceItemType;
 }
 
 export interface UpdateChoiceItemData {
@@ -50,6 +51,7 @@ export interface UpdateChoiceItemData {
   maxTotal?: number | null;
   allergens?: string[] | null;
   isActive?: boolean;
+  itemType?: ChoiceItemType;
 }
 
 export interface SelectionLine {
@@ -516,6 +518,20 @@ export async function createChoiceItem(
   userId: string,
   data: CreateChoiceItemData
 ) {
+  // If creating a NO_PARTICIPATION item, check that one doesn't already exist
+  if (data.itemType === "NO_PARTICIPATION") {
+    const existingNoParticipation = await prisma.choiceItem.findFirst({
+      where: {
+        choiceId,
+        itemType: "NO_PARTICIPATION",
+        isActive: true,
+      },
+    });
+    if (existingNoParticipation) {
+      throw new Error("A NO_PARTICIPATION item already exists for this choice");
+    }
+  }
+
   const item = await prisma.choiceItem.create({
     data: {
       choiceId,
@@ -529,6 +545,7 @@ export async function createChoiceItem(
       maxTotal: data.maxTotal,
       allergens: data.allergens as any || null,
       isActive: data.isActive !== undefined ? data.isActive : true,
+      itemType: data.itemType || "NORMAL",
     },
   });
 
@@ -589,6 +606,7 @@ export async function bulkCreateChoiceItems(
           maxTotal: itemData.maxTotal,
           allergens: itemData.allergens as any || null,
           isActive: itemData.isActive !== undefined ? itemData.isActive : true,
+          itemType: itemData.itemType || "NORMAL",
         },
       });
       results.push(item);
@@ -605,6 +623,65 @@ export async function bulkCreateChoiceItems(
   });
 
   return createdItems;
+}
+
+/**
+ * A4c. Ensure NO_PARTICIPATION item exists for a choice
+ * Creates the NO_PARTICIPATION item if it doesn't exist, returns existing one if it does
+ */
+export async function ensureNoParticipationItem(
+  choiceId: string,
+  userId: string
+) {
+  // Check if a NO_PARTICIPATION item already exists
+  const existingItem = await prisma.choiceItem.findFirst({
+    where: {
+      choiceId,
+      itemType: "NO_PARTICIPATION",
+      isActive: true,
+    },
+  });
+
+  if (existingItem) {
+    return existingItem;
+  }
+
+  // Get choice for tripId (for logging)
+  const choice = await prisma.choice.findUnique({
+    where: { id: choiceId },
+    select: { tripId: true, archivedAt: true },
+  });
+
+  if (!choice) {
+    throw new Error("Choice not found");
+  }
+
+  if (choice.archivedAt) {
+    throw new Error("Cannot add items to archived choice");
+  }
+
+  // Create the NO_PARTICIPATION item
+  const item = await prisma.choiceItem.create({
+    data: {
+      choiceId,
+      name: "Not participating",
+      description: "I'm not making a selection for this choice",
+      price: null,
+      sortIndex: 999999, // High sort index to put it at the end
+      itemType: "NO_PARTICIPATION",
+      isActive: true,
+    },
+  });
+
+  // Log event
+  await logEvent("ChoiceItem", item.id, EventType.CHOICE_ITEM_CREATED, userId, {
+    tripId: choice.tripId,
+    choiceId,
+    name: item.name,
+    itemType: "NO_PARTICIPATION",
+  });
+
+  return item;
 }
 
 /**
@@ -743,7 +820,10 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
       },
       items: {
         where: { isActive: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: [
+          { sortIndex: "asc" },
+          { createdAt: "asc" },
+        ],
       },
     },
   });
@@ -751,6 +831,38 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
   if (!choice) {
     throw new Error("Choice not found");
   }
+
+  // Ensure NO_PARTICIPATION item exists for this choice (if not archived)
+  if (!choice.archivedAt) {
+    await ensureNoParticipationItem(choiceId, userId);
+  }
+
+  // Re-fetch items to include the NO_PARTICIPATION item if it was just created
+  const items = await prisma.choiceItem.findMany({
+    where: {
+      choiceId,
+      isActive: true,
+    },
+    orderBy: [
+      { sortIndex: "asc" },
+      { createdAt: "asc" },
+    ],
+  });
+
+  // Sort items: NORMAL/OTHER items first, then NO_PARTICIPATION at the end
+  const sortedItems = items.sort((a, b) => {
+    if (a.itemType === "NO_PARTICIPATION" && b.itemType !== "NO_PARTICIPATION") {
+      return 1;
+    }
+    if (a.itemType !== "NO_PARTICIPATION" && b.itemType === "NO_PARTICIPATION") {
+      return -1;
+    }
+    // Otherwise maintain sortIndex/createdAt order
+    if (a.sortIndex !== b.sortIndex) {
+      return a.sortIndex - b.sortIndex;
+    }
+    return a.createdAt.getTime() - b.createdAt.getTime();
+  });
 
   // Get user's current selection
   const mySelection = await prisma.choiceSelection.findUnique({
@@ -769,10 +881,14 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
     },
   });
 
-  // Calculate user's total
+  // Calculate user's total (exclude NO_PARTICIPATION items from total)
   let myTotal: number | undefined;
   if (mySelection) {
     myTotal = mySelection.lines.reduce((sum, line) => {
+      // Skip NO_PARTICIPATION items in total calculation
+      if (line.item.itemType === "NO_PARTICIPATION") {
+        return sum;
+      }
       const itemPrice = line.item.price ? parseFloat(line.item.price.toString()) : 0;
       return sum + (itemPrice * line.quantity);
     }, 0);
@@ -780,7 +896,7 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
 
   return {
     choice,
-    items: choice.items,
+    items: sortedItems,
     mySelections: mySelection?.lines || [],
     myTotal,
   };
@@ -816,7 +932,7 @@ export async function createOrUpdateSelection(
     throw new Error("Choice deadline has passed");
   }
 
-  // Fetch all items to validate caps
+  // Fetch all items to validate caps and check NO_PARTICIPATION rules
   const items = await prisma.choiceItem.findMany({
     where: {
       id: { in: data.lines.map(l => l.itemId) },
@@ -829,6 +945,29 @@ export async function createOrUpdateSelection(
       },
     },
   });
+
+  // Validate NO_PARTICIPATION rules:
+  // - NO_PARTICIPATION cannot be combined with other items
+  // - Only quantity of 1 is allowed for NO_PARTICIPATION
+  const noParticipationItems = items.filter(i => i.itemType === "NO_PARTICIPATION");
+  const hasNoParticipation = noParticipationItems.length > 0;
+  const hasOtherItems = items.some(i => i.itemType !== "NO_PARTICIPATION");
+
+  if (hasNoParticipation && hasOtherItems) {
+    throw new Error("Cannot select 'Not participating' along with other items. Please choose one or the other.");
+  }
+
+  if (hasNoParticipation && data.lines.length > 1) {
+    throw new Error("Cannot select multiple items when 'Not participating' is selected.");
+  }
+
+  // Validate quantity for NO_PARTICIPATION (must be exactly 1)
+  for (const line of data.lines) {
+    const item = items.find(i => i.id === line.itemId);
+    if (item?.itemType === "NO_PARTICIPATION" && line.quantity !== 1) {
+      throw new Error("'Not participating' selection must have a quantity of 1.");
+    }
+  }
 
   // Validate each line against caps
   for (const line of data.lines) {
@@ -1131,13 +1270,15 @@ export async function getItemsReport(choiceId: string) {
     });
     const userNames = Array.from(usersMap.values());
 
-    const totalPrice = item.price
-      ? parseFloat(item.price.toString()) * qtyTotal
-      : null;
+    // NO_PARTICIPATION items don't have prices
+    const totalPrice = item.itemType === "NO_PARTICIPATION"
+      ? null
+      : (item.price ? parseFloat(item.price.toString()) * qtyTotal : null);
 
     return {
       itemId: item.id,
       name: item.name,
+      itemType: item.itemType,
       qtyTotal,
       totalPrice,
       distinctUsers,
@@ -1183,15 +1324,25 @@ export async function getUsersReport(choiceId: string) {
   });
 
   const users = selections.map(selection => {
+    // Check if user selected NO_PARTICIPATION
+    const isNotParticipating = selection.lines.some(
+      line => line.item.itemType === "NO_PARTICIPATION"
+    );
+
     const lines = selection.lines.map(line => ({
       itemName: line.item.name,
+      itemType: line.item.itemType,
       quantity: line.quantity,
-      linePrice: line.item.price
-        ? parseFloat(line.item.price.toString()) * line.quantity
-        : null,
+      // NO_PARTICIPATION items don't contribute to price
+      linePrice: line.item.itemType === "NO_PARTICIPATION"
+        ? null
+        : (line.item.price
+          ? parseFloat(line.item.price.toString()) * line.quantity
+          : null),
       note: line.note,
     }));
 
+    // Don't count NO_PARTICIPATION items in total
     const userTotalPrice = lines.reduce((sum, line) => {
       return sum + (line.linePrice || 0);
     }, 0);
@@ -1202,6 +1353,7 @@ export async function getUsersReport(choiceId: string) {
       note: selection.note,
       lines,
       userTotalPrice: userTotalPrice > 0 ? userTotalPrice : null,
+      isNotParticipating,
     };
   });
 
@@ -1299,11 +1451,17 @@ export async function createSpendFromChoice(
   if (mode === "byItem") {
     // Create spend items for each user's selection of each menu item
     // This allows each item to show who ordered it (assignedUserId)
+    // Skip NO_PARTICIPATION items - they don't generate spend items
 
     // Group selections by user and item
     const userItemSelections = new Map<string, Map<string, { itemName: string; quantity: number; price: number }>>();
 
     for (const choiceItem of choice.items) {
+      // Skip NO_PARTICIPATION items - they don't generate spend items
+      if (choiceItem.itemType === "NO_PARTICIPATION") {
+        continue;
+      }
+
       const itemPrice = choiceItem.price ? parseFloat(choiceItem.price.toString()) : 0;
       if (itemPrice > 0) {
         for (const line of choiceItem.lines) {
@@ -1374,10 +1532,18 @@ export async function createSpendFromChoice(
     }
   } else if (mode === "byUser") {
     // Create spend items for each user's total
+    // Skip users who only have NO_PARTICIPATION selections (they have userTotalPrice of null/0)
     for (const user of usersReport.users) {
+      // Skip users who are not participating
+      if (user.isNotParticipating) {
+        continue;
+      }
+
       if (user.userTotalPrice && user.userTotalPrice > 0) {
         const userName = user.displayName || user.userId;
+        // Filter out NO_PARTICIPATION items from description
         const itemDescription = user.lines
+          .filter(l => l.itemType !== "NO_PARTICIPATION")
           .map(l => `${l.quantity}x ${l.itemName}`)
           .join(", ");
 

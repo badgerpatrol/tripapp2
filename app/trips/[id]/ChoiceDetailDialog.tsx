@@ -13,6 +13,7 @@ interface ChoiceItem {
   maxTotal: number | null;
   allergens: string[] | null;
   isActive: boolean;
+  itemType: "NORMAL" | "OTHER" | "NO_PARTICIPATION";
 }
 
 interface SelectionLine {
@@ -120,18 +121,37 @@ export default function ChoiceDetailDialog({
   };
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
+    const item = detail?.items.find(i => i.id === itemId);
+    const isNoParticipation = item?.itemType === "NO_PARTICIPATION";
+
     if (quantity <= 0) {
       const newSelections = { ...selections };
       delete newSelections[itemId];
       setSelections(newSelections);
-    } else {
+    } else if (isNoParticipation) {
+      // Selecting NO_PARTICIPATION: clear all other selections and set quantity to 1
       setSelections({
-        ...selections,
         [itemId]: {
-          quantity,
-          note: selections[itemId]?.note || "",
+          quantity: 1, // NO_PARTICIPATION always has quantity of 1
+          note: "",
         },
       });
+    } else {
+      // Selecting a normal item: remove any NO_PARTICIPATION selection
+      const noParticipationItem = detail?.items.find(i => i.itemType === "NO_PARTICIPATION");
+      const newSelections = { ...selections };
+
+      // Remove NO_PARTICIPATION if it's selected
+      if (noParticipationItem && newSelections[noParticipationItem.id]) {
+        delete newSelections[noParticipationItem.id];
+      }
+
+      newSelections[itemId] = {
+        quantity,
+        note: selections[itemId]?.note || "",
+      };
+
+      setSelections(newSelections);
     }
   };
 
@@ -221,11 +241,18 @@ export default function ChoiceDetailDialog({
   const calculateTotal = () => {
     return Object.entries(selections).reduce((sum, [itemId, sel]) => {
       const item = detail.items.find(i => i.id === itemId);
-      if (item && item.price) {
+      // Exclude NO_PARTICIPATION items from total
+      if (item && item.price && item.itemType !== "NO_PARTICIPATION") {
         return sum + (item.price * sel.quantity);
       }
       return sum;
     }, 0);
+  };
+
+  // Check if user has selected NO_PARTICIPATION
+  const isNotParticipating = () => {
+    const noParticipationItem = detail?.items.find(i => i.itemType === "NO_PARTICIPATION");
+    return noParticipationItem && selections[noParticipationItem.id];
   };
 
   return (
@@ -296,11 +323,17 @@ export default function ChoiceDetailDialog({
               {/* Menu Items */}
               <div className="space-y-3 mb-6">
                 <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Menu</h3>
-                {detail.items.length === 0 ? (
+                {detail.items.filter(i => i.itemType !== "NO_PARTICIPATION").length === 0 ? (
                   <p className="text-sm text-zinc-500">No items available yet</p>
                 ) : (
-                  detail.items.map(item => (
-                    <div key={item.id} className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
+                  detail.items
+                    .filter(item => item.itemType !== "NO_PARTICIPATION")
+                    .map(item => (
+                    <div key={item.id} className={`border rounded-lg p-3 ${
+                      isNotParticipating()
+                        ? "border-zinc-200 dark:border-zinc-700 opacity-50"
+                        : "border-zinc-200 dark:border-zinc-700"
+                    }`}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
@@ -324,7 +357,7 @@ export default function ChoiceDetailDialog({
                             </div>
                           )}
                         </div>
-                        {!isClosed && (
+                        {!isClosed && !isNotParticipating() && (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleQuantityChange(item.id, (selections[item.id]?.quantity || 0) - 1)}
@@ -358,6 +391,60 @@ export default function ChoiceDetailDialog({
                 )}
               </div>
 
+              {/* Not Participating Option */}
+              {!isClosed && detail.items.some(i => i.itemType === "NO_PARTICIPATION") && (
+                <div className="mb-6">
+                  <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4">
+                    {detail.items
+                      .filter(item => item.itemType === "NO_PARTICIPATION")
+                      .map(item => (
+                        <button
+                          key={item.id}
+                          onClick={() => handleQuantityChange(
+                            item.id,
+                            selections[item.id]?.quantity ? 0 : 1
+                          )}
+                          className={`w-full p-4 rounded-lg border-2 transition-all ${
+                            selections[item.id]?.quantity
+                              ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20"
+                              : "border-zinc-200 dark:border-zinc-700 hover:border-amber-300 dark:hover:border-amber-700"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                selections[item.id]?.quantity
+                                  ? "border-amber-500 bg-amber-500"
+                                  : "border-zinc-300 dark:border-zinc-600"
+                              }`}>
+                                {selections[item.id]?.quantity && (
+                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="text-left">
+                                <span className={`font-medium ${
+                                  selections[item.id]?.quantity
+                                    ? "text-amber-700 dark:text-amber-400"
+                                    : "text-zinc-700 dark:text-zinc-300"
+                                }`}>
+                                  {item.name}
+                                </span>
+                                {item.description && (
+                                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
               {/* Overall Note */}
               {!isClosed && (
                 <div className="mb-4">
@@ -378,10 +465,21 @@ export default function ChoiceDetailDialog({
               {Object.keys(selections).length > 0 && (
                 <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 mb-4">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">Your Total:</span>
-                    <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                      ${calculateTotal().toFixed(2)}
-                    </span>
+                    {isNotParticipating() ? (
+                      <>
+                        <span className="font-semibold text-amber-700 dark:text-amber-400">Status:</span>
+                        <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                          Not participating
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">Your Total:</span>
+                        <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                          ${calculateTotal().toFixed(2)}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

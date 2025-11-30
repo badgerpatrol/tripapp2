@@ -83,6 +83,12 @@ enum ChoiceVisibility {
   PRIVATE
 }
 
+enum ChoiceItemType {
+  NORMAL
+  OTHER
+  NO_PARTICIPATION
+}
+
 enum NotificationType {
   TRIP_INVITE
   SPEND_ADDED
@@ -721,20 +727,21 @@ model Choice {
 }
 
 model ChoiceItem {
-  id          String    @id @default(uuid())
+  id          String          @id @default(uuid())
   choiceId    String
   name        String
   description String?
-  price       Decimal?  @db.Decimal(19, 4)
-  course      String?   // Raw course value if present (e.g., "Starters", "Mains", "Desserts")
-  sortIndex   Int       @default(0) // For manual reordering or auto-ordering by course
-  tags        Json?     // Array of strings
+  price       Decimal?        @db.Decimal(19, 4)
+  course      String?         // Raw course value if present (e.g., "Starters", "Mains", "Desserts")
+  sortIndex   Int             @default(0) // For manual reordering or auto-ordering by course
+  tags        Json?           // Array of strings
   maxPerUser  Int?
   maxTotal    Int?
-  allergens   Json?     // Array of strings
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  allergens   Json?           // Array of strings
+  isActive    Boolean         @default(true)
+  itemType    ChoiceItemType  @default(NORMAL) // NORMAL, OTHER, or NO_PARTICIPATION
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   // Relationships
   choice Choice                 @relation(fields: [choiceId], references: [id], onDelete: Cascade)
@@ -742,6 +749,7 @@ model ChoiceItem {
 
   @@index([choiceId])
   @@index([isActive])
+  @@index([itemType])
   @@map("choice_items")
 }
 

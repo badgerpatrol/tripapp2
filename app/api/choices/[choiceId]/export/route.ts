@@ -13,21 +13,30 @@ import { prisma } from "@/lib/prisma";
  * Convert items report to CSV
  */
 function itemsReportToCSV(report: any): string {
-  const headers = ["Item Name", "Total Quantity", "Total Price", "Distinct Users"];
+  const headers = ["Item Name", "Type", "Total Quantity", "Total Price", "Distinct Users"];
   const rows = report.items.map((item: any) => {
+    // Show friendly name for item type
+    const typeDisplay = item.itemType === "NO_PARTICIPATION"
+      ? "Not Participating"
+      : item.itemType === "OTHER"
+        ? "Other"
+        : "Normal";
+
     const row: (string | number)[] = [
       item.name,
+      typeDisplay,
       item.qtyTotal,
-      item.totalPrice?.toFixed(2) || "N/A",
+      item.itemType === "NO_PARTICIPATION" ? "N/A" : (item.totalPrice?.toFixed(2) || "N/A"),
       item.distinctUsers,
     ];
     return row;
   });
 
-  // Add grand total row
+  // Add grand total row (excludes NO_PARTICIPATION items)
   if (report.grandTotalPrice !== null) {
     rows.push([
       "GRAND TOTAL",
+      "",
       "",
       report.grandTotalPrice.toFixed(2),
       "",
@@ -49,22 +58,48 @@ function usersReportToCSV(report: any): string {
   const lines: string[] = [];
 
   // Header
-  lines.push('"User","Item","Quantity","Price","Note"');
+  lines.push('"User","Status","Item","Quantity","Price","Note"');
 
   // Data rows
   for (const user of report.users) {
     const userName = user.displayName || user.userId;
     const userNote = user.note || "";
 
+    // Check if user is not participating
+    if (user.isNotParticipating) {
+      lines.push([
+        `"${userName}"`,
+        '"NOT PARTICIPATING"',
+        '"(opted out)"',
+        '""',
+        '""',
+        `"${userNote}"`,
+      ].join(","));
+      continue;
+    }
+
     if (user.lines.length === 0) {
-      lines.push(`"${userName}","(no selections)","","","${userNote}"`);
+      lines.push([
+        `"${userName}"`,
+        '"No Response"',
+        '"(no selections)"',
+        '""',
+        '""',
+        `"${userNote}"`,
+      ].join(","));
     } else {
       for (let i = 0; i < user.lines.length; i++) {
         const line = user.lines[i];
         const isFirstLine = i === 0;
 
+        // Skip NO_PARTICIPATION items in the detail (they're shown via status)
+        if (line.itemType === "NO_PARTICIPATION") {
+          continue;
+        }
+
         lines.push([
           `"${isFirstLine ? userName : ""}"`,
+          `"${isFirstLine ? "Participating" : ""}"`,
           `"${line.itemName}"`,
           `"${line.quantity}"`,
           `"${line.linePrice?.toFixed(2) || "N/A"}"`,
@@ -72,9 +107,10 @@ function usersReportToCSV(report: any): string {
         ].join(","));
       }
 
-      // User total
-      if (user.userTotalPrice !== null) {
+      // User total (only if they have a price)
+      if (user.userTotalPrice !== null && user.userTotalPrice > 0) {
         lines.push([
+          '""',
           '""',
           `"${userName} Total"`,
           '""',
@@ -89,6 +125,7 @@ function usersReportToCSV(report: any): string {
   if (report.grandTotalPrice !== null) {
     lines.push('');
     lines.push([
+      '""',
       '""',
       '"GRAND TOTAL"',
       '""',

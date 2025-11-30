@@ -20,6 +20,7 @@ import {
   getItemsReport,
   getUsersReport,
   deactivateChoiceItem,
+  ensureNoParticipationItem,
 } from "@/server/services/choices";
 
 const TEST_USER_1 = "test-user-choice-1";
@@ -460,5 +461,256 @@ describe("Choice Service Tests", () => {
         lines: [{ itemId: item.id, quantity: 1 }],
       })
     ).rejects.toThrow(/deadline has passed/);
+  });
+
+  // ============================================================================
+  // NO_PARTICIPATION Tests
+  // ============================================================================
+
+  describe("NO_PARTICIPATION Feature", () => {
+    it("should create NO_PARTICIPATION item with ensureNoParticipationItem", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      expect(noParticipationItem.itemType).toBe("NO_PARTICIPATION");
+      expect(noParticipationItem.name).toBe("Not participating");
+      expect(noParticipationItem.price).toBeNull();
+    });
+
+    it("should not create duplicate NO_PARTICIPATION items", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      const item1 = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+      const item2 = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      expect(item1.id).toBe(item2.id);
+    });
+
+    it("should prevent creating NO_PARTICIPATION item via createChoiceItem if one exists", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      // Create first NO_PARTICIPATION item
+      await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Not participating",
+        itemType: "NO_PARTICIPATION",
+      });
+
+      // Try to create another
+      await expect(
+        createChoiceItem(choice.id, TEST_USER_1, {
+          name: "Also not participating",
+          itemType: "NO_PARTICIPATION",
+        })
+      ).rejects.toThrow(/NO_PARTICIPATION item already exists/);
+    });
+
+    it("should prevent selecting NO_PARTICIPATION with other items", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      const normalItem = await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Pizza",
+        price: 12.50,
+      });
+
+      const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      // Try to select both - should fail
+      await expect(
+        createOrUpdateSelection(choice.id, TEST_USER_2, {
+          lines: [
+            { itemId: normalItem.id, quantity: 1 },
+            { itemId: noParticipationItem.id, quantity: 1 },
+          ],
+        })
+      ).rejects.toThrow(/Cannot select 'Not participating' along with other items/);
+    });
+
+    it("should prevent quantity > 1 for NO_PARTICIPATION items", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      await expect(
+        createOrUpdateSelection(choice.id, TEST_USER_2, {
+          lines: [{ itemId: noParticipationItem.id, quantity: 2 }],
+        })
+      ).rejects.toThrow(/'Not participating' selection must have a quantity of 1/);
+    });
+
+    it("should allow user to select NO_PARTICIPATION alone", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Pizza",
+        price: 12.50,
+      });
+
+      const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      const result = await createOrUpdateSelection(choice.id, TEST_USER_2, {
+        lines: [{ itemId: noParticipationItem.id, quantity: 1 }],
+      });
+
+      expect(result.mySelections).toHaveLength(1);
+      expect(result.mySelections[0].quantity).toBe(1);
+      expect(result.myTotal).toBe(0); // NO_PARTICIPATION should not contribute to total
+    });
+
+    it("should exclude NO_PARTICIPATION from user total in reports", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      const normalItem = await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Pizza",
+        price: 12.50,
+      });
+
+      const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      // User 1 selects pizza
+      await createOrUpdateSelection(choice.id, TEST_USER_1, {
+        lines: [{ itemId: normalItem.id, quantity: 2 }],
+      });
+
+      // User 2 opts out
+      await createOrUpdateSelection(choice.id, TEST_USER_2, {
+        lines: [{ itemId: noParticipationItem.id, quantity: 1 }],
+      });
+
+      const userReport = await getUsersReport(choice.id);
+
+      const user1Report = userReport.users.find(u => u.userId === TEST_USER_1);
+      expect(user1Report?.userTotalPrice).toBe(25.00);
+      expect(user1Report?.isNotParticipating).toBe(false);
+
+      const user2Report = userReport.users.find(u => u.userId === TEST_USER_2);
+      expect(user2Report?.userTotalPrice).toBeNull();
+      expect(user2Report?.isNotParticipating).toBe(true);
+
+      // Grand total should only include user 1's selections
+      expect(userReport.grandTotalPrice).toBe(25.00);
+    });
+
+    it("should include itemType in items report", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Pizza",
+        price: 12.50,
+      });
+
+      await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      // Make some selections
+      const detail = await getChoiceDetail(choice.id, TEST_USER_1);
+      const normalItem = detail.items.find(i => i.itemType === "NORMAL");
+      const noParticipationItem = detail.items.find(i => i.itemType === "NO_PARTICIPATION");
+
+      await createOrUpdateSelection(choice.id, TEST_USER_1, {
+        lines: [{ itemId: normalItem!.id, quantity: 1 }],
+      });
+
+      await createOrUpdateSelection(choice.id, TEST_USER_2, {
+        lines: [{ itemId: noParticipationItem!.id, quantity: 1 }],
+      });
+
+      const itemsReport = await getItemsReport(choice.id);
+
+      const pizzaReport = itemsReport.items.find(i => i.name === "Pizza");
+      expect(pizzaReport?.itemType).toBe("NORMAL");
+
+      const noParticipationReport = itemsReport.items.find(i => i.name === "Not participating");
+      expect(noParticipationReport?.itemType).toBe("NO_PARTICIPATION");
+      expect(noParticipationReport?.totalPrice).toBeNull();
+    });
+
+    it("should automatically create NO_PARTICIPATION item when getting choice detail", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      // Get choice detail - should auto-create NO_PARTICIPATION item
+      const detail = await getChoiceDetail(choice.id, TEST_USER_1);
+
+      const noParticipationItem = detail.items.find(i => i.itemType === "NO_PARTICIPATION");
+      expect(noParticipationItem).toBeDefined();
+      expect(noParticipationItem?.name).toBe("Not participating");
+    });
+
+    it("should show NO_PARTICIPATION item at the end of items list", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      // Create items in specific order
+      await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Salad",
+        price: 8.00,
+      });
+
+      await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Pizza",
+        price: 12.50,
+      });
+
+      // Get detail (will create NO_PARTICIPATION item)
+      const detail = await getChoiceDetail(choice.id, TEST_USER_1);
+
+      // NO_PARTICIPATION should be last
+      const lastItem = detail.items[detail.items.length - 1];
+      expect(lastItem.itemType).toBe("NO_PARTICIPATION");
+    });
+
+    it("should correctly track respondents vs non-participants vs pending", async () => {
+      const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+        name: "Menu",
+      });
+
+      const normalItem = await createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Pizza",
+        price: 12.50,
+      });
+
+      const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+      // User 1 selects pizza
+      await createOrUpdateSelection(choice.id, TEST_USER_1, {
+        lines: [{ itemId: normalItem.id, quantity: 1 }],
+      });
+
+      // User 2 opts out
+      await createOrUpdateSelection(choice.id, TEST_USER_2, {
+        lines: [{ itemId: noParticipationItem.id, quantity: 1 }],
+      });
+
+      // User 3 doesn't respond
+
+      const respondents = await getChoiceRespondents(choice.id, TEST_TRIP_ID);
+
+      // Both user 1 and user 2 have responded (even though user 2 opted out)
+      expect(respondents.respondedUserIds).toContain(TEST_USER_1);
+      expect(respondents.respondedUserIds).toContain(TEST_USER_2);
+      expect(respondents.respondedUserIds).toHaveLength(2);
+
+      // Only user 3 is pending
+      expect(respondents.pendingUserIds).toContain(TEST_USER_3);
+      expect(respondents.pendingUserIds).toHaveLength(1);
+    });
   });
 });
