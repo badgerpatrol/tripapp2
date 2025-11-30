@@ -7,6 +7,7 @@ interface ChoiceItem {
   id: string;
   name: string;
   description: string | null;
+  type: "NORMAL" | "OTHER" | "NO_PARTICIPATION";
   price: number | null;
   tags: string[] | null;
   maxPerUser: number | null;
@@ -120,18 +121,34 @@ export default function ChoiceDetailDialog({
   };
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
+    if (!detail) return;
+
+    const item = detail.items.find(i => i.id === itemId);
+    if (!item) return;
+
     if (quantity <= 0) {
       const newSelections = { ...selections };
       delete newSelections[itemId];
       setSelections(newSelections);
-    } else {
+    } else if (item.type === "NO_PARTICIPATION") {
+      // Selecting NO_PARTICIPATION: deselect all other items
       setSelections({
-        ...selections,
-        [itemId]: {
-          quantity,
-          note: selections[itemId]?.note || "",
-        },
+        [itemId]: { quantity: 1, note: "" },
       });
+    } else {
+      // Selecting a normal item: deselect NO_PARTICIPATION if selected
+      const noParticipationItem = detail.items.find(i => i.type === "NO_PARTICIPATION");
+      const newSelections = { ...selections };
+
+      if (noParticipationItem && newSelections[noParticipationItem.id]) {
+        delete newSelections[noParticipationItem.id];
+      }
+
+      newSelections[itemId] = {
+        quantity,
+        note: selections[itemId]?.note || "",
+      };
+      setSelections(newSelections);
     }
   };
 
@@ -221,12 +238,22 @@ export default function ChoiceDetailDialog({
   const calculateTotal = () => {
     return Object.entries(selections).reduce((sum, [itemId, sel]) => {
       const item = detail.items.find(i => i.id === itemId);
-      if (item && item.price) {
+      // Exclude NO_PARTICIPATION items from total
+      if (item && item.price && item.type !== "NO_PARTICIPATION") {
         return sum + (item.price * sel.quantity);
       }
       return sum;
     }, 0);
   };
+
+  // Check if NO_PARTICIPATION is selected
+  const hasNoParticipationSelected = detail?.items.some(
+    item => item.type === "NO_PARTICIPATION" && selections[item.id]?.quantity > 0
+  ) ?? false;
+
+  // Separate regular items from NO_PARTICIPATION item
+  const regularItems = detail?.items.filter(item => item.type !== "NO_PARTICIPATION") ?? [];
+  const noParticipationItem = detail?.items.find(item => item.type === "NO_PARTICIPATION");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -293,13 +320,67 @@ export default function ChoiceDetailDialog({
             <div className="text-center py-8 text-zinc-500">Loading...</div>
           ) : (
             <>
+              {/* NO_PARTICIPATION Option */}
+              {noParticipationItem && !isClosed && (
+                <div className="mb-6">
+                  <button
+                    onClick={() => handleQuantityChange(
+                      noParticipationItem.id,
+                      hasNoParticipationSelected ? 0 : 1
+                    )}
+                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                      hasNoParticipationSelected
+                        ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                        : "border-zinc-300 dark:border-zinc-600 hover:border-orange-300 dark:hover:border-orange-700"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          hasNoParticipationSelected
+                            ? "border-orange-500 bg-orange-500"
+                            : "border-zinc-400 dark:border-zinc-500"
+                        }`}>
+                          {hasNoParticipationSelected && (
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <span className={`font-medium ${
+                            hasNoParticipationSelected
+                              ? "text-orange-700 dark:text-orange-400"
+                              : "text-zinc-700 dark:text-zinc-300"
+                          }`}>
+                            Not participating
+                          </span>
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            I'm not making a choice for this
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Divider if NO_PARTICIPATION option exists */}
+              {noParticipationItem && !isClosed && (
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 border-t border-zinc-200 dark:border-zinc-700" />
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">or select items</span>
+                  <div className="flex-1 border-t border-zinc-200 dark:border-zinc-700" />
+                </div>
+              )}
+
               {/* Menu Items */}
-              <div className="space-y-3 mb-6">
+              <div className={`space-y-3 mb-6 ${hasNoParticipationSelected ? "opacity-50 pointer-events-none" : ""}`}>
                 <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Menu</h3>
-                {detail.items.length === 0 ? (
+                {regularItems.length === 0 ? (
                   <p className="text-sm text-zinc-500">No items available yet</p>
                 ) : (
-                  detail.items.map(item => (
+                  regularItems.map(item => (
                     <div key={item.id} className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
@@ -358,8 +439,8 @@ export default function ChoiceDetailDialog({
                 )}
               </div>
 
-              {/* Overall Note */}
-              {!isClosed && (
+              {/* Overall Note - hide when NO_PARTICIPATION is selected */}
+              {!isClosed && !hasNoParticipationSelected && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     Dietary Notes / Special Requests
@@ -374,14 +455,26 @@ export default function ChoiceDetailDialog({
                 </div>
               )}
 
-              {/* Total */}
-              {Object.keys(selections).length > 0 && (
+              {/* Total - only show for regular selections, not NO_PARTICIPATION */}
+              {Object.keys(selections).length > 0 && !hasNoParticipationSelected && (
                 <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 mb-4">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-zinc-900 dark:text-zinc-100">Your Total:</span>
                     <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                       ${calculateTotal().toFixed(2)}
                     </span>
+                  </div>
+                </div>
+              )}
+
+              {/* NO_PARTICIPATION confirmation */}
+              {hasNoParticipationSelected && (
+                <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4 mb-4">
+                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="text-sm font-medium">You've opted out of this choice</span>
                   </div>
                 </div>
               )}

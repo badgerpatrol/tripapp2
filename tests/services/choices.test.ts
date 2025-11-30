@@ -20,6 +20,7 @@ import {
   getItemsReport,
   getUsersReport,
   deactivateChoiceItem,
+  ensureNoParticipationItem,
 } from "@/server/services/choices";
 
 const TEST_USER_1 = "test-user-choice-1";
@@ -460,5 +461,167 @@ describe("Choice Service Tests", () => {
         lines: [{ itemId: item.id, quantity: 1 }],
       })
     ).rejects.toThrow(/deadline has passed/);
+  });
+
+  // NO_PARTICIPATION Tests
+
+  // Test Scenario: create_no_participation_item
+  it("should create a NO_PARTICIPATION item for a choice", async () => {
+    const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+      name: "Menu with Opt-out",
+    });
+
+    const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+    expect(noParticipationItem.type).toBe("NO_PARTICIPATION");
+    expect(noParticipationItem.name).toBe("Not participating");
+    expect(noParticipationItem.price).toBeNull();
+  });
+
+  // Test Scenario: no_participation_exclusivity
+  it("should prevent selecting NO_PARTICIPATION with other items", async () => {
+    const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+      name: "Menu",
+    });
+
+    const item = await createChoiceItem(choice.id, TEST_USER_1, {
+      name: "Pizza",
+      price: 12.50,
+    });
+
+    const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+    // Try to select both NO_PARTICIPATION and a regular item
+    await expect(
+      createOrUpdateSelection(choice.id, TEST_USER_2, {
+        lines: [
+          { itemId: item.id, quantity: 1 },
+          { itemId: noParticipationItem.id, quantity: 1 },
+        ],
+      })
+    ).rejects.toThrow(/Cannot select NO_PARTICIPATION together with other items/);
+  });
+
+  // Test Scenario: select_only_no_participation
+  it("should allow selecting only NO_PARTICIPATION", async () => {
+    const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+      name: "Menu",
+    });
+
+    await createChoiceItem(choice.id, TEST_USER_1, {
+      name: "Pizza",
+      price: 12.50,
+    });
+
+    const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+    // Select NO_PARTICIPATION only
+    const result = await createOrUpdateSelection(choice.id, TEST_USER_2, {
+      lines: [{ itemId: noParticipationItem.id, quantity: 1 }],
+    });
+
+    expect(result.mySelections).toHaveLength(1);
+    expect(result.myTotal).toBe(0); // NO_PARTICIPATION has no price
+  });
+
+  // Test Scenario: respondents_with_no_participation
+  it("should correctly identify NO_PARTICIPATION users separately", async () => {
+    const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+      name: "Menu",
+    });
+
+    const item = await createChoiceItem(choice.id, TEST_USER_1, {
+      name: "Pizza",
+      price: 12.50,
+    });
+
+    const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+    // User 1 selects pizza
+    await createOrUpdateSelection(choice.id, TEST_USER_1, {
+      lines: [{ itemId: item.id, quantity: 1 }],
+    });
+
+    // User 2 selects NO_PARTICIPATION
+    await createOrUpdateSelection(choice.id, TEST_USER_2, {
+      lines: [{ itemId: noParticipationItem.id, quantity: 1 }],
+    });
+
+    // User 3 has not responded
+    const respondents = await getChoiceRespondents(choice.id, TEST_TRIP_ID);
+
+    expect(respondents.respondedUserIds).toContain(TEST_USER_1);
+    expect(respondents.respondedUserIds).toHaveLength(1);
+    expect(respondents.noParticipationUserIds).toContain(TEST_USER_2);
+    expect(respondents.noParticipationUserIds).toHaveLength(1);
+    expect(respondents.pendingUserIds).toContain(TEST_USER_3);
+    expect(respondents.pendingUserIds).toHaveLength(1);
+  });
+
+  // Test Scenario: reports_exclude_no_participation_from_totals
+  it("should exclude NO_PARTICIPATION from grand totals in reports", async () => {
+    const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+      name: "Menu",
+    });
+
+    const item = await createChoiceItem(choice.id, TEST_USER_1, {
+      name: "Pizza",
+      price: 10.00,
+    });
+
+    const noParticipationItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+    // User 1 selects pizza
+    await createOrUpdateSelection(choice.id, TEST_USER_1, {
+      lines: [{ itemId: item.id, quantity: 2 }],
+    });
+
+    // User 2 selects NO_PARTICIPATION
+    await createOrUpdateSelection(choice.id, TEST_USER_2, {
+      lines: [{ itemId: noParticipationItem.id, quantity: 1 }],
+    });
+
+    const itemReport = await getItemsReport(choice.id);
+
+    // Should have 2 items in report
+    expect(itemReport.items).toHaveLength(2);
+
+    // Grand total should only count pizza
+    expect(itemReport.grandTotalPrice).toBe(20.00);
+
+    const userReport = await getUsersReport(choice.id);
+
+    // Should have 2 users
+    expect(userReport.users).toHaveLength(2);
+
+    // User 2 should be marked as NO_PARTICIPATION
+    const user2Report = userReport.users.find((u: any) => u.userId === TEST_USER_2);
+    expect(user2Report?.isNoParticipation).toBe(true);
+    expect(user2Report?.lines).toHaveLength(0); // NO_PARTICIPATION lines are filtered out
+
+    // Grand total should only count user 1
+    expect(userReport.grandTotalPrice).toBe(20.00);
+  });
+
+  // Test Scenario: duplicate_no_participation_prevention
+  it("should prevent creating duplicate NO_PARTICIPATION items", async () => {
+    const choice = await createChoice(TEST_USER_1, TEST_TRIP_ID, {
+      name: "Menu",
+    });
+
+    // Create first NO_PARTICIPATION item
+    await ensureNoParticipationItem(choice.id, TEST_USER_1);
+
+    // Try to create another NO_PARTICIPATION item directly
+    await expect(
+      createChoiceItem(choice.id, TEST_USER_1, {
+        name: "Another No Participation",
+        type: "NO_PARTICIPATION",
+      })
+    ).rejects.toThrow(/NO_PARTICIPATION item already exists/);
+
+    // ensureNoParticipationItem should just return the existing one
+    const existingItem = await ensureNoParticipationItem(choice.id, TEST_USER_1);
+    expect(existingItem.name).toBe("Not participating");
   });
 });

@@ -159,7 +159,11 @@ export default function ChoiceReportsDialog({
           {respondents && (
             <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {respondents.respondedUserIds.length} responded, {respondents.pendingUserIds.length} pending
+                {respondents.respondedUserIds.length} responded
+                {respondents.noParticipationUserIds?.length > 0 && (
+                  <span className="text-orange-600 dark:text-orange-400"> ({respondents.noParticipationUserIds.length} not participating)</span>
+                )}
+                , {respondents.pendingUserIds.length} pending
               </div>
             </div>
           )}
@@ -206,19 +210,31 @@ export default function ChoiceReportsDialog({
               {tab === "items" && itemsReport && (
                 <div className="space-y-3">
                   {itemsReport.items.map((item: any) => (
-                    <div key={item.itemId} className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
+                    <div
+                      key={item.itemId}
+                      className={`border rounded-lg p-3 ${
+                        item.type === "NO_PARTICIPATION"
+                          ? "border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
+                          : "border-zinc-200 dark:border-zinc-700"
+                      }`}
+                    >
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium">{item.name}: {item.qtyTotal} </div>
+                          <div className="font-medium flex items-center gap-2">
+                            {item.type === "NO_PARTICIPATION" && (
+                              <span className="text-orange-600">⊘</span>
+                            )}
+                            {item.name}: {item.qtyTotal}
+                          </div>
                           <div className="text-sm text-zinc-600 dark:text-zinc-400">
                              {item.distinctUsers}
                              {item.distinctUsers === 1
                                 ? " person"
                                 : " people"}
                           </div>
-                          
+
                         </div>
-                        {item.totalPrice && (
+                        {item.type !== "NO_PARTICIPATION" && item.totalPrice && (
                           <div className="font-bold text-zinc-900 dark:text-zinc-100">
                             ${item.totalPrice.toFixed(2)}
                           </div>
@@ -264,25 +280,44 @@ export default function ChoiceReportsDialog({
               {tab === "users" && usersReport && (
                 <div className="space-y-3">
                   {usersReport.users.map((userReport: any) => (
-                    <div key={userReport.userId} className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
-                      <div className="font-medium mb-2">{userReport.displayName || "User"}</div>
+                    <div
+                      key={userReport.userId}
+                      className={`border rounded-lg p-3 ${
+                        userReport.isNoParticipation
+                          ? "border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20"
+                          : "border-zinc-200 dark:border-zinc-700"
+                      }`}
+                    >
+                      <div className="font-medium mb-2 flex items-center gap-2">
+                        {userReport.isNoParticipation && (
+                          <span className="text-orange-600">⊘</span>
+                        )}
+                        {userReport.displayName || "User"}
+                        {userReport.isNoParticipation && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-300">
+                            Not participating
+                          </span>
+                        )}
+                      </div>
                       {userReport.note && (
                         <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-2 italic">
                           Note: {userReport.note}
                         </div>
                       )}
-                      <div className="space-y-1">
-                        {userReport.lines.map((line: any, idx: number) => (
-                          <div key={idx} className="text-sm flex justify-between">
-                            <span>
-                              {line.quantity}x {line.itemName}
-                              {line.note && <span className="text-zinc-500 ml-2">({line.note})</span>}
-                            </span>
-                            {line.linePrice && <span>${line.linePrice.toFixed(2)}</span>}
-                          </div>
-                        ))}
-                      </div>
-                      {userReport.userTotalPrice && (
+                      {!userReport.isNoParticipation && (
+                        <div className="space-y-1">
+                          {userReport.lines.map((line: any, idx: number) => (
+                            <div key={idx} className="text-sm flex justify-between">
+                              <span>
+                                {line.quantity}x {line.itemName}
+                                {line.note && <span className="text-zinc-500 ml-2">({line.note})</span>}
+                              </span>
+                              {line.linePrice && <span>${line.linePrice.toFixed(2)}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!userReport.isNoParticipation && userReport.userTotalPrice && (
                         <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-700 font-semibold flex justify-between">
                           <span>Subtotal</span>
                           <span>${userReport.userTotalPrice.toFixed(2)}</span>
@@ -365,14 +400,14 @@ export default function ChoiceReportsDialog({
                     )}
                   </div>
 
-                  {/* Who Hasn't Chosen */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
-                      <span className="text-orange-600">⏳</span> Who Hasn't Chosen ({respondents.pendingUsers?.length || 0})
-                    </h3>
-                    {respondents.pendingUsers && respondents.pendingUsers.length > 0 ? (
+                  {/* Not Participating */}
+                  {respondents.noParticipationUsers && respondents.noParticipationUsers.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+                        <span className="text-orange-600">⊘</span> Not Participating ({respondents.noParticipationUsers.length})
+                      </h3>
                       <div className="space-y-2">
-                        {respondents.pendingUsers.map((user: any) => (
+                        {respondents.noParticipationUsers.map((user: any) => (
                           <div
                             key={user.userId}
                             className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg"
@@ -392,13 +427,47 @@ export default function ChoiceReportsDialog({
                                 <div className="text-xs text-zinc-600 dark:text-zinc-400">{user.email}</div>
                               )}
                             </div>
-                            <span className="text-orange-600 text-xl">⏳</span>
+                            <span className="text-orange-600 text-xl">⊘</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Who Hasn't Chosen */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+                      <span className="text-zinc-400">⏳</span> Who Hasn't Chosen ({respondents.pendingUsers?.length || 0})
+                    </h3>
+                    {respondents.pendingUsers && respondents.pendingUsers.length > 0 ? (
+                      <div className="space-y-2">
+                        {respondents.pendingUsers.map((user: any) => (
+                          <div
+                            key={user.userId}
+                            className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-900/20 border border-zinc-200 dark:border-zinc-700 rounded-lg"
+                          >
+                            {user.photoURL && (
+                              <img
+                                src={user.photoURL}
+                                alt={user.displayName || user.email}
+                                className="w-8 h-8 rounded-full"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                                {user.displayName || user.email}
+                              </div>
+                              {user.displayName && (
+                                <div className="text-xs text-zinc-600 dark:text-zinc-400">{user.email}</div>
+                              )}
+                            </div>
+                            <span className="text-zinc-400 text-xl">⏳</span>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="text-zinc-500 dark:text-zinc-400 text-sm italic p-3 bg-zinc-50 dark:bg-zinc-900/20 rounded-lg">
-                        Everyone has made a choice!
+                        Everyone has responded!
                       </div>
                     )}
                   </div>

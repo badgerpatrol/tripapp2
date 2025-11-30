@@ -13,21 +13,26 @@ import { prisma } from "@/lib/prisma";
  * Convert items report to CSV
  */
 function itemsReportToCSV(report: any): string {
-  const headers = ["Item Name", "Total Quantity", "Total Price", "Distinct Users"];
+  const headers = ["Item Name", "Type", "Total Quantity", "Total Price", "Distinct Users"];
   const rows = report.items.map((item: any) => {
+    // Show clear type for NO_PARTICIPATION items
+    const itemType = item.type === "NO_PARTICIPATION" ? "Not participating" :
+                     item.type === "OTHER" ? "Other" : "Normal";
     const row: (string | number)[] = [
       item.name,
+      itemType,
       item.qtyTotal,
-      item.totalPrice?.toFixed(2) || "N/A",
+      item.type === "NO_PARTICIPATION" ? "N/A" : (item.totalPrice?.toFixed(2) || "N/A"),
       item.distinctUsers,
     ];
     return row;
   });
 
-  // Add grand total row
+  // Add grand total row (excluding NO_PARTICIPATION)
   if (report.grandTotalPrice !== null) {
     rows.push([
       "GRAND TOTAL",
+      "",
       "",
       report.grandTotalPrice.toFixed(2),
       "",
@@ -49,15 +54,28 @@ function usersReportToCSV(report: any): string {
   const lines: string[] = [];
 
   // Header
-  lines.push('"User","Item","Quantity","Price","Note"');
+  lines.push('"User","Status","Item","Quantity","Price","Note"');
 
   // Data rows
   for (const user of report.users) {
     const userName = user.displayName || user.userId;
     const userNote = user.note || "";
 
+    // Handle NO_PARTICIPATION users
+    if (user.isNoParticipation) {
+      lines.push([
+        `"${userName}"`,
+        '"Not participating"',
+        '""',
+        '""',
+        '""',
+        `"${userNote}"`,
+      ].join(","));
+      continue;
+    }
+
     if (user.lines.length === 0) {
-      lines.push(`"${userName}","(no selections)","","","${userNote}"`);
+      lines.push(`"${userName}","Responded","(no selections)","","","${userNote}"`);
     } else {
       for (let i = 0; i < user.lines.length; i++) {
         const line = user.lines[i];
@@ -65,6 +83,7 @@ function usersReportToCSV(report: any): string {
 
         lines.push([
           `"${isFirstLine ? userName : ""}"`,
+          `"${isFirstLine ? "Responded" : ""}"`,
           `"${line.itemName}"`,
           `"${line.quantity}"`,
           `"${line.linePrice?.toFixed(2) || "N/A"}"`,
@@ -76,6 +95,7 @@ function usersReportToCSV(report: any): string {
       if (user.userTotalPrice !== null) {
         lines.push([
           '""',
+          '""',
           `"${userName} Total"`,
           '""',
           `"${user.userTotalPrice.toFixed(2)}"`,
@@ -85,10 +105,11 @@ function usersReportToCSV(report: any): string {
     }
   }
 
-  // Grand total
+  // Grand total (excludes NO_PARTICIPATION users)
   if (report.grandTotalPrice !== null) {
     lines.push('');
     lines.push([
+      '""',
       '""',
       '"GRAND TOTAL"',
       '""',
