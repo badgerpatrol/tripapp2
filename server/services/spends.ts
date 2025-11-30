@@ -48,7 +48,6 @@ export async function createSpend(userId: string, data: CreateSpendInput) {
       paidBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -84,7 +83,6 @@ export async function getSpendById(spendId: string) {
       paidBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -100,7 +98,6 @@ export async function getSpendById(spendId: string) {
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -138,7 +135,6 @@ export async function getTripSpends(tripId: string, query?: GetSpendsQuery) {
       paidBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -154,7 +150,6 @@ export async function getTripSpends(tripId: string, query?: GetSpendsQuery) {
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -226,7 +221,6 @@ export async function updateSpend(spendId: string, userId: string, data: UpdateS
       paidBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -242,8 +236,7 @@ export async function updateSpend(spendId: string, userId: string, data: UpdateS
           user: {
             select: {
               id: true,
-              email: true,
-              displayName: true,
+                  displayName: true,
               photoURL: true,
             },
           },
@@ -311,8 +304,7 @@ export async function closeSpend(spendId: string, userId: string, force: boolean
         paidBy: {
           select: {
             id: true,
-            email: true,
-            displayName: true,
+              displayName: true,
             photoURL: true,
           },
         },
@@ -327,8 +319,7 @@ export async function closeSpend(spendId: string, userId: string, force: boolean
             user: {
               select: {
                 id: true,
-                email: true,
-                displayName: true,
+                      displayName: true,
                 photoURL: true,
               },
             },
@@ -374,7 +365,6 @@ export async function reopenSpend(spendId: string, userId: string) {
       paidBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -390,8 +380,7 @@ export async function reopenSpend(spendId: string, userId: string) {
           user: {
             select: {
               id: true,
-              email: true,
-              displayName: true,
+                  displayName: true,
               photoURL: true,
             },
           },

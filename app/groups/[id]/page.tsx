@@ -300,11 +300,11 @@ function GroupDetailPageContent() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-semibold">
-                      {member.user?.displayName?.[0] || member.user?.email?.[0] || "?"}
+                      {member.user?.displayName?.[0] ?? "?"}
                     </div>
                     <div>
                       <p className="font-medium text-zinc-900 dark:text-white">
-                        {member.user?.displayName || member.user?.email || "Unknown"}
+                        {member.user?.displayName ?? "Unknown"}
                       </p>
                       <p className="text-sm text-zinc-500 dark:text-zinc-400">
                         {member.role === GroupMemberRole.ADMIN ? "Admin" : "Member"}
@@ -318,7 +318,7 @@ function GroupDetailPageContent() {
                       onClick={() =>
                         handleRemoveMember(
                           member.userId,
-                          member.user?.displayName || member.user?.email || "member"
+                          member.user?.displayName ?? "Unknown"
                         )
                       }
                       className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm px-2 py-1"

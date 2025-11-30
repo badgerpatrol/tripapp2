@@ -92,7 +92,6 @@ export async function createChoice(
         createdBy: {
           select: {
             id: true,
-            email: true,
             displayName: true,
             photoURL: true,
           },
@@ -137,6 +136,19 @@ export async function createChoice(
         actorId: userId,
         action: "created",
         payload: { name: data.name, deadline: data.deadline },
+      },
+    });
+
+    // Create the "Not for me" opt-out item (always last via high sortIndex)
+    await tx.choiceItem.create({
+      data: {
+        choiceId: choice.id,
+        name: "Not for me",
+        description: "Select this if you will not be participating in this choice",
+        price: null,
+        sortIndex: 999999, // Always last
+        isOptOut: true,
+        isActive: true,
       },
     });
 
@@ -188,7 +200,6 @@ export async function updateChoice(
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -701,7 +712,6 @@ export async function getTripChoices(
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -736,14 +746,13 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
       },
       items: {
         where: { isActive: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
       },
     },
   });
@@ -996,7 +1005,6 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
       user: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -1006,22 +1014,48 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
 
   const allUserIds = tripMembers.map(m => m.userId);
 
-  // Get users who have selections
+  // Get users who have selections, including their selection lines and items
   const selections = await prisma.choiceSelection.findMany({
     where: { choiceId },
-    select: { userId: true },
+    include: {
+      lines: {
+        include: {
+          item: {
+            select: { isOptOut: true },
+          },
+        },
+      },
+    },
   });
 
-  const respondedUserIds = selections.map(s => s.userId);
-  const pendingUserIds = allUserIds.filter(id => !respondedUserIds.includes(id));
+  // Separate users into three categories:
+  // 1. Opted out (selected only the opt-out item)
+  // 2. Responded with regular items
+  // 3. Pending (no selection yet)
+  const optedOutUserIds: string[] = [];
+  const respondedUserIds: string[] = [];
 
-  // Build user details maps
+  for (const selection of selections) {
+    const hasOnlyOptOut = selection.lines.length > 0 &&
+      selection.lines.every(line => line.item.isOptOut);
+
+    if (hasOnlyOptOut) {
+      optedOutUserIds.push(selection.userId);
+    } else {
+      respondedUserIds.push(selection.userId);
+    }
+  }
+
+  const pendingUserIds = allUserIds.filter(
+    id => !respondedUserIds.includes(id) && !optedOutUserIds.includes(id)
+  );
+
+  // Build user details
   const respondedUsers = tripMembers
     .filter(m => respondedUserIds.includes(m.userId))
     .map(m => ({
       userId: m.user.id,
       displayName: m.user.displayName,
-      email: m.user.email,
       photoURL: m.user.photoURL,
     }));
 
@@ -1030,15 +1064,24 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
     .map(m => ({
       userId: m.user.id,
       displayName: m.user.displayName,
-      email: m.user.email,
+      photoURL: m.user.photoURL,
+    }));
+
+  const optedOutUsers = tripMembers
+    .filter(m => optedOutUserIds.includes(m.userId))
+    .map(m => ({
+      userId: m.user.id,
+      displayName: m.user.displayName,
       photoURL: m.user.photoURL,
     }));
 
   return {
     respondedUserIds,
     pendingUserIds,
+    optedOutUserIds,
     respondedUsers,
     pendingUsers,
+    optedOutUsers,
   };
 }
 
@@ -1099,8 +1142,9 @@ export async function getItemsReport(choiceId: string) {
                   userId: true,
                   user: {
                     select: {
+                      id: true,
                       displayName: true,
-                      email: true,
+                      photoURL: true,
                     },
                   },
                 },
@@ -1116,16 +1160,32 @@ export async function getItemsReport(choiceId: string) {
     throw new Error("Choice not found");
   }
 
-  const items = choice.items.map(item => {
+  // Separate opt-out item from regular items
+  const regularItems = choice.items.filter(item => !item.isOptOut);
+  const optOutItem = choice.items.find(item => item.isOptOut);
+
+  // Get users who opted out
+  const optedOutUsers: Array<{ userId: string; displayName: string; photoURL: string | null }> = [];
+  if (optOutItem) {
+    optOutItem.lines.forEach(line => {
+      optedOutUsers.push({
+        userId: line.selection.userId,
+        displayName: line.selection.user.displayName ?? "Unknown",
+        photoURL: line.selection.user.photoURL,
+      });
+    });
+  }
+
+  const items = regularItems.map(item => {
     const qtyTotal = item.lines.reduce((sum, line) => sum + line.quantity, 0);
     const userIds = new Set(item.lines.map(line => line.selection.userId));
     const distinctUsers = userIds.size;
 
-    // Get unique users with their display names (fallback to email)
+    // Get unique users with their display names
     const usersMap = new Map();
     item.lines.forEach(line => {
       if (!usersMap.has(line.selection.userId)) {
-        const userName = line.selection.user.displayName || line.selection.user.email;
+        const userName = line.selection.user.displayName ?? "Unknown";
         usersMap.set(line.selection.userId, userName);
       }
     });
@@ -1152,6 +1212,7 @@ export async function getItemsReport(choiceId: string) {
   return {
     items,
     grandTotalPrice: grandTotalPrice > 0 ? grandTotalPrice : null,
+    optedOutUsers,
   };
 }
 
@@ -1166,7 +1227,7 @@ export async function getUsersReport(choiceId: string) {
         select: {
           id: true,
           displayName: true,
-          email: true,
+          photoURL: true,
         },
       },
       lines: {
@@ -1182,8 +1243,31 @@ export async function getUsersReport(choiceId: string) {
     },
   });
 
-  const users = selections.map(selection => {
-    const lines = selection.lines.map(line => ({
+  // Separate opted-out users from users with regular selections
+  const optedOutUsers: Array<{ userId: string; displayName: string; photoURL: string | null }> = [];
+  const usersWithSelections: typeof selections = [];
+
+  for (const selection of selections) {
+    // Check if user only selected the opt-out item
+    const hasOnlyOptOut = selection.lines.length > 0 &&
+      selection.lines.every(line => line.item.isOptOut);
+
+    if (hasOnlyOptOut) {
+      optedOutUsers.push({
+        userId: selection.userId,
+        displayName: selection.user.displayName ?? "Unknown",
+        photoURL: selection.user.photoURL,
+      });
+    } else {
+      usersWithSelections.push(selection);
+    }
+  }
+
+  const users = usersWithSelections.map(selection => {
+    // Filter out opt-out items from the lines
+    const regularLines = selection.lines.filter(line => !line.item.isOptOut);
+
+    const lines = regularLines.map(line => ({
       itemName: line.item.name,
       quantity: line.quantity,
       linePrice: line.item.price
@@ -1198,7 +1282,7 @@ export async function getUsersReport(choiceId: string) {
 
     return {
       userId: selection.userId,
-      displayName: selection.user.displayName || selection.user.email,
+      displayName: selection.user.displayName ?? "Unknown",
       note: selection.note,
       lines,
       userTotalPrice: userTotalPrice > 0 ? userTotalPrice : null,
@@ -1212,6 +1296,7 @@ export async function getUsersReport(choiceId: string) {
   return {
     users,
     grandTotalPrice: grandTotalPrice > 0 ? grandTotalPrice : null,
+    optedOutUsers,
   };
 }
 
@@ -1300,10 +1385,13 @@ export async function createSpendFromChoice(
     // Create spend items for each user's selection of each menu item
     // This allows each item to show who ordered it (assignedUserId)
 
-    // Group selections by user and item
+    // Group selections by user and item (excluding opt-out items)
     const userItemSelections = new Map<string, Map<string, { itemName: string; quantity: number; price: number }>>();
 
     for (const choiceItem of choice.items) {
+      // Skip opt-out items - they should not create spend items
+      if (choiceItem.isOptOut) continue;
+
       const itemPrice = choiceItem.price ? parseFloat(choiceItem.price.toString()) : 0;
       if (itemPrice > 0) {
         for (const line of choiceItem.lines) {

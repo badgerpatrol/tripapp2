@@ -733,6 +733,7 @@ model ChoiceItem {
   maxTotal    Int?
   allergens   Json?     // Array of strings
   isActive    Boolean   @default(true)
+  isOptOut    Boolean   @default(false) // True for "Not for me" item - mutually exclusive with other items
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

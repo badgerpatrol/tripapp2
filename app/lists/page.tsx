@@ -322,7 +322,7 @@ function ListsPageContent() {
                 {/* Creator */}
                 {template.owner && (
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                    By {template.owner.displayName || template.owner.email.split('@')[0]}
+                    By {template.owner.displayName ?? "Unknown"}
                   </div>
                 )}
 

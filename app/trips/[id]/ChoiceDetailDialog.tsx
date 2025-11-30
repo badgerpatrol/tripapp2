@@ -13,6 +13,7 @@ interface ChoiceItem {
   maxTotal: number | null;
   allergens: string[] | null;
   isActive: boolean;
+  isOptOut: boolean;
 }
 
 interface SelectionLine {
@@ -120,18 +121,39 @@ export default function ChoiceDetailDialog({
   };
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
+    if (!detail) return;
+
+    const clickedItem = detail.items.find(i => i.id === itemId);
+    if (!clickedItem) return;
+
     if (quantity <= 0) {
       const newSelections = { ...selections };
       delete newSelections[itemId];
       setSelections(newSelections);
     } else {
-      setSelections({
-        ...selections,
-        [itemId]: {
-          quantity,
-          note: selections[itemId]?.note || "",
-        },
-      });
+      // If selecting the opt-out item, clear all other selections
+      if (clickedItem.isOptOut) {
+        setSelections({
+          [itemId]: {
+            quantity: 1, // Opt-out is always quantity 1
+            note: "",
+          },
+        });
+      } else {
+        // If selecting a regular item, clear opt-out selection if present
+        const optOutItem = detail.items.find(i => i.isOptOut);
+        const newSelections = { ...selections };
+        if (optOutItem && newSelections[optOutItem.id]) {
+          delete newSelections[optOutItem.id];
+        }
+        setSelections({
+          ...newSelections,
+          [itemId]: {
+            quantity,
+            note: selections[itemId]?.note || "",
+          },
+        });
+      }
     }
   };
 
@@ -296,66 +318,131 @@ export default function ChoiceDetailDialog({
               {/* Menu Items */}
               <div className="space-y-3 mb-6">
                 <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Menu</h3>
-                {detail.items.length === 0 ? (
-                  <p className="text-sm text-zinc-500">No items available yet</p>
-                ) : (
-                  detail.items.map(item => (
-                    <div key={item.id} className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-zinc-900 dark:text-zinc-100">{item.name}</span>
-                            {item.price && (
-                              <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                                ${Number(item.price).toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                          {item.description && (
-                            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
-                          )}
-                          {item.tags && item.tags.length > 0 && (
-                            <div className="flex gap-1 mt-1">
-                              {item.tags.map(tag => (
-                                <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-                                  {tag}
-                                </span>
-                              ))}
+                {(() => {
+                  const regularItems = detail.items.filter(i => !i.isOptOut);
+                  const optOutItem = detail.items.find(i => i.isOptOut);
+                  const hasRegularSelections = regularItems.some(item => selections[item.id]?.quantity > 0);
+                  const hasOptOutSelection = optOutItem && selections[optOutItem.id]?.quantity > 0;
+
+                  return (
+                    <>
+                      {regularItems.length === 0 && !optOutItem ? (
+                        <p className="text-sm text-zinc-500">No items available yet</p>
+                      ) : (
+                        <>
+                          {/* Regular Items */}
+                          {regularItems.map(item => (
+                            <div
+                              key={item.id}
+                              className={`border rounded-lg p-3 transition-opacity ${
+                                hasOptOutSelection
+                                  ? "border-zinc-300 dark:border-zinc-600 opacity-50"
+                                  : "border-zinc-200 dark:border-zinc-700"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{item.name}</span>
+                                    {item.price && (
+                                      <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                                        ${Number(item.price).toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.description && (
+                                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
+                                  )}
+                                  {item.tags && item.tags.length > 0 && (
+                                    <div className="flex gap-1 mt-1">
+                                      {item.tags.map(tag => (
+                                        <span key={tag} className="px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {!isClosed && !hasOptOutSelection && (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleQuantityChange(item.id, (selections[item.id]?.quantity || 0) - 1)}
+                                      className="tap-target w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 flex items-center justify-center text-zinc-700 dark:text-zinc-300"
+                                    >
+                                      −
+                                    </button>
+                                    <span className="w-8 text-center font-medium text-zinc-900 dark:text-zinc-100">
+                                      {selections[item.id]?.quantity || 0}
+                                    </span>
+                                    <button
+                                      onClick={() => handleQuantityChange(item.id, (selections[item.id]?.quantity || 0) + 1)}
+                                      className="tap-target w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 flex items-center justify-center text-blue-700 dark:text-blue-400"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              {selections[item.id] && selections[item.id].quantity > 0 && !isClosed && (
+                                <input
+                                  type="text"
+                                  placeholder="Add note (e.g., no nuts)"
+                                  value={selections[item.id].note}
+                                  onChange={(e) => handleNoteChange(item.id, e.target.value)}
+                                  className="mt-2 w-full px-2 py-1 text-sm border border-zinc-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              )}
                             </div>
+                          ))}
+
+                          {/* Opt-Out Item - separated with divider */}
+                          {optOutItem && (
+                            <>
+                              <div className="border-t border-zinc-200 dark:border-zinc-700 my-4" />
+                              <div
+                                className={`border rounded-lg p-3 transition-all ${
+                                  hasOptOutSelection
+                                    ? "border-orange-400 dark:border-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                                    : hasRegularSelections
+                                      ? "border-zinc-300 dark:border-zinc-600 opacity-50"
+                                      : "border-zinc-200 dark:border-zinc-700"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-zinc-900 dark:text-zinc-100">{optOutItem.name}</span>
+                                    </div>
+                                    {optOutItem.description && (
+                                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{optOutItem.description}</p>
+                                    )}
+                                  </div>
+                                  {!isClosed && !hasRegularSelections && (
+                                    <button
+                                      onClick={() => handleQuantityChange(optOutItem.id, hasOptOutSelection ? 0 : 1)}
+                                      className={`tap-target px-4 py-2 rounded-lg font-medium transition-colors ${
+                                        hasOptOutSelection
+                                          ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                          : "bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300"
+                                      }`}
+                                    >
+                                      {hasOptOutSelection ? "Selected" : "Select"}
+                                    </button>
+                                  )}
+                                  {!isClosed && hasRegularSelections && (
+                                    <span className="text-sm text-zinc-500 dark:text-zinc-400 italic">
+                                      Clear items to select
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </>
                           )}
-                        </div>
-                        {!isClosed && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleQuantityChange(item.id, (selections[item.id]?.quantity || 0) - 1)}
-                              className="tap-target w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 flex items-center justify-center text-zinc-700 dark:text-zinc-300"
-                            >
-                              −
-                            </button>
-                            <span className="w-8 text-center font-medium text-zinc-900 dark:text-zinc-100">
-                              {selections[item.id]?.quantity || 0}
-                            </span>
-                            <button
-                              onClick={() => handleQuantityChange(item.id, (selections[item.id]?.quantity || 0) + 1)}
-                              className="tap-target w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 flex items-center justify-center text-blue-700 dark:text-blue-400"
-                            >
-                              +
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      {selections[item.id] && selections[item.id].quantity > 0 && !isClosed && (
-                        <input
-                          type="text"
-                          placeholder="Add note (e.g., no nuts)"
-                          value={selections[item.id].note}
-                          onChange={(e) => handleNoteChange(item.id, e.target.value)}
-                          className="mt-2 w-full px-2 py-1 text-sm border border-zinc-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                        </>
                       )}
-                    </div>
-                  ))
-                )}
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Overall Note */}

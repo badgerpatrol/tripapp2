@@ -101,7 +101,6 @@ export async function listMyTemplates(ownerId: string) {
         select: {
           id: true,
           displayName: true,
-          email: true,
         },
       },
     },
@@ -124,7 +123,6 @@ export async function getAllTemplates() {
         select: {
           id: true,
           displayName: true,
-          email: true,
         },
       },
     },
@@ -166,7 +164,6 @@ export async function browsePublicTemplates(query: BrowsePublicTemplatesQuery) {
         select: {
           id: true,
           displayName: true,
-          email: true,
         },
       },
     },

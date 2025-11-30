@@ -60,7 +60,6 @@ export async function createAssignments(
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -149,7 +148,6 @@ export async function updateAssignment(
       user: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -293,7 +291,6 @@ export async function replaceAssignments(
               user: {
                 select: {
                   id: true,
-                  email: true,
                   displayName: true,
                   photoURL: true,
                 },
@@ -315,7 +312,6 @@ export async function replaceAssignments(
               user: {
                 select: {
                   id: true,
-                  email: true,
                   displayName: true,
                   photoURL: true,
                 },

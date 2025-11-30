@@ -27,7 +27,7 @@ async function debugApiResponse() {
     console.log(`  Members (${trip.members.length}):`);
 
     trip.members.forEach((member) => {
-      console.log(`    - ${member.user.email}`);
+      console.log(`    - ${member.user.displayName}`);
       console.log(`      userId: ${member.userId}`);
       console.log(`      RSVP: ${member.rsvpStatus}`);
       console.log(`      Role: ${member.role}`);

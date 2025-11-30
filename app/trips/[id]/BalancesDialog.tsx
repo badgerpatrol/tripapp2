@@ -318,9 +318,6 @@ export default function BalancesDialog({
                               <p className="font-semibold text-zinc-900 dark:text-zinc-100">
                                 {balance.userName}
                               </p>
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                {balance.userEmail}
-                              </p>
                             </div>
                           </div>
                           <div className="text-right">

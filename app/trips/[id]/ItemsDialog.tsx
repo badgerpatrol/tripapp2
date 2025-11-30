@@ -342,7 +342,7 @@ export default function ItemsDialog({
                         </h4>
                         {item.assignedUser && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                            {item.assignedUser.displayName || item.assignedUser.email}
+                            {item.assignedUser.displayName ?? "Unknown"}
                           </span>
                         )}
                       </div>

@@ -586,7 +586,6 @@ export async function getTripById(tripId: string) {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -596,7 +595,6 @@ export async function getTripById(tripId: string) {
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -627,7 +625,6 @@ export async function getUserTrips(userId: string) {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -642,7 +639,6 @@ export async function getUserTrips(userId: string) {
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -669,7 +665,6 @@ export async function getAllTrips() {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -684,7 +679,6 @@ export async function getAllTrips() {
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -750,7 +744,6 @@ export async function getTripOverviewForInvitee(
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -761,7 +754,6 @@ export async function getTripOverviewForInvitee(
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -817,7 +809,6 @@ export async function getTripOverviewForMember(
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -828,7 +819,6 @@ export async function getTripOverviewForMember(
           user: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -846,7 +836,6 @@ export async function getTripOverviewForMember(
           paidBy: {
             select: {
               id: true,
-              email: true,
               displayName: true,
               photoURL: true,
             },
@@ -862,7 +851,6 @@ export async function getTripOverviewForMember(
               user: {
                 select: {
                   id: true,
-                  email: true,
                   displayName: true,
                   photoURL: true,
                 },
@@ -1509,7 +1497,6 @@ export async function deleteTrip(tripId: string, userId: string) {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
         },
       },

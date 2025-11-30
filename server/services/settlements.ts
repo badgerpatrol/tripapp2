@@ -14,7 +14,6 @@ import { EventType, SettlementStatus } from "@/lib/generated/prisma";
 export interface PersonBalance {
   userId: string;
   userName: string;
-  userEmail: string;
   userPhotoURL: string | null;
   totalPaid: number;
   totalOwed: number;
@@ -76,7 +75,6 @@ export async function calculateTripBalances(
             select: {
               id: true,
               displayName: true,
-              email: true,
               photoURL: true,
             },
           },
@@ -86,7 +84,6 @@ export async function calculateTripBalances(
         select: {
           id: true,
           displayName: true,
-          email: true,
           photoURL: true,
         },
       },
@@ -109,7 +106,6 @@ export async function calculateTripBalances(
       user: {
         id: string;
         displayName: string | null;
-        email: string;
         photoURL: string | null;
       };
       totalPaid: number;
@@ -174,8 +170,7 @@ export async function calculateTripBalances(
   const balances: PersonBalance[] = Array.from(balanceMap.entries()).map(
     ([userId, data]) => ({
       userId,
-      userName: data.user.displayName || data.user.email,
-      userEmail: data.user.email,
+      userName: data.user.displayName ?? "Unknown",
       userPhotoURL: data.user.photoURL,
       totalPaid: data.totalPaid,
       totalOwed: data.totalOwed,
@@ -223,7 +218,6 @@ function calculateMinimalSettlementPlan(
       user: {
         id: string;
         displayName: string | null;
-        email: string;
         photoURL: string | null;
       };
       totalPaid: number;

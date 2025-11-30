@@ -351,15 +351,12 @@ export default function InviteUsersDialog({
                       <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                           <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                            {(member.user.displayName || member.user.email)[0].toUpperCase()}
+                            {(member.user.displayName ?? "?")[0].toUpperCase()}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                            {member.user.displayName || member.user.email}
-                          </p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                            {member.user.email}
+                            {member.user.displayName ?? "Unknown"}
                           </p>
                         </div>
                       </div>
@@ -383,7 +380,7 @@ export default function InviteUsersDialog({
                         {member.role !== "OWNER" && (
                           <button
                             type="button"
-                            onClick={() => handleRemoveMember(member.user.id, member.user.displayName || member.user.email)}
+                            onClick={() => handleRemoveMember(member.user.id, member.user.displayName ?? "Unknown")}
                             disabled={removingUserId === member.user.id}
                             className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Remove member"
@@ -513,15 +510,12 @@ export default function InviteUsersDialog({
                           />
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
                             <span className="text-sm font-semibold text-white">
-                              {(availableUser.displayName || availableUser.email)[0].toUpperCase()}
+                              {(availableUser.displayName ?? "?")[0].toUpperCase()}
                             </span>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                              {availableUser.displayName || availableUser.email}
-                            </p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                              {availableUser.email}
+                              {availableUser.displayName ?? "Unknown"}
                             </p>
                           </div>
                         </label>
