@@ -158,8 +158,10 @@ export default function ChoiceReportsDialog({
           {/* Respondents Summary */}
           {respondents && (
             <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {respondents.respondedUserIds.length} responded, {respondents.pendingUserIds.length} pending
+              <div className="text-sm font-medium text-blue-900 dark:text-blue-100 flex flex-wrap gap-x-3 gap-y-1">
+                <span>{respondents.respondedUserIds?.length || 0} chosen</span>
+                <span>{respondents.optedOutUserIds?.length || 0} opted out</span>
+                <span>{respondents.pendingUserIds?.length || 0} pending</span>
               </div>
             </div>
           )}
@@ -216,7 +218,7 @@ export default function ChoiceReportsDialog({
                                 ? " person"
                                 : " people"}
                           </div>
-                          
+
                         </div>
                         {item.totalPrice && (
                           <div className="font-bold text-zinc-900 dark:text-zinc-100">
@@ -234,6 +236,35 @@ export default function ChoiceReportsDialog({
                       </div>
                     </div>
                   )}
+
+                  {/* Opted Out Users Section */}
+                  {itemsReport.optedOutUsers && itemsReport.optedOutUsers.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                      <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2 flex items-center gap-2">
+                        <span className="text-orange-500">✗</span> Opted Out ({itemsReport.optedOutUsers.length})
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {itemsReport.optedOutUsers.map((user: any) => (
+                          <div
+                            key={user.userId}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-full"
+                          >
+                            {user.photoURL && (
+                              <img
+                                src={user.photoURL}
+                                alt={user.displayName}
+                                className="w-5 h-5 rounded-full"
+                              />
+                            )}
+                            <span className="text-sm text-orange-800 dark:text-orange-200">
+                              {user.displayName}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => handleExport("items")}
                     className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700"
@@ -298,6 +329,35 @@ export default function ChoiceReportsDialog({
                       </div>
                     </div>
                   )}
+
+                  {/* Opted Out Users Section */}
+                  {usersReport.optedOutUsers && usersReport.optedOutUsers.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                      <h4 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2 flex items-center gap-2">
+                        <span className="text-orange-500">✗</span> Opted Out ({usersReport.optedOutUsers.length})
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {usersReport.optedOutUsers.map((user: any) => (
+                          <div
+                            key={user.userId}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-full"
+                          >
+                            {user.photoURL && (
+                              <img
+                                src={user.photoURL}
+                                alt={user.displayName}
+                                className="w-5 h-5 rounded-full"
+                              />
+                            )}
+                            <span className="text-sm text-orange-800 dark:text-orange-200">
+                              {user.displayName}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => handleExport("users")}
                     className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700"
@@ -362,6 +422,41 @@ export default function ChoiceReportsDialog({
                     )}
                   </div>
 
+                  {/* Who Isn't Going To (Opted Out) */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
+                      <span className="text-zinc-500">✗</span> Who Isn't Going To ({respondents.optedOutUsers?.length || 0})
+                    </h3>
+                    {respondents.optedOutUsers && respondents.optedOutUsers.length > 0 ? (
+                      <div className="space-y-2">
+                        {respondents.optedOutUsers.map((user: any) => (
+                          <div
+                            key={user.userId}
+                            className="flex items-center gap-3 p-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg"
+                          >
+                            {user.photoURL && (
+                              <img
+                                src={user.photoURL}
+                                alt={user.displayName ?? "Unknown"}
+                                className="w-8 h-8 rounded-full"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                                {user.displayName ?? "Unknown"}
+                              </div>
+                            </div>
+                            <span className="text-zinc-500 text-xl">✗</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-zinc-500 dark:text-zinc-400 text-sm italic p-3 bg-zinc-50 dark:bg-zinc-900/20 rounded-lg">
+                        No one has opted out
+                      </div>
+                    )}
+                  </div>
+
                   {/* Who Hasn't Chosen */}
                   <div>
                     <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center gap-2">
@@ -392,7 +487,7 @@ export default function ChoiceReportsDialog({
                       </div>
                     ) : (
                       <div className="text-zinc-500 dark:text-zinc-400 text-sm italic p-3 bg-zinc-50 dark:bg-zinc-900/20 rounded-lg">
-                        Everyone has made a choice!
+                        Everyone has responded!
                       </div>
                     )}
                   </div>

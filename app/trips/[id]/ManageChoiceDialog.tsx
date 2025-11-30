@@ -16,6 +16,7 @@ interface ChoiceItem {
   maxTotal: number | null;
   allergens: string[] | null;
   tags: string[] | null;
+  isOptOut?: boolean;
 }
 
 interface ManageChoiceDialogProps {
@@ -323,10 +324,12 @@ export default function ManageChoiceDialog({
   };
 
   const handleToggleSelectAll = () => {
-    if (selectedItems.size === items.length) {
+    // Exclude opt-out items from select all
+    const selectableItems = items.filter(item => !item.isOptOut);
+    if (selectedItems.size === selectableItems.length) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(items.map(item => item.id)));
+      setSelectedItems(new Set(selectableItems.map(item => item.id)));
     }
   };
 
@@ -636,29 +639,32 @@ export default function ManageChoiceDialog({
               {tab === "items" && (
                 <div className="space-y-4">
                   {/* Select All Checkbox and Bulk Delete */}
-                  {items.length > 0 && (
-                    <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={items.length > 0 && selectedItems.size === items.length}
-                          onChange={handleToggleSelectAll}
-                          className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                          Select All ({selectedItems.size} selected)
-                        </span>
-                      </label>
-                      {selectedItems.size > 0 && (
-                        <button
-                          onClick={handleBulkDelete}
-                          className="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
-                        >
-                          Delete Selected ({selectedItems.size})
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  {items.length > 0 && (() => {
+                    const selectableItems = items.filter(item => !item.isOptOut);
+                    return selectableItems.length > 0 && (
+                      <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectableItems.length > 0 && selectedItems.size === selectableItems.length}
+                            onChange={handleToggleSelectAll}
+                            className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                            Select All ({selectedItems.size} selected)
+                          </span>
+                        </label>
+                        {selectedItems.size > 0 && (
+                          <button
+                            onClick={handleBulkDelete}
+                            className="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
+                          >
+                            Delete Selected ({selectedItems.size})
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {items.map(item => (
                     <div key={item.id}>
@@ -684,7 +690,12 @@ export default function ManageChoiceDialog({
                             placeholder="Price"
                             value={editForm.price}
                             onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                            disabled={item.isOptOut}
+                            className={`w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg ${
+                              item.isOptOut
+                                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                : "bg-white dark:bg-zinc-700"
+                            }`}
                           />
                           <div className="grid grid-cols-2 gap-2">
                             <input
@@ -692,14 +703,24 @@ export default function ManageChoiceDialog({
                               placeholder="Max per user"
                               value={editForm.maxPerUser}
                               onChange={(e) => setEditForm({ ...editForm, maxPerUser: e.target.value })}
-                              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                              disabled={item.isOptOut}
+                              className={`w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg ${
+                                item.isOptOut
+                                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                  : "bg-white dark:bg-zinc-700"
+                              }`}
                             />
                             <input
                               type="number"
                               placeholder="Max total"
                               value={editForm.maxTotal}
                               onChange={(e) => setEditForm({ ...editForm, maxTotal: e.target.value })}
-                              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                              disabled={item.isOptOut}
+                              className={`w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg ${
+                                item.isOptOut
+                                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                  : "bg-white dark:bg-zinc-700"
+                              }`}
                             />
                           </div>
                           <input
@@ -707,14 +728,24 @@ export default function ManageChoiceDialog({
                             placeholder="Allergens (comma separated)"
                             value={editForm.allergens}
                             onChange={(e) => setEditForm({ ...editForm, allergens: e.target.value })}
-                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                            disabled={item.isOptOut}
+                            className={`w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg ${
+                              item.isOptOut
+                                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                : "bg-white dark:bg-zinc-700"
+                            }`}
                           />
                           <input
                             type="text"
                             placeholder="Tags (comma separated)"
                             value={editForm.tags}
                             onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
-                            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                            disabled={item.isOptOut}
+                            className={`w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg ${
+                              item.isOptOut
+                                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                                : "bg-white dark:bg-zinc-700"
+                            }`}
                           />
                           <div className="flex gap-2">
                             <button
@@ -734,15 +765,28 @@ export default function ManageChoiceDialog({
                         </div>
                       ) : (
                         // View Mode
-                        <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.has(item.id)}
-                            onChange={() => handleToggleSelectItem(item.id)}
-                            className="w-4 h-4 mt-1 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
-                          />
+                        <div className={`border rounded-lg p-3 flex items-start gap-3 ${
+                          item.isOptOut
+                            ? "border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10"
+                            : "border-zinc-200 dark:border-zinc-700"
+                        }`}>
+                          {!item.isOptOut && (
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.has(item.id)}
+                              onChange={() => handleToggleSelectItem(item.id)}
+                              className="w-4 h-4 mt-1 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          )}
                           <div className="flex-1">
-                            <div className="font-medium">{item.name}</div>
+                            <div className="font-medium flex items-center gap-2">
+                              {item.name}
+                              {item.isOptOut && (
+                                <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">
+                                  Opt-out
+                                </span>
+                              )}
+                            </div>
                             {item.price && <div className="text-sm text-zinc-600 dark:text-zinc-400">${Number(item.price).toFixed(2)}</div>}
                             {item.description && <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{item.description}</div>}
                             {item.maxPerUser && <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Max per user: {item.maxPerUser}</div>}
