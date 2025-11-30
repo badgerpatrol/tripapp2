@@ -342,17 +342,14 @@ export default function ChoiceReportsDialog({
                             {user.photoURL && (
                               <img
                                 src={user.photoURL}
-                                alt={user.displayName || user.email}
+                                alt={user.displayName ?? "Unknown"}
                                 className="w-8 h-8 rounded-full"
                               />
                             )}
                             <div className="flex-1">
                               <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                                {user.displayName || user.email}
+                                {user.displayName ?? "Unknown"}
                               </div>
-                              {user.displayName && (
-                                <div className="text-xs text-zinc-600 dark:text-zinc-400">{user.email}</div>
-                              )}
                             </div>
                             <span className="text-green-600 text-xl">✓</span>
                           </div>
@@ -380,17 +377,14 @@ export default function ChoiceReportsDialog({
                             {user.photoURL && (
                               <img
                                 src={user.photoURL}
-                                alt={user.displayName || user.email}
+                                alt={user.displayName ?? "Unknown"}
                                 className="w-8 h-8 rounded-full"
                               />
                             )}
                             <div className="flex-1">
                               <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                                {user.displayName || user.email}
+                                {user.displayName ?? "Unknown"}
                               </div>
-                              {user.displayName && (
-                                <div className="text-xs text-zinc-600 dark:text-zinc-400">{user.email}</div>
-                              )}
                             </div>
                             <span className="text-orange-600 text-xl">⏳</span>
                           </div>

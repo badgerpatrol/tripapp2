@@ -215,7 +215,7 @@ export default function ViewSpendDialog({
           {/* Date */}
             <div>
               <p className="text-base text-zinc-900 dark:text-zinc-100 ">
-                {formatDate(spend.date)} by {spend.paidBy.displayName || spend.paidBy.email}
+                {formatDate(spend.date)} by {spend.paidBy.displayName ?? "Unknown"}
               </p>
               <p className="text-base text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap gap-2 mb-6">
                   {spend.notes}
@@ -490,7 +490,7 @@ export default function ViewSpendDialog({
                               ? "text-red-700 dark:text-red-300"
                               : "text-blue-700 dark:text-blue-300"
                           }`}>
-                            {(assignment.user.displayName || assignment.user.email)[0].toUpperCase()}
+                            {(assignment.user.displayName ?? "?")[0].toUpperCase()}
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -499,18 +499,11 @@ export default function ViewSpendDialog({
                               ? "text-red-900 dark:text-red-100"
                               : "text-zinc-900 dark:text-zinc-100"
                           }`}>
-                            {assignment.user.displayName || assignment.user.email}
+                            {assignment.user.displayName ?? "Unknown"}
                             {isAssignmentOwner && (
                               <span className="ml-2 text-xs font-semibold text-red-600 dark:text-red-400">(You)</span>
                             )}
                           </p>
-                          {assignment.user.displayName && (
-                            <p className={`text-xs ${
-                              isAssignmentOwner
-                                ? "text-red-700 dark:text-red-400"
-                                : "text-zinc-600 dark:text-zinc-400"
-                            }`}>{assignment.user.email}</p>
-                          )}
                         </div>
                         {assignment.shareAmount !== undefined && (
                           <div className="text-right flex-shrink-0">

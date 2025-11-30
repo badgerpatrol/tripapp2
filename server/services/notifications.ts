@@ -108,7 +108,6 @@ export async function getUserNotifications(userId: string, status?: Notification
       sender: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },

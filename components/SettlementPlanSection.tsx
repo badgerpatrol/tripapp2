@@ -589,9 +589,6 @@ export default function SettlementPlanSection({
                           <p className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                             {balance.userName}
                           </p>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                            {balance.userEmail}
-                          </p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">

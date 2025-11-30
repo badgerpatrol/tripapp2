@@ -50,7 +50,6 @@ export async function getGroup(groupId: string, includeMembers = false) {
               user: {
                 select: {
                   id: true,
-                  email: true,
                   displayName: true,
                   photoURL: true,
                 },
@@ -173,7 +172,6 @@ export async function listGroupMembers(groupId: string) {
       user: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -232,7 +230,6 @@ export async function addGroupMember(
       user: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -285,7 +282,8 @@ export async function removeGroupMember(
     include: {
       user: {
         select: {
-          email: true,
+          id: true,
+          displayName: true,
         },
       },
     },
@@ -308,7 +306,7 @@ export async function removeGroupMember(
   // Log event
   await logEvent("Group", groupId, EventType.GROUP_MEMBER_REMOVED, adminUserId, {
     userId,
-    userEmail: member.user.email,
+    userName: member.user.displayName,
   });
 
   return { success: true };
@@ -360,7 +358,6 @@ export async function getDiscoverableUsers(
       user: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },

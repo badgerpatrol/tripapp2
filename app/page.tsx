@@ -229,7 +229,7 @@ export default function Home() {
 
                   <div className="mb-4 p-3 bg-white/70 dark:bg-zinc-800/70 rounded-lg">
                     <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-                      Invited by {trip.createdBy.displayName || trip.createdBy.email}
+                      Invited by {trip.createdBy.displayName}
                     </p>
                   </div>
 
@@ -350,7 +350,7 @@ export default function Home() {
                     )}
 
                     <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-                      Organized by {trip.createdBy.displayName || trip.createdBy.email}
+                      Organized by {trip.createdBy.displayName ?? "Unknown"}
                     </p>
 
 

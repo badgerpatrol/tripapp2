@@ -1693,7 +1693,7 @@ export default function TripDetailPage() {
           </div>
 
           <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-            Organized by {trip.organizer.displayName || trip.organizer.email}
+            Organized by {trip.organizer.displayName ?? "Unknown"}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -1831,7 +1831,7 @@ export default function TripDetailPage() {
                   You've been invited to {trip.name}!
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400">
-                  {trip.organizer.displayName || trip.organizer.email} has invited you to join this trip.
+                  {trip.organizer.displayName ?? "Someone"} has invited you to join this trip.
                   {trip.rsvpStatus === "CLOSED"
                     ? " However, RSVP has been closed by the organizer."
                     : " Please respond to let them know if you can make it."}
@@ -2103,14 +2103,13 @@ export default function TripDetailPage() {
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                     <span className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">
-                      {(member.user.displayName || member.user.email)[0].toUpperCase()}
+                      {(member.user.displayName ?? "?")[0].toUpperCase()}
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm sm:text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                      {member.user.displayName || member.user.email}
+                      {member.user.displayName ?? "Unknown"}
                     </p>
-                    <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 truncate">{member.user.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
@@ -2135,7 +2134,7 @@ export default function TripDetailPage() {
                   {member.role !== "OWNER" && canInvite && !isViewer && (
                     <button
                       type="button"
-                      onClick={() => handleRemoveMember(member.user.id, member.user.displayName || member.user.email)}
+                      onClick={() => handleRemoveMember(member.user.id, member.user.displayName ?? "Unknown")}
                       disabled={removingUserId === member.user.id}
                       className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Remove member"

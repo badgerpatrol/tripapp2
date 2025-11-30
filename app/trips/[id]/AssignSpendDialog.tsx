@@ -236,7 +236,7 @@ export default function AssignSpendDialog({
 
               {getFilteredParticipants().map((participant) => {
                 const isSelected = selectedUserIds.has(participant.user.id);
-                const displayName = participant.user.displayName || participant.user.email;
+                const displayName = participant.user.displayName ?? "Unknown";
 
                 return (
                   <button
@@ -286,9 +286,7 @@ export default function AssignSpendDialog({
                       <p className="font-medium text-zinc-900 dark:text-zinc-100">
                         {displayName}
                       </p>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                        {participant.user.email}
-                      </p>
+                      
                     </div>
                   </button>
                 );

@@ -280,16 +280,13 @@ export default function EditItemAssignmentDialog({
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  {(assignment.user.displayName || assignment.user.email)[0].toUpperCase()}
+                  {(assignment.user.displayName ?? "?")[0].toUpperCase()}
                 </span>
               </div>
               <div>
                 <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                  {assignment.user.displayName || assignment.user.email}
+                  {assignment.user.displayName ?? "Unknown"}
                 </p>
-                {assignment.user.displayName && (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{assignment.user.email}</p>
-                )}
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-700">
@@ -306,7 +303,7 @@ export default function EditItemAssignmentDialog({
           {showRemoveConfirm ? (
             <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
               <p className="text-sm font-medium text-red-900 dark:text-red-100 mb-3">
-                Are you sure you want to remove {assignment.user.displayName || assignment.user.email} from this spend?
+                Are you sure you want to remove {assignment.user.displayName ?? "Unknown"} from this spend?
               </p>
               <div className="flex gap-2">
                 <button

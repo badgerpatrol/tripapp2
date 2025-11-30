@@ -62,7 +62,6 @@ export async function GET(request: NextRequest, { params }: Params) {
         user: m.user
           ? {
               id: m.user.id,
-              email: m.user.email,
               displayName: m.user.displayName,
               photoURL: m.user.photoURL,
             }
@@ -144,7 +143,6 @@ export async function POST(request: NextRequest, { params }: Params) {
         user: member.user
           ? {
               id: member.user.id,
-              email: member.user.email,
               displayName: member.user.displayName,
               photoURL: member.user.photoURL,
             }

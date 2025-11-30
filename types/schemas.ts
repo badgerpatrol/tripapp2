@@ -122,7 +122,6 @@ export const CreateTripResponseSchema = z.object({
 
 export const UserSummarySchema = z.object({
   id: z.string(),
-  email: z.string(),
   displayName: z.string().nullable(),
   photoURL: z.string().nullable(),
 });

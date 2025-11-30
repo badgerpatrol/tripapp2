@@ -107,7 +107,7 @@ function SpendCard({
         <div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Paid by</p>
           <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">
-            {spend.paidBy.displayName || spend.paidBy.email}
+            {spend.paidBy.displayName ?? "Unknown"}
           </p>
         </div>
 

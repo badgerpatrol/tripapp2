@@ -223,7 +223,6 @@ export async function createSpendItem(spendId: string, userId: string, data: Cre
         assignedUser: {
           select: {
             id: true,
-            email: true,
             displayName: true,
             photoURL: true,
           },
@@ -231,7 +230,6 @@ export async function createSpendItem(spendId: string, userId: string, data: Cre
         createdBy: {
           select: {
             id: true,
-            email: true,
             displayName: true,
             photoURL: true,
           },
@@ -322,7 +320,6 @@ export async function updateSpendItem(itemId: string, userId: string, data: Upda
         assignedUser: {
           select: {
             id: true,
-            email: true,
             displayName: true,
             photoURL: true,
           },
@@ -330,7 +327,6 @@ export async function updateSpendItem(itemId: string, userId: string, data: Upda
         createdBy: {
           select: {
             id: true,
-            email: true,
             displayName: true,
             photoURL: true,
           },
@@ -503,7 +499,6 @@ export async function getSpendItems(spendId: string) {
       assignedUser: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -511,7 +506,6 @@ export async function getSpendItems(spendId: string) {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -534,7 +528,6 @@ export async function getSpendItemById(itemId: string) {
       assignedUser: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -542,7 +535,6 @@ export async function getSpendItemById(itemId: string) {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -642,7 +634,6 @@ export async function recalculateSpendFromItems(spendId: string, userId: string)
         paidBy: {
           select: {
             id: true,
-            email: true,
             displayName: true,
             photoURL: true,
           },

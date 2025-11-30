@@ -92,7 +92,6 @@ export async function createChoice(
         createdBy: {
           select: {
             id: true,
-            email: true,
             displayName: true,
             photoURL: true,
           },
@@ -188,7 +187,6 @@ export async function updateChoice(
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -701,7 +699,6 @@ export async function getTripChoices(
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -736,7 +733,6 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
       createdBy: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -996,7 +992,6 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
       user: {
         select: {
           id: true,
-          email: true,
           displayName: true,
           photoURL: true,
         },
@@ -1021,7 +1016,6 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
     .map(m => ({
       userId: m.user.id,
       displayName: m.user.displayName,
-      email: m.user.email,
       photoURL: m.user.photoURL,
     }));
 
@@ -1030,7 +1024,6 @@ export async function getChoiceRespondents(choiceId: string, tripId: string) {
     .map(m => ({
       userId: m.user.id,
       displayName: m.user.displayName,
-      email: m.user.email,
       photoURL: m.user.photoURL,
     }));
 
@@ -1100,7 +1093,6 @@ export async function getItemsReport(choiceId: string) {
                   user: {
                     select: {
                       displayName: true,
-                      email: true,
                     },
                   },
                 },
@@ -1121,11 +1113,11 @@ export async function getItemsReport(choiceId: string) {
     const userIds = new Set(item.lines.map(line => line.selection.userId));
     const distinctUsers = userIds.size;
 
-    // Get unique users with their display names (fallback to email)
+    // Get unique users with their display names
     const usersMap = new Map();
     item.lines.forEach(line => {
       if (!usersMap.has(line.selection.userId)) {
-        const userName = line.selection.user.displayName || line.selection.user.email;
+        const userName = line.selection.user.displayName ?? "Unknown";
         usersMap.set(line.selection.userId, userName);
       }
     });
@@ -1166,7 +1158,6 @@ export async function getUsersReport(choiceId: string) {
         select: {
           id: true,
           displayName: true,
-          email: true,
         },
       },
       lines: {
@@ -1198,7 +1189,7 @@ export async function getUsersReport(choiceId: string) {
 
     return {
       userId: selection.userId,
-      displayName: selection.user.displayName || selection.user.email,
+      displayName: selection.user.displayName ?? "Unknown",
       note: selection.note,
       lines,
       userTotalPrice: userTotalPrice > 0 ? userTotalPrice : null,
