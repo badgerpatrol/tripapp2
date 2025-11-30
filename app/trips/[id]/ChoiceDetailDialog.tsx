@@ -13,7 +13,7 @@ interface ChoiceItem {
   maxTotal: number | null;
   allergens: string[] | null;
   isActive: boolean;
-  itemType: "NORMAL" | "OTHER" | "NO_PARTICIPATION";
+  itemType?: "NORMAL" | "OTHER" | "NO_PARTICIPATION"; // Optional for backwards compatibility
 }
 
 interface SelectionLine {
@@ -120,9 +120,14 @@ export default function ChoiceDetailDialog({
     }
   };
 
+  // Helper to get item type with fallback for backwards compatibility
+  const getItemType = (item: ChoiceItem | undefined): "NORMAL" | "OTHER" | "NO_PARTICIPATION" => {
+    return item?.itemType || "NORMAL";
+  };
+
   const handleQuantityChange = (itemId: string, quantity: number) => {
     const item = detail?.items.find(i => i.id === itemId);
-    const isNoParticipation = item?.itemType === "NO_PARTICIPATION";
+    const isNoParticipation = getItemType(item) === "NO_PARTICIPATION";
 
     if (quantity <= 0) {
       const newSelections = { ...selections };
@@ -138,7 +143,7 @@ export default function ChoiceDetailDialog({
       });
     } else {
       // Selecting a normal item: remove any NO_PARTICIPATION selection
-      const noParticipationItem = detail?.items.find(i => i.itemType === "NO_PARTICIPATION");
+      const noParticipationItem = detail?.items.find(i => getItemType(i) === "NO_PARTICIPATION");
       const newSelections = { ...selections };
 
       // Remove NO_PARTICIPATION if it's selected
@@ -242,7 +247,7 @@ export default function ChoiceDetailDialog({
     return Object.entries(selections).reduce((sum, [itemId, sel]) => {
       const item = detail.items.find(i => i.id === itemId);
       // Exclude NO_PARTICIPATION items from total
-      if (item && item.price && item.itemType !== "NO_PARTICIPATION") {
+      if (item && item.price && getItemType(item) !== "NO_PARTICIPATION") {
         return sum + (item.price * sel.quantity);
       }
       return sum;
@@ -251,7 +256,7 @@ export default function ChoiceDetailDialog({
 
   // Check if user has selected NO_PARTICIPATION
   const isNotParticipating = () => {
-    const noParticipationItem = detail?.items.find(i => i.itemType === "NO_PARTICIPATION");
+    const noParticipationItem = detail?.items.find(i => getItemType(i) === "NO_PARTICIPATION");
     return noParticipationItem && selections[noParticipationItem.id];
   };
 
@@ -323,11 +328,11 @@ export default function ChoiceDetailDialog({
               {/* Menu Items */}
               <div className="space-y-3 mb-6">
                 <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Menu</h3>
-                {detail.items.filter(i => i.itemType !== "NO_PARTICIPATION").length === 0 ? (
+                {detail.items.filter(i => getItemType(i) !== "NO_PARTICIPATION").length === 0 ? (
                   <p className="text-sm text-zinc-500">No items available yet</p>
                 ) : (
                   detail.items
-                    .filter(item => item.itemType !== "NO_PARTICIPATION")
+                    .filter(item => getItemType(item) !== "NO_PARTICIPATION")
                     .map(item => (
                     <div key={item.id} className={`border rounded-lg p-3 ${
                       isNotParticipating()
@@ -392,11 +397,11 @@ export default function ChoiceDetailDialog({
               </div>
 
               {/* Not Participating Option */}
-              {!isClosed && detail.items.some(i => i.itemType === "NO_PARTICIPATION") && (
+              {!isClosed && detail.items.some(i => getItemType(i) === "NO_PARTICIPATION") && (
                 <div className="mb-6">
                   <div className="border-t border-zinc-200 dark:border-zinc-700 pt-4">
                     {detail.items
-                      .filter(item => item.itemType === "NO_PARTICIPATION")
+                      .filter(item => getItemType(item) === "NO_PARTICIPATION")
                       .map(item => (
                         <button
                           key={item.id}

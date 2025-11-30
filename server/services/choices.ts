@@ -833,8 +833,14 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
   }
 
   // Ensure NO_PARTICIPATION item exists for this choice (if not archived)
+  // Wrapped in try-catch to gracefully handle case where itemType column doesn't exist yet
   if (!choice.archivedAt) {
-    await ensureNoParticipationItem(choiceId, userId);
+    try {
+      await ensureNoParticipationItem(choiceId, userId);
+    } catch (err) {
+      // Silently ignore if itemType column doesn't exist (migration not yet applied)
+      console.warn("Could not ensure NO_PARTICIPATION item (migration may not be applied yet):", err);
+    }
   }
 
   // Re-fetch items to include the NO_PARTICIPATION item if it was just created
@@ -850,11 +856,14 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
   });
 
   // Sort items: NORMAL/OTHER items first, then NO_PARTICIPATION at the end
+  // Handle items without itemType (migration not applied) by treating them as NORMAL
   const sortedItems = items.sort((a, b) => {
-    if (a.itemType === "NO_PARTICIPATION" && b.itemType !== "NO_PARTICIPATION") {
+    const aType = (a as any).itemType || "NORMAL";
+    const bType = (b as any).itemType || "NORMAL";
+    if (aType === "NO_PARTICIPATION" && bType !== "NO_PARTICIPATION") {
       return 1;
     }
-    if (a.itemType !== "NO_PARTICIPATION" && b.itemType === "NO_PARTICIPATION") {
+    if (aType !== "NO_PARTICIPATION" && bType === "NO_PARTICIPATION") {
       return -1;
     }
     // Otherwise maintain sortIndex/createdAt order
@@ -886,7 +895,9 @@ export async function getChoiceDetail(choiceId: string, userId: string) {
   if (mySelection) {
     myTotal = mySelection.lines.reduce((sum, line) => {
       // Skip NO_PARTICIPATION items in total calculation
-      if (line.item.itemType === "NO_PARTICIPATION") {
+      // Handle missing itemType (migration not applied) by treating as NORMAL
+      const itemType = (line.item as any).itemType || "NORMAL";
+      if (itemType === "NO_PARTICIPATION") {
         return sum;
       }
       const itemPrice = line.item.price ? parseFloat(line.item.price.toString()) : 0;
@@ -949,9 +960,10 @@ export async function createOrUpdateSelection(
   // Validate NO_PARTICIPATION rules:
   // - NO_PARTICIPATION cannot be combined with other items
   // - Only quantity of 1 is allowed for NO_PARTICIPATION
-  const noParticipationItems = items.filter(i => i.itemType === "NO_PARTICIPATION");
+  // Handle missing itemType (migration not applied) by treating as NORMAL
+  const noParticipationItems = items.filter(i => (i as any).itemType === "NO_PARTICIPATION");
   const hasNoParticipation = noParticipationItems.length > 0;
-  const hasOtherItems = items.some(i => i.itemType !== "NO_PARTICIPATION");
+  const hasOtherItems = items.some(i => ((i as any).itemType || "NORMAL") !== "NO_PARTICIPATION");
 
   if (hasNoParticipation && hasOtherItems) {
     throw new Error("Cannot select 'Not participating' along with other items. Please choose one or the other.");
@@ -964,7 +976,7 @@ export async function createOrUpdateSelection(
   // Validate quantity for NO_PARTICIPATION (must be exactly 1)
   for (const line of data.lines) {
     const item = items.find(i => i.id === line.itemId);
-    if (item?.itemType === "NO_PARTICIPATION" && line.quantity !== 1) {
+    if ((item as any)?.itemType === "NO_PARTICIPATION" && line.quantity !== 1) {
       throw new Error("'Not participating' selection must have a quantity of 1.");
     }
   }
