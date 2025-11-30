@@ -6,9 +6,6 @@ const nextConfig = {
   experimental: {
     // Turbopack is enabled by default in Next.js 16+
   },
-  // Mark playwright as external - it's used for server-side menu parsing
-  // and shouldn't be bundled by the regular build process
-  serverExternalPackages: ['playwright', 'playwright-core'],
 };
 
 export default nextConfig;
