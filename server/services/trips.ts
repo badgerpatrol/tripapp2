@@ -246,6 +246,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
         status: TripStatus.PLANNING,
         createdById: userId,
         signUpMode: data.signUpMode || false,
+        headerImageData: data.headerImageData || null,
       },
     });
 
@@ -430,6 +431,7 @@ export async function updateTrip(
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
         ...(data.signUpMode !== undefined && { signUpMode: data.signUpMode }),
+        ...(data.headerImageData !== undefined && { headerImageData: data.headerImageData }),
       },
     });
 
@@ -781,6 +783,7 @@ export async function getTripOverviewForInvitee(
     status: trip.status,
     spendStatus: trip.spendStatus,
     rsvpStatus: trip.rsvpStatus,
+    headerImageData: trip.headerImageData,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,
     participants: trip.members.map((m) => ({
@@ -902,6 +905,7 @@ export async function getTripOverviewForMember(
     status: trip.status,
     spendStatus: trip.spendStatus,
     rsvpStatus: trip.rsvpStatus,
+    headerImageData: trip.headerImageData,
     // Sign-up mode fields (only visible to owners)
     signUpMode: isOwner ? trip.signUpMode : undefined,
     signUpPassword: isOwner ? trip.signUpPassword : undefined,

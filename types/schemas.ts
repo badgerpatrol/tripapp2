@@ -63,6 +63,7 @@ export const CreateTripSchema = z.object({
     (val) => (val === "" ? undefined : val),
     z.string().min(6, "Password must be at least 6 characters").optional()
   ),
+  headerImageData: z.string().optional(), // Base64 encoded header image
 }).refine(
   (data) => {
     if (data.startDate && data.endDate) {
@@ -88,6 +89,7 @@ export const UpdateTripSchema = z.object({
     (val) => (val === "" ? undefined : val),
     z.string().min(6, "Password must be at least 6 characters").nullable().optional()
   ),
+  headerImageData: z.string().nullable().optional(), // Base64 encoded header image
 }).refine(
   (data) => {
     if (data.startDate && data.endDate) {

@@ -204,7 +204,7 @@ export function JoinTripDialog({
       {step === 'select' && (
         <div className="space-y-6">
           <p className="text-zinc-600 dark:text-zinc-400">
-            Select your account to join <span className="font-semibold">{tripName}</span>:
+            Already done this...:
           </p>
 
           {/* List of existing joinable participants */}
