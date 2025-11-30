@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useAdminMode } from "@/lib/admin/AdminModeContext";
 import LoginForm from "@/components/LoginForm";
@@ -37,12 +37,26 @@ interface Trip {
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, userProfile, loading: authLoading } = useAuth();
   const { isAdminMode } = useAdminMode();
   const canCreateTrip = userProfile && userProfile.role !== UserRole.VIEWER;
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle redirect after login (returnTo parameter)
+  const returnTo = searchParams.get("returnTo");
+
+  // Redirect to returnTo URL after login
+  useEffect(() => {
+    if (!authLoading && user && returnTo) {
+      // Validate returnTo is a relative path (security)
+      if (returnTo.startsWith("/")) {
+        router.push(returnTo);
+      }
+    }
+  }, [user, authLoading, returnTo, router]);
 
   useEffect(() => {
     const fetchTrips = async () => {

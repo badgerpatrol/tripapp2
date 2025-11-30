@@ -3,8 +3,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 import { SpendStatus } from "@/lib/generated/prisma";
-import LoginForm from "@/components/LoginForm";
+import { useTripPasswordStore } from "@/lib/stores/tripPasswordStore";
+import TripPasswordLogin from "@/components/TripPasswordLogin";
+import { JoinTripDialog } from "@/components/JoinTripDialog";
 import EditTripDialog from "../../trips/[id]/EditTripDialog";
 import InviteUsersDialog from "../../trips/[id]/InviteUsersDialog";
 import AddSpendDialog from "../../trips/[id]/AddSpendDialog";
@@ -115,6 +119,7 @@ export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user, userProfile, loading: authLoading } = useAuth();
+  const { clearTripPassword } = useTripPasswordStore();
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +166,16 @@ export default function TripDetailPage() {
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
   const [listsCount, setListsCount] = useState<number | null>(null);
+
+  // Public trip info (fetched before login for display)
+  const [publicTripInfo, setPublicTripInfo] = useState<{
+    tripName: string;
+    signUpEnabled: boolean;
+    participants: Array<{ id: string; user: { id: string; email: string; displayName: string | null } }>;
+  } | null>(null);
+
+  // Join trip dialog state (for participating in the trip)
+  const [isJoinTripDialogOpen, setIsJoinTripDialogOpen] = useState(false);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -235,6 +250,27 @@ export default function TripDetailPage() {
   };
 
   const tripId = params.id as string;
+
+  // Fetch public trip info (for login screen display)
+  useEffect(() => {
+    const fetchPublicInfo = async () => {
+      try {
+        const response = await fetch(`/api/trips/${tripId}/public`);
+        if (response.ok) {
+          const data = await response.json();
+          setPublicTripInfo({
+            tripName: data.tripName,
+            signUpEnabled: data.signUpEnabled,
+            participants: data.participants || [],
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching public trip info:", err);
+      }
+    };
+
+    fetchPublicInfo();
+  }, [tripId]);
 
   // Set default filter based on trip RSVP status
   useEffect(() => {
@@ -361,8 +397,16 @@ export default function TripDetailPage() {
 
   // Show login form if not authenticated
   if (!user) {
-    const viewerEmail = `trip_${tripId.slice(0, 8)}_viewer@tripplanner.local`;
-    return <LoginForm defaultEmail={viewerEmail} />;
+    return (
+      <TripPasswordLogin
+        tripId={tripId}
+        tripName={publicTripInfo?.tripName}
+        onFullAccountLogin={() => {
+          // Redirect to main login with return URL
+          router.push(`/?returnTo=/t/${tripId}`);
+        }}
+      />
+    );
   }
 
   // Show error state
@@ -1344,6 +1388,17 @@ export default function TripDetailPage() {
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      clearTripPassword();
+      await signOut(auth);
+      // Page will re-render to show login form
+    } catch (err) {
+      console.error("Error signing out:", err);
+    }
+  };
+
   // Get filtered participants based on RSVP status (excludes VIEWER role members)
   const getFilteredParticipants = () => {
     if (!trip?.participants) return [];
@@ -1666,6 +1721,23 @@ export default function TripDetailPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {/* User bar */}
+      <div className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 px-4 py-2">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="font-medium text-zinc-900 dark:text-zinc-100">{userProfile?.displayName || user?.email}</span>
+          </span>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign out
+          </button>
+        </div>
+      </div>
       <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
         <div className="max-w-6xl mx-auto">
 
@@ -1678,17 +1750,19 @@ export default function TripDetailPage() {
                   {trip.name}
                 </h1>
               </div>
-              {isOwner && (
-                <button
-                  onClick={() => setIsEditDialogOpen(true)}
-                  className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2 flex-shrink-0"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Edit
-                </button>
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isOwner && (
+                  <button
+                    onClick={() => setIsEditDialogOpen(true)}
+                    className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex flex-col gap-2">
               <span
@@ -1746,7 +1820,37 @@ export default function TripDetailPage() {
 
           </div>
         </div>
-        
+
+        {/* Participate CTA for viewers */}
+        {userProfile?.role === "VIEWER" && publicTripInfo?.signUpEnabled && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-sm border-2 border-green-200 dark:border-green-800 p-6 md:p-8 mb-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+                  Want to take part?
+                </h2>
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  Add your name or sign back in if you've been here before
+                </p>
+              </div>
+              <button
+                onClick={() => setIsJoinTripDialogOpen(true)}
+                className="tap-target px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center gap-2 flex-shrink-0"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Participate in this trip
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Lists Section (for accepted members) - hide for non-organizers if no lists */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (listsCount !== null && listsCount > 0)) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
@@ -3179,6 +3283,24 @@ export default function TripDetailPage() {
         selectedListId={selectedListId || undefined}
         currentMembers={trip?.participants || []}
       />
+
+      {/* Join Trip Dialog (for viewers to participate) */}
+      {publicTripInfo?.signUpEnabled && (
+        <JoinTripDialog
+          isOpen={isJoinTripDialogOpen}
+          onClose={() => setIsJoinTripDialogOpen(false)}
+          tripId={tripId}
+          tripName={trip?.name || publicTripInfo?.tripName || "Trip"}
+          participants={publicTripInfo?.participants?.map(p => ({
+            ...p,
+            role: "MEMBER",
+          })) || []}
+          onLoginRequired={(email) => {
+            // This callback is not used with the current flow
+            console.log("Login required for:", email);
+          }}
+        />
+      )}
     </div>
   );
 }

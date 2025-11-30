@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
  * Convert items report to CSV
  */
 function itemsReportToCSV(report: any): string {
-  const headers = ["Item Name", "Total Quantity", "Total Price", "Distinct Users"];
+  const headers = ["Item Name", "Total Quantity", "Total Price", "People"];
   const rows = report.items.map((item: any) => {
     const row: (string | number)[] = [
       item.name,

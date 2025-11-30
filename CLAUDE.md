@@ -38,3 +38,4 @@
       Add build hook: Vercel runs prisma migrate deploy automatically
       Migrations apply during deployment
 30) Use the same 'zinc' style for all pages and forms
+31) Dont push anything to github yourself, ever. Leave all that to me.
