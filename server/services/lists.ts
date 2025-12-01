@@ -89,11 +89,11 @@ export async function createTemplate(
 }
 
 /**
- * List my templates (private + my public)
+ * List my templates (private + my public), excluding inventory lists
  */
 export async function listMyTemplates(ownerId: string) {
   const templates = await prisma.listTemplate.findMany({
-    where: { ownerId },
+    where: { ownerId, inventory: false },
     include: {
       todoItems: true,
       kitItems: true,
@@ -133,11 +133,12 @@ export async function getAllTemplates() {
 }
 
 /**
- * Browse public templates (gallery)
+ * Browse public templates (gallery), excluding inventory lists
  */
 export async function browsePublicTemplates(query: BrowsePublicTemplatesQuery) {
   const where: any = {
     visibility: "PUBLIC",
+    inventory: false,
   };
 
   if (query.type) {
