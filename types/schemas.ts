@@ -610,6 +610,7 @@ export type CreateTripInput = {
   location?: string;
   signUpMode?: boolean;
   signUpPassword?: string;
+  headerImageData?: string;
 };
 export type UpdateTripInput = z.infer<typeof UpdateTripSchema>;
 export type TripResponse = z.infer<typeof TripResponseSchema>;

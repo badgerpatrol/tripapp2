@@ -42,8 +42,9 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   // Header image state
   const [headerImageData, setHeaderImageData] = useState<string | null>(null);
   const [headerImagePreview, setHeaderImagePreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const photoLibraryInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Template selection state
   const [templates, setTemplates] = useState<ListTemplate[]>([]);
@@ -106,6 +107,12 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   const handleRemoveImage = () => {
     setHeaderImageData(null);
     setHeaderImagePreview(null);
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
+    }
+    if (photoLibraryInputRef.current) {
+      photoLibraryInputRef.current.value = "";
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -412,7 +419,7 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {/* Take Photo button */}
+            {/* Take Photo button - opens device camera */}
             <button
               type="button"
               onClick={() => cameraInputRef.current?.click()}
@@ -423,6 +430,18 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               Take Photo
+            </button>
+
+            {/* Choose from Library button - opens photo library on iOS */}
+            <button
+              type="button"
+              onClick={() => photoLibraryInputRef.current?.click()}
+              className="w-full px-4 py-3 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200 font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Choose from Library
             </button>
 
             {/* Divider */}
@@ -437,12 +456,12 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
               </div>
             </div>
 
-            {/* Upload Image button */}
+            {/* Upload File button - opens file browser */}
             <label className="w-full px-4 py-3 rounded-lg border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center justify-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
-              Upload Image
+              Upload File
               <input
                 ref={fileInputRef}
                 type="file"
@@ -454,12 +473,20 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           </div>
         )}
 
-        {/* Hidden camera input for mobile */}
+        {/* Hidden camera input - uses capture attribute for direct camera access */}
         <input
           ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
+          onChange={handleImageChange}
+          className="hidden"
+        />
+        {/* Hidden photo library input - no capture attribute allows photo library selection on iOS */}
+        <input
+          ref={photoLibraryInputRef}
+          type="file"
+          accept="image/*"
           onChange={handleImageChange}
           className="hidden"
         />

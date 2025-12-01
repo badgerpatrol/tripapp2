@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -48,7 +48,77 @@ export default function EditTripDialog({
   const [headerImageData, setHeaderImageData] = useState<string | null>(trip.headerImageData || null);
   const [headerImagePreview, setHeaderImagePreview] = useState<string | null>(trip.headerImageData || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const photoLibraryInputRef = useRef<HTMLInputElement>(null);
+
+  // Camera state for live camera capture
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [showCameraView, setShowCameraView] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Clean up camera stream when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [isOpen]);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+    setShowCameraView(false);
+  };
+
+  const startCamera = async () => {
+    try {
+      setError(null);
+      setShowCameraView(true);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setIsCameraActive(true);
+      }
+    } catch (err) {
+      console.error("Camera error:", err);
+      setError("Unable to access camera. Please check permissions or use photo library.");
+      setShowCameraView(false);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0);
+    const imageData = canvas.toDataURL("image/jpeg", 0.85);
+
+    setHeaderImageData(imageData);
+    setHeaderImagePreview(imageData);
+    stopCamera();
+  };
 
   if (!isOpen) return null;
 
@@ -82,6 +152,9 @@ export default function EditTripDialog({
     setHeaderImagePreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+    if (photoLibraryInputRef.current) {
+      photoLibraryInputRef.current.value = "";
     }
   };
 
@@ -440,7 +513,54 @@ export default function EditTripDialog({
                 Add a cover image that will appear at the top of your trip page
               </p>
 
-              {headerImagePreview ? (
+              {/* Live Camera View */}
+              {showCameraView && (
+                <div className="relative">
+                  <div className="relative h-48 rounded-lg overflow-hidden bg-black">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                    {!isCameraActive && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center text-white">
+                          <svg className="w-12 h-12 mx-auto mb-2 opacity-50 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          </svg>
+                          <p className="text-sm">Starting camera...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <canvas ref={canvasRef} className="hidden" />
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      className="flex-1 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      disabled={!isCameraActive}
+                      className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      </svg>
+                      Capture
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Image Preview */}
+              {headerImagePreview && !showCameraView && (
                 <div className="relative">
                   <div className="relative h-40 rounded-lg overflow-hidden">
                     <img
@@ -461,12 +581,15 @@ export default function EditTripDialog({
                     </svg>
                   </button>
                 </div>
-              ) : (
+              )}
+
+              {/* Image Source Options */}
+              {!headerImagePreview && !showCameraView && (
                 <div className="flex flex-col gap-3">
-                  {/* Take Photo button */}
+                  {/* Take Photo button - opens live camera */}
                   <button
                     type="button"
-                    onClick={() => cameraInputRef.current?.click()}
+                    onClick={startCamera}
                     className="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -474,6 +597,18 @@ export default function EditTripDialog({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     Take Photo
+                  </button>
+
+                  {/* Choose from Photo Library button */}
+                  <button
+                    type="button"
+                    onClick={() => photoLibraryInputRef.current?.click()}
+                    className="w-full px-4 py-3 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200 font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Choose from Library
                   </button>
 
                   {/* Divider */}
@@ -488,12 +623,12 @@ export default function EditTripDialog({
                     </div>
                   </div>
 
-                  {/* Upload Image button */}
+                  {/* Upload File button - opens file browser */}
                   <label className="w-full px-4 py-3 rounded-lg border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    Upload Image
+                    Upload File
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -505,12 +640,11 @@ export default function EditTripDialog({
                 </div>
               )}
 
-              {/* Hidden camera input for mobile */}
+              {/* Hidden photo library input - uses accept="image/*" to show photo picker on iOS */}
               <input
-                ref={cameraInputRef}
+                ref={photoLibraryInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handleImageChange}
                 className="hidden"
               />
