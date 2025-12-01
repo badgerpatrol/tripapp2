@@ -669,7 +669,7 @@ export default function EditTripDialog({
                     Enable Sign-up Mode
                   </label>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                    Creates a shared viewer account that others can use to view this trip without individual invitations.
+                    Publish a page for the trip where people can sign up.
                   </p>
                 </div>
               </div>
