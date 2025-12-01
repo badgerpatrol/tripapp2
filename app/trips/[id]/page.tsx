@@ -1333,12 +1333,15 @@ export default function TripDetailPage() {
   const getFilteredParticipants = () => {
     if (!trip?.participants) return [];
 
+    // Always exclude viewer accounts (used for sign-up mode access)
+    const nonViewerParticipants = trip.participants.filter((p) => p.role !== "VIEWER");
+
     // Filter by selected RSVP status
     if (memberRsvpFilter !== "all") {
-      return trip.participants.filter((p) => p.rsvpStatus === memberRsvpFilter);
+      return nonViewerParticipants.filter((p) => p.rsvpStatus === memberRsvpFilter);
     }
 
-    return trip.participants;
+    return nonViewerParticipants;
   };
 
   // Check if current user can finalize (close/reopen) a specific spend
