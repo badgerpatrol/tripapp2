@@ -72,7 +72,33 @@ export async function POST(
 
     const trimmedName = displayName.trim();
 
-    // 3. Generate email for the new user
+    // 3. Check if a participant with this name already exists on the trip (case-insensitive)
+    const existingParticipant = await prisma.tripMember.findFirst({
+      where: {
+        tripId,
+        deletedAt: null,
+        user: {
+          displayName: {
+            equals: trimmedName,
+            mode: "insensitive",
+          },
+        },
+      },
+      include: {
+        user: {
+          select: { displayName: true },
+        },
+      },
+    });
+
+    if (existingParticipant) {
+      return NextResponse.json(
+        { error: `The name "${trimmedName}" is already taken on this trip. Please choose a different name.` },
+        { status: 400 }
+      );
+    }
+
+    // 4. Generate email for the new user
     // Format: <name>@<tripId>.fake
     // Clean the name: lowercase, replace spaces with dots, remove special chars
     const cleanName = trimmedName
@@ -83,7 +109,7 @@ export async function POST(
     const shortTripId = tripId.slice(0, 8);
     const email = `${cleanName}@${shortTripId}.fake`;
 
-    // 4. Check if user with this email already exists
+    // 5. Check if user with this email already exists
     let firebaseUser;
     let isNewFirebaseUser = true;
 
@@ -109,7 +135,7 @@ export async function POST(
       }
     }
 
-    // 5. Create or update user in database
+    // 6. Create or update user in database
     const dbUser = await prisma.user.upsert({
       where: { id: firebaseUser.uid },
       create: {
@@ -126,7 +152,7 @@ export async function POST(
       },
     });
 
-    // 6. Add user as trip member if not already
+    // 7. Add user as trip member if not already
     const existingMembership = await prisma.tripMember.findUnique({
       where: {
         tripId_userId: {
@@ -157,7 +183,7 @@ export async function POST(
       });
     }
 
-    // 7. Log the event
+    // 8. Log the event
     await logEvent("User", dbUser.id, EventType.USER_CREATED, dbUser.id, {
       tripId,
       method: "trip-join-new",

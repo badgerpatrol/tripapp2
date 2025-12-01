@@ -111,6 +111,17 @@ export function JoinTripDialog({
       return;
     }
 
+    // Check if name already exists among trip participants (case-insensitive)
+    const trimmedName = newName.trim().toLowerCase();
+    const existingParticipant = participants.find(
+      (p) => p.user.displayName?.toLowerCase() === trimmedName
+    );
+
+    if (existingParticipant) {
+      setError(`The name "${newName.trim()}" is already taken on this trip. Please choose a different name.`);
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -349,10 +360,10 @@ export function JoinTripDialog({
               </div>
               <div>
                 <p className="font-medium text-green-900 dark:text-green-100">
-                  Account created for {newName}
+                  Added {newName}
                 </p>
                 <p className="text-sm text-green-700 dark:text-green-300">
-                  Now enter the trip password to log in
+                  Please re-enter the trip password to log in
                 </p>
               </div>
             </div>
