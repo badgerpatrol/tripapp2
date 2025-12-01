@@ -1861,11 +1861,14 @@ export default function TripDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {trip.participants.length === 0
-                      ? "no-one"
-                      : trip.participants.length === 1
-                      ? "1 person"
-                      : `${trip.participants.length} people`}
+                    {(() => {
+                      const nonViewerCount = trip.participants.filter(p => p.role !== "VIEWER").length;
+                      return nonViewerCount === 0
+                        ? "no-one"
+                        : nonViewerCount === 1
+                        ? "1 person"
+                        : `${nonViewerCount} people`;
+                    })()}
                   </p>
                 </div>
               </div>
