@@ -76,16 +76,19 @@ export default function AssignSpendDialog({
 
   // Get filtered participants based on RSVP status
   const getFilteredParticipants = () => {
+    // Always exclude viewer accounts (used for sign-up mode access)
+    const nonViewerParticipants = participants.filter((p) => (p as any).role !== "VIEWER");
+
     // Filter by selected RSVP status
     if (memberRsvpFilter !== "all") {
-      return participants.filter((p) => {
+      return nonViewerParticipants.filter((p) => {
         // Check if participant has rsvpStatus property (from the trip's participants array)
         const participant = p as any;
         return participant.rsvpStatus === memberRsvpFilter;
       });
     }
 
-    return participants;
+    return nonViewerParticipants;
   };
 
   const handleToggleUser = (userId: string) => {

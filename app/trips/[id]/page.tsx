@@ -1333,12 +1333,15 @@ export default function TripDetailPage() {
   const getFilteredParticipants = () => {
     if (!trip?.participants) return [];
 
+    // Always exclude viewer accounts (used for sign-up mode access)
+    const nonViewerParticipants = trip.participants.filter((p) => p.role !== "VIEWER");
+
     // Filter by selected RSVP status
     if (memberRsvpFilter !== "all") {
-      return trip.participants.filter((p) => p.rsvpStatus === memberRsvpFilter);
+      return nonViewerParticipants.filter((p) => p.rsvpStatus === memberRsvpFilter);
     }
 
-    return trip.participants;
+    return nonViewerParticipants;
   };
 
   // Check if current user can finalize (close/reopen) a specific spend
@@ -1776,11 +1779,14 @@ export default function TripDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {trip.participants.length === 0
-                      ? "no-one"
-                      : trip.participants.length === 1
-                      ? "1 person"
-                      : `${trip.participants.length} people`}
+                    {(() => {
+                      const nonViewerCount = trip.participants.filter(p => p.role !== "VIEWER").length;
+                      return nonViewerCount === 0
+                        ? "no-one"
+                        : nonViewerCount === 1
+                        ? "1 person"
+                        : `${nonViewerCount} people`;
+                    })()}
                   </p>
                 </div>
               </div>
