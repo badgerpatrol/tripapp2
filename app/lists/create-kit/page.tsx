@@ -499,29 +499,31 @@ function CreateKitListPageContent() {
                         />
                       </div>
 
-                      {/* Checkboxes */}
-                      <div className="flex gap-4 text-sm">
-                        <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={item.perPerson}
-                            onChange={(e) => updateItem(item.id, "perPerson", e.target.checked)}
-                            className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
-                            disabled={loading}
-                          />
-                          Per person
-                        </label>
-                        <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={item.required}
-                            onChange={(e) => updateItem(item.id, "required", e.target.checked)}
-                            className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
-                            disabled={loading}
-                          />
-                          Required
-                        </label>
-                      </div>
+                      {/* Checkboxes - hide for inventory lists */}
+                      {!inventory && (
+                        <div className="flex gap-4 text-sm">
+                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.perPerson}
+                              onChange={(e) => updateItem(item.id, "perPerson", e.target.checked)}
+                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                              disabled={loading}
+                            />
+                            Per person
+                          </label>
+                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.required}
+                              onChange={(e) => updateItem(item.id, "required", e.target.checked)}
+                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                              disabled={loading}
+                            />
+                            Required
+                          </label>
+                        </div>
+                      )}
 
                       {/* Inventory-specific fields - only show when inventory mode is enabled */}
                       {inventory && (
