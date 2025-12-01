@@ -212,7 +212,7 @@ function ListsPageContent() {
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
-            My Checklists ({myTemplates.length})
+            My Checklists ({filteredMyTemplates.length})
           </button>
           <button
             onClick={() => setActiveTab("public-gallery")}

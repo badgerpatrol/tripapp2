@@ -250,11 +250,13 @@ function ViewListPageContent() {
                   <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(template.type)}`}>
                     {template.type}
                   </span>
-                  {template.visibility === "PUBLIC" && (
-                    <span className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
-                      <span>🌐</span> Public
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
+                    {template.visibility === "PUBLIC" ? (
+                      <><span>🌐</span> Public</>
+                    ) : (
+                      <><span>🔒</span> Private</>
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
