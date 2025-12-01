@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase/client';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
+import { useTripPasswordStore } from '@/lib/stores/tripPasswordStore';
 
 interface TripParticipant {
   id: string;
@@ -59,12 +60,58 @@ export function JoinTripDialog({
   const [loading, setLoading] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
 
+  // Get stored trip password (from when user first logged into trip as viewer)
+  const storedPassword = useTripPasswordStore.getState().getTripPassword(tripId);
+
   // Filter to show only users created through the trip join flow (with .fake emails)
   // but exclude the viewer account (tripplanner.local emails)
   // These are the accounts that can be logged into with the trip password
   const joinableParticipants = participants.filter(
-    (p) => p.user.email.endsWith('.fake') && !p.user.email.endsWith('@tripplanner.local')
+    (p) => !p.user.email.endsWith('@tripplanner.local')
   );
+
+  // Auto-login using stored password for .fake accounts
+  const attemptAutoLogin = async (email: string) => {
+    if (!storedPassword || !email.endsWith('.fake')) {
+      // No stored password or not a .fake account - show manual login
+      setPendingEmail(email);
+      setStep('login');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Verify password is still valid
+      const verifyResponse = await fetch(`/api/trips/${tripId}/verify-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: storedPassword }),
+      });
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyResponse.ok || !verifyData.valid) {
+        // Password no longer valid - fall back to manual entry
+        setPendingEmail(email);
+        setStep('login');
+        return;
+      }
+
+      // Sign in with Firebase
+      await signInWithEmailAndPassword(auth, email, storedPassword);
+      handleClose();
+    } catch (err) {
+      // On any error, fall back to manual password entry
+      setPendingEmail(email);
+      setStep('login');
+      if ((err as AuthError).code) {
+        setError(getAuthErrorMessage(err as AuthError));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleReset = () => {
     setStep('select');
@@ -83,13 +130,13 @@ export function JoinTripDialog({
 
   const handleSelectExisting = (userId: string) => {
     setSelectedUserId(userId);
-    setStep('login');
     setError('');
 
     // Find the user's email
     const participant = joinableParticipants.find(p => p.user.id === userId);
     if (participant) {
-      setPendingEmail(participant.user.email);
+      // Try auto-login with stored password for .fake accounts
+      attemptAutoLogin(participant.user.email);
     }
   };
 
@@ -143,12 +190,12 @@ export function JoinTripDialog({
         throw new Error(data.error || 'Failed to create account');
       }
 
-      // Set the email for login and move to login step
-      setPendingEmail(data.email);
-      setStep('login');
+      // Try auto-login with stored password for the new .fake account
+      // Note: setLoading(false) will be called in attemptAutoLogin's finally block
+      await attemptAutoLogin(data.email);
+      return; // Don't call setLoading(false) again
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account');
-    } finally {
       setLoading(false);
     }
   };
