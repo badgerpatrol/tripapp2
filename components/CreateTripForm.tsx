@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { CreateTripSchema, type CreateTripInput } from "@/types/schemas";
@@ -39,6 +39,13 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   const [signUpMode, setSignUpMode] = useState(false);
   const [signUpPassword, setSignUpPassword] = useState("");
 
+  // Header image state
+  const [headerImageData, setHeaderImageData] = useState<string | null>(null);
+  const [headerImagePreview, setHeaderImagePreview] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const photoLibraryInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Template selection state
   const [templates, setTemplates] = useState<ListTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -72,6 +79,45 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
     }
   }, [startDate, endDate]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image must be less than 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setHeaderImageData(base64);
+      setHeaderImagePreview(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setHeaderImageData(null);
+    setHeaderImagePreview(null);
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
+    }
+    if (photoLibraryInputRef.current) {
+      photoLibraryInputRef.current.value = "";
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -92,6 +138,7 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
         endDate: endDate ? new Date(endDate) : undefined,
         signUpMode,
         signUpPassword: signUpMode && signUpPassword.trim() ? signUpPassword.trim() : undefined,
+        headerImageData: headerImageData || undefined,
       };
 
       // Validate with Zod
@@ -339,6 +386,111 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
           placeholder="Add any details about your trip..."
         />
       </Field>
+
+      {/* Header Image */}
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Header Image
+        </label>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Add a cover image that will appear at the top of your trip page
+        </p>
+
+        {headerImagePreview ? (
+          <div className="relative">
+            <div className="relative h-40 rounded-lg overflow-hidden">
+              <img
+                src={headerImagePreview}
+                alt="Header preview"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+            </div>
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors"
+              title="Remove image"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {/* Take Photo button - opens device camera */}
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Take Photo
+            </button>
+
+            {/* Choose from Library button - opens photo library on iOS */}
+            <button
+              type="button"
+              onClick={() => photoLibraryInputRef.current?.click()}
+              className="w-full px-4 py-3 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200 font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Choose from Library
+            </button>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-300 dark:border-zinc-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400">
+                  or
+                </span>
+              </div>
+            </div>
+
+            {/* Upload File button - opens file browser */}
+            <label className="w-full px-4 py-3 rounded-lg border-2 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium hover:border-blue-500 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center justify-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload File
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+        )}
+
+        {/* Hidden camera input - uses capture attribute for direct camera access */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleImageChange}
+          className="hidden"
+        />
+        {/* Hidden photo library input - no capture attribute allows photo library selection on iOS */}
+        <input
+          ref={photoLibraryInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="hidden"
+        />
+      </div>
 
       {/* Sign-up Mode */}
       <div className="space-y-3">

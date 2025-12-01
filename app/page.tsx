@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useAdminMode } from "@/lib/admin/AdminModeContext";
 import LoginForm from "@/components/LoginForm";
@@ -35,7 +35,35 @@ interface Trip {
   }>;
 }
 
+// Component that handles the returnTo redirect - needs to be in Suspense
+function ReturnToHandler() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
+  const returnTo = searchParams.get("returnTo");
+
+  useEffect(() => {
+    if (!authLoading && user && returnTo) {
+      // Validate returnTo is a relative path (security)
+      if (returnTo.startsWith("/")) {
+        router.push(returnTo);
+      }
+    }
+  }, [user, authLoading, returnTo, router]);
+
+  return null;
+}
+
 export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <ReturnToHandler />
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const router = useRouter();
   const { user, userProfile, loading: authLoading } = useAuth();
   const { isAdminMode } = useAdminMode();

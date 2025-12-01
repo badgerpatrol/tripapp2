@@ -293,6 +293,7 @@ model Trip {
   signUpMode   Boolean     @default(false) // When true, creates a viewer user for sign-up access
   signUpViewerUserId String? // The viewer user created for sign-up mode
   signUpPassword String?    // Password for the sign-up viewer account
+  headerImageData String?   @db.Text // Base64 encoded header/theme image
   createdById  String
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt

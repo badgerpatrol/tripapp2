@@ -3,8 +3,12 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 import { SpendStatus } from "@/lib/generated/prisma";
-import LoginForm from "@/components/LoginForm";
+import { useTripPasswordStore } from "@/lib/stores/tripPasswordStore";
+import TripPasswordLogin from "@/components/TripPasswordLogin";
+import { JoinTripDialog } from "@/components/JoinTripDialog";
 import EditTripDialog from "../../trips/[id]/EditTripDialog";
 import InviteUsersDialog from "../../trips/[id]/InviteUsersDialog";
 import AddSpendDialog from "../../trips/[id]/AddSpendDialog";
@@ -37,6 +41,7 @@ interface TripDetail {
   status: string;
   spendStatus: SpendStatus;
   rsvpStatus: string;
+  headerImageData?: string | null;
   createdAt: string;
   organizer: {
     id: string;
@@ -115,6 +120,7 @@ export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user, userProfile, loading: authLoading } = useAuth();
+  const { clearTripPassword } = useTripPasswordStore();
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +167,16 @@ export default function TripDetailPage() {
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
   const [listsCount, setListsCount] = useState<number | null>(null);
+
+  // Public trip info (fetched before login for display)
+  const [publicTripInfo, setPublicTripInfo] = useState<{
+    tripName: string;
+    signUpEnabled: boolean;
+    participants: Array<{ id: string; user: { id: string; email: string; displayName: string | null } }>;
+  } | null>(null);
+
+  // Join trip dialog state (for participating in the trip)
+  const [isJoinTripDialogOpen, setIsJoinTripDialogOpen] = useState(false);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -235,6 +251,27 @@ export default function TripDetailPage() {
   };
 
   const tripId = params.id as string;
+
+  // Fetch public trip info (for login screen display)
+  useEffect(() => {
+    const fetchPublicInfo = async () => {
+      try {
+        const response = await fetch(`/api/trips/${tripId}/public`);
+        if (response.ok) {
+          const data = await response.json();
+          setPublicTripInfo({
+            tripName: data.tripName,
+            signUpEnabled: data.signUpEnabled,
+            participants: data.participants || [],
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching public trip info:", err);
+      }
+    };
+
+    fetchPublicInfo();
+  }, [tripId]);
 
   // Set default filter based on trip RSVP status
   useEffect(() => {
@@ -361,8 +398,16 @@ export default function TripDetailPage() {
 
   // Show login form if not authenticated
   if (!user) {
-    const viewerEmail = `trip_${tripId.slice(0, 8)}_viewer@tripplanner.local`;
-    return <LoginForm defaultEmail={viewerEmail} />;
+    return (
+      <TripPasswordLogin
+        tripId={tripId}
+        tripName={publicTripInfo?.tripName}
+        onFullAccountLogin={() => {
+          // Redirect to main login with return URL
+          router.push(`/?returnTo=/t/${tripId}`);
+        }}
+      />
+    );
   }
 
   // Show error state
@@ -1344,6 +1389,17 @@ export default function TripDetailPage() {
   const isOwner = trip?.userRole === "OWNER";
   const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
 
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      clearTripPassword();
+      await signOut(auth);
+      // Page will re-render to show login form
+    } catch (err) {
+      console.error("Error signing out:", err);
+    }
+  };
+
   // Get filtered participants based on RSVP status (excludes VIEWER role members)
   const getFilteredParticipants = () => {
     if (!trip?.participants) return [];
@@ -1666,87 +1722,187 @@ export default function TripDetailPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {/* User bar */}
+      <div className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 px-4 py-2">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="font-medium text-zinc-900 dark:text-zinc-100">{userProfile?.displayName || user?.email}</span>
+          </span>
+          <button
+            onClick={handleLogout}
+            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign out
+          </button>
+        </div>
+      </div>
       <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
         <div className="max-w-6xl mx-auto">
 
         {/* Trip Header */}
-        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-          <div className="flex flex-col gap-4 mb-4">
-            <div className="flex justify-between items-start gap-3">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 break-words">
-                  {trip.name}
-                </h1>
+        <div className="rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 mb-6 overflow-hidden">
+          {/* Header Image Background */}
+          {trip.headerImageData ? (
+            <div className="relative">
+              <div className="h-48 md:h-64 w-full">
+                <img
+                  src={trip.headerImageData}
+                  alt={trip.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
               </div>
-              {isOwner && (
-                <button
-                  onClick={() => setIsEditDialogOpen(true)}
-                  className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2 flex-shrink-0"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              {/* Title overlay on image */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                <div className="flex justify-between items-end gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-3xl font-bold text-white break-words drop-shadow-lg">
+                      {trip.name}
+                    </h1>
+                    <span
+                      className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded-full ${
+                        trip.status === "PLANNING"
+                          ? "bg-blue-500/80 text-white"
+                          : trip.status === "ACTIVE"
+                          ? "bg-green-500/80 text-white"
+                          : "bg-zinc-500/80 text-white"
+                      }`}
+                    >
+                      {trip.status}
+                    </span>
+                  </div>
+                  {isOwner && (
+                    <button
+                      onClick={() => setIsEditDialogOpen(true)}
+                      className="tap-target px-4 py-2 rounded-lg bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-medium transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Content section */}
+          <div className="bg-white dark:bg-zinc-800 p-6 md:p-8">
+            {/* Show title here only if no header image */}
+            {!trip.headerImageData && (
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 break-words">
+                      {trip.name}
+                    </h1>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {isOwner && (
+                      <button
+                        onClick={() => setIsEditDialogOpen(true)}
+                        className="tap-target px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span
+                    className={`px-3 py-1 text-sm font-medium rounded-full flex-shrink-0 self-start ${
+                      trip.status === "PLANNING"
+                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                        : trip.status === "ACTIVE"
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                        : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                    }`}
+                  >
+                    {trip.status}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {trip.description && (
+              <p className={`text-zinc-600 dark:text-zinc-400 ${trip.headerImageData ? 'mb-4' : 'mb-4'}`}>{trip.description}</p>
+            )}
+
+            <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
+              Organized by {trip.organizer.displayName}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Edit
-                </button>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <span
-                className={`px-3 py-1 text-sm font-medium rounded-full flex-shrink-0 self-start ${
-                  trip.status === "PLANNING"
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                    : trip.status === "ACTIVE"
-                    ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                    : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                {trip.status}
-              </span>
-              {trip.description && (
-                <p className="text-zinc-600 dark:text-zinc-400">{trip.description}</p>
-              )}
-            </div>
-          </div>
-
-          <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-            Organized by {trip.organizer.displayName}
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
-                </p>
+
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {trip.participants.length === 0
+                      ? "no-one"
+                      : trip.participants.length === 1
+                      ? "1 person"
+                      : `${trip.participants.length} people`}
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {trip.participants.length === 0
-                    ? "no-one"
-                    : trip.participants.length === 1
-                    ? "1 person"
-                    : `${trip.participants.length} people`}
-                </p>
-              </div>
-            </div>
-
-
           </div>
         </div>
-        
+
+        {/* Participate CTA for viewers */}
+        {userProfile?.role === "VIEWER" && publicTripInfo?.signUpEnabled && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-sm border-2 border-green-200 dark:border-green-800 p-6 md:p-8 mb-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+                  Want to take part?
+                </h2>
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  Add your name or sign back in if you've been here before
+                </p>
+              </div>
+              <button
+                onClick={() => setIsJoinTripDialogOpen(true)}
+                className="tap-target px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center gap-2 flex-shrink-0"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Join in
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Lists Section (for accepted members) - hide for non-organizers if no lists */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (listsCount !== null && listsCount > 0)) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
@@ -2272,13 +2428,9 @@ export default function TripDetailPage() {
                                 setSelectedChoiceId(choice.id);
                                 setIsManageChoiceDialogOpen(true);
                               }}
-                              className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0 self-start"
-                              title="Manage choice"
+                              className="tap-target px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-300 font-medium transition-colors text-xs sm:text-sm whitespace-nowrap flex-shrink-0 self-start"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
+                              Edit
                             </button>
                           )}
                         </div>
@@ -3179,6 +3331,24 @@ export default function TripDetailPage() {
         selectedListId={selectedListId || undefined}
         currentMembers={trip?.participants || []}
       />
+
+      {/* Join Trip Dialog (for viewers to participate) */}
+      {publicTripInfo?.signUpEnabled && (
+        <JoinTripDialog
+          isOpen={isJoinTripDialogOpen}
+          onClose={() => setIsJoinTripDialogOpen(false)}
+          tripId={tripId}
+          tripName={trip?.name || publicTripInfo?.tripName || "Trip"}
+          participants={publicTripInfo?.participants?.map(p => ({
+            ...p,
+            role: "MEMBER",
+          })) || []}
+          onLoginRequired={(email) => {
+            // This callback is not used with the current flow
+            console.log("Login required for:", email);
+          }}
+        />
+      )}
     </div>
   );
 }
