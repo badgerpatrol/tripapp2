@@ -1017,6 +1017,85 @@ export type AdminUserDetailResponse = z.infer<typeof AdminUserDetailResponseSche
 export type SearchUsersQuery = z.infer<typeof SearchUsersQuerySchema>;
 
 // ============================================================================
+// Transport / Lift-share Schemas
+// ============================================================================
+
+export const CreateTransportOfferSchema = z.object({
+  fromLocation: z.string().min(1, "From location is required").max(200, "From location is too long"),
+  toLocation: z.string().min(1, "To location is required").max(200, "To location is too long"),
+  departureTime: z.coerce.date().optional(),
+  maxPeople: z.number().int().positive().optional(),
+  maxGearDescription: z.string().max(500, "Gear description is too long").optional(),
+  notes: z.string().max(2000, "Notes are too long").optional(),
+});
+
+export const UpdateTransportOfferSchema = z.object({
+  fromLocation: z.string().min(1, "From location is required").max(200, "From location is too long").optional(),
+  toLocation: z.string().min(1, "To location is required").max(200, "To location is too long").optional(),
+  departureTime: z.coerce.date().optional().nullable(),
+  maxPeople: z.number().int().positive().optional().nullable(),
+  maxGearDescription: z.string().max(500, "Gear description is too long").optional().nullable(),
+  notes: z.string().max(2000, "Notes are too long").optional().nullable(),
+});
+
+export const CreateTransportRequirementSchema = z.object({
+  fromLocation: z.string().min(1, "From location is required").max(200, "From location is too long"),
+  toLocation: z.string().min(1, "To location is required").max(200, "To location is too long"),
+  earliestTime: z.coerce.date().optional(),
+  latestTime: z.coerce.date().optional(),
+  peopleCount: z.number().int().positive().default(1),
+  gearDescription: z.string().max(500, "Gear description is too long").optional(),
+  notes: z.string().max(2000, "Notes are too long").optional(),
+});
+
+export const UpdateTransportRequirementSchema = z.object({
+  fromLocation: z.string().min(1, "From location is required").max(200, "From location is too long").optional(),
+  toLocation: z.string().min(1, "To location is required").max(200, "To location is too long").optional(),
+  earliestTime: z.coerce.date().optional().nullable(),
+  latestTime: z.coerce.date().optional().nullable(),
+  peopleCount: z.number().int().positive().optional(),
+  gearDescription: z.string().max(500, "Gear description is too long").optional().nullable(),
+  notes: z.string().max(2000, "Notes are too long").optional().nullable(),
+});
+
+export const TransportOfferResponseSchema = z.object({
+  id: z.string(),
+  tripId: z.string(),
+  fromLocation: z.string(),
+  toLocation: z.string(),
+  departureTime: z.coerce.date().nullable(),
+  maxPeople: z.number().nullable(),
+  maxGearDescription: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  createdBy: UserSummarySchema,
+});
+
+export const TransportRequirementResponseSchema = z.object({
+  id: z.string(),
+  tripId: z.string(),
+  fromLocation: z.string(),
+  toLocation: z.string(),
+  earliestTime: z.coerce.date().nullable(),
+  latestTime: z.coerce.date().nullable(),
+  peopleCount: z.number(),
+  gearDescription: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  createdBy: UserSummarySchema,
+});
+
+// Type exports for transport
+export type CreateTransportOfferInput = z.infer<typeof CreateTransportOfferSchema>;
+export type UpdateTransportOfferInput = z.infer<typeof UpdateTransportOfferSchema>;
+export type CreateTransportRequirementInput = z.infer<typeof CreateTransportRequirementSchema>;
+export type UpdateTransportRequirementInput = z.infer<typeof UpdateTransportRequirementSchema>;
+export type TransportOfferResponse = z.infer<typeof TransportOfferResponseSchema>;
+export type TransportRequirementResponse = z.infer<typeof TransportRequirementResponseSchema>;
+
+// ============================================================================
 // Guards and Utility Functions
 // ============================================================================
 

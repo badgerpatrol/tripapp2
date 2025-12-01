@@ -26,6 +26,7 @@ import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
 import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
+import TransportSection from "./TransportSection";
 
 interface TripDetail {
   id: string;
@@ -189,6 +190,7 @@ export default function TripDetailPage() {
     members: boolean;
     timeline: boolean;
     lists: boolean;
+    transport: boolean;
   }>({
     rsvp: false,
     balance: false,
@@ -198,6 +200,7 @@ export default function TripDetailPage() {
     members: false,
     timeline: false,
     lists: false,
+    transport: false,
   });
 
   // Filters collapse state
@@ -223,6 +226,7 @@ export default function TripDetailPage() {
       members: false,
       timeline: false,
       lists: false,
+      transport: false,
     });
   };
 
@@ -236,6 +240,7 @@ export default function TripDetailPage() {
       members: true,
       timeline: true,
       lists: true,
+      transport: true,
     });
   };
 
@@ -2358,6 +2363,17 @@ export default function TripDetailPage() {
             )}
           </div>
         )}
+
+        {/* Transport / Lift Share Section (hidden for non-admins while in development) */}
+        {trip.userRsvpStatus === "ACCEPTED" && trip.userRole === "ADMIN" && (
+          <TransportSection
+            tripId={tripId}
+            collapsed={collapsedSections.transport}
+            onToggle={() => toggleSection('transport')}
+            isViewer={isViewer}
+          />
+        )}
+
         {/* Balance Summary (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined || trip.totalUnassigned !== undefined) && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">

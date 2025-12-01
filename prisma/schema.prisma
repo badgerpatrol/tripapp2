@@ -256,6 +256,9 @@ model User {
   groupMemberships   GroupMember[]
   listTemplatesCreated ListTemplate[]
 
+  transportOffersCreated       TransportOffer[]       @relation("TransportOfferCreator")
+  transportRequirementsCreated TransportRequirement[] @relation("TransportRequirementCreator")
+
   @@index([email])
   @@map("users")
 }
@@ -312,6 +315,8 @@ model Trip {
   notifications Notification[]
   featureFlags FeatureFlag[]
   choices      Choice[]
+  transportOffers       TransportOffer[]
+  transportRequirements TransportRequirement[]
 
   @@index([createdById])
   @@index([status])
@@ -1037,4 +1042,56 @@ model TagLink {
   @@index([tagId])
   @@index([entityType, entityId])
   @@map("tag_links")
+}
+
+// ============================================================================
+// TRANSPORT / LIFT-SHARE
+// ============================================================================
+
+model TransportOffer {
+  id                  String    @id @default(uuid())
+  tripId              String
+  createdById         String
+  fromLocation        String
+  toLocation          String
+  departureTime       DateTime?
+  maxPeople           Int?
+  maxGearDescription  String?   // e.g. "several pairs of skis"
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relationships
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User @relation("TransportOfferCreator", fields: [createdById], references: [id])
+
+  @@index([tripId])
+  @@index([createdById])
+  @@index([departureTime])
+  @@map("transport_offers")
+}
+
+model TransportRequirement {
+  id               String    @id @default(uuid())
+  tripId           String
+  createdById      String
+  fromLocation     String
+  toLocation       String
+  earliestTime     DateTime?
+  latestTime       DateTime?
+  peopleCount      Int       @default(1)
+  gearDescription  String?   // e.g. "1 pair of skis"
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relationships
+  trip      Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdBy User @relation("TransportRequirementCreator", fields: [createdById], references: [id])
+
+  @@index([tripId])
+  @@index([createdById])
+  @@index([earliestTime])
+  @@index([latestTime])
+  @@map("transport_requirements")
 }
