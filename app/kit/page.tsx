@@ -325,6 +325,14 @@ function KitPageContent() {
                 ? "No public kit templates found. Try adjusting your search."
                 : "No inventory lists yet. Create your first inventory list!"}
             </p>
+            {activeTab === "my-templates" && (
+              <Button
+                onClick={() => window.location.href = "/lists/create-kit?inventory=false"}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                🎒 New Kit List
+              </Button>
+            )}
             {activeTab === "inventory" && (
               <Button
                 onClick={() => window.location.href = "/lists/create-kit?inventory=true"}
