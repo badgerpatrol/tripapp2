@@ -472,7 +472,7 @@ export async function updateTrip(
       },
     });
 
-    // Add the viewer as a trip member if not already a member
+    // Add the viewer as a trip member or restore if soft-deleted
     const existingMembership = await prisma.tripMember.findUnique({
       where: {
         tripId_userId: {
@@ -483,10 +483,26 @@ export async function updateTrip(
     });
 
     if (!existingMembership) {
+      // Create new membership
       await prisma.tripMember.create({
         data: {
           tripId,
           userId: viewerUserId,
+          role: TripMemberRole.VIEWER,
+          rsvpStatus: "ACCEPTED",
+        },
+      });
+    } else if (existingMembership.deletedAt !== null) {
+      // Restore soft-deleted membership
+      await prisma.tripMember.update({
+        where: {
+          tripId_userId: {
+            tripId,
+            userId: viewerUserId,
+          },
+        },
+        data: {
+          deletedAt: null,
           role: TripMemberRole.VIEWER,
           rsvpStatus: "ACCEPTED",
         },
