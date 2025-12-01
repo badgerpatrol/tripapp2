@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Visibility } from "@/lib/generated/prisma";
 import KitPhotoScanSheet, { KitItemToAdd } from "@/components/lists/KitPhotoScanSheet";
+import AddFromInventorySheet from "@/components/lists/AddFromInventorySheet";
 
 interface KitItem {
   id?: string;
@@ -77,6 +78,7 @@ function EditKitListPageContent() {
   const [inventory, setInventory] = useState(false);
   const [items, setItems] = useState<KitItem[]>([]);
   const [isPhotoScanOpen, setIsPhotoScanOpen] = useState(false);
+  const [isInventorySheetOpen, setIsInventorySheetOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !templateId) return;
@@ -457,7 +459,7 @@ function EditKitListPageContent() {
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
                 Items ({items.filter((i) => i.label.trim()).length})
               </h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   onClick={() => setIsPhotoScanOpen(true)}
@@ -469,6 +471,19 @@ function EditKitListPageContent() {
                   </svg>
                   Scan From Photo
                 </Button>
+                {!inventory && (
+                  <Button
+                    type="button"
+                    onClick={() => setIsInventorySheetOpen(true)}
+                    className="text-sm px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+                    disabled={saving}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    From Inventory
+                  </Button>
+                )}
                 <Button
                   type="button"
                   onClick={addItem}
@@ -741,6 +756,13 @@ function EditKitListPageContent() {
           listId={templateId}
           isOpen={isPhotoScanOpen}
           onClose={() => setIsPhotoScanOpen(false)}
+          onItemsSelected={handlePhotoScanComplete}
+        />
+
+        {/* Add From Inventory Dialog */}
+        <AddFromInventorySheet
+          isOpen={isInventorySheetOpen}
+          onClose={() => setIsInventorySheetOpen(false)}
           onItemsSelected={handlePhotoScanComplete}
         />
       </div>
