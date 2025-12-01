@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import CreateTransportOfferDialog from "./CreateTransportOfferDialog";
 import CreateTransportRequirementDialog from "./CreateTransportRequirementDialog";
+import EditTransportOfferDialog from "./EditTransportOfferDialog";
+import EditTransportRequirementDialog from "./EditTransportRequirementDialog";
 
 interface TransportOffer {
   id: string;
@@ -42,6 +44,8 @@ interface TransportRequirement {
 
 interface TransportSectionProps {
   tripId: string;
+  tripStartDate: string;
+  tripEndDate: string;
   collapsed: boolean;
   onToggle: () => void;
   isViewer?: boolean;
@@ -49,6 +53,8 @@ interface TransportSectionProps {
 
 export default function TransportSection({
   tripId,
+  tripStartDate,
+  tripEndDate,
   collapsed,
   onToggle,
   isViewer = false,
@@ -62,6 +68,8 @@ export default function TransportSection({
   const [isRequirementDialogOpen, setIsRequirementDialogOpen] = useState(false);
   const [deletingOfferId, setDeletingOfferId] = useState<string | null>(null);
   const [deletingRequirementId, setDeletingRequirementId] = useState<string | null>(null);
+  const [editingOffer, setEditingOffer] = useState<TransportOffer | null>(null);
+  const [editingRequirement, setEditingRequirement] = useState<TransportRequirement | null>(null);
 
   const fetchTransport = useCallback(async () => {
     if (!user) return;
@@ -96,6 +104,7 @@ export default function TransportSection({
 
   const handleDeleteOffer = async (offerId: string) => {
     if (!user) return;
+    if (!confirm("Are you sure you want to delete this lift offer?")) return;
     setDeletingOfferId(offerId);
 
     try {
@@ -123,6 +132,7 @@ export default function TransportSection({
 
   const handleDeleteRequirement = async (requirementId: string) => {
     if (!user) return;
+    if (!confirm("Are you sure you want to delete this lift request?")) return;
     setDeletingRequirementId(requirementId);
 
     try {
@@ -272,16 +282,27 @@ export default function TransportSection({
                             </p>
                           </div>
                           {user?.uid === offer.createdBy.id && !isViewer && (
-                            <button
-                              onClick={() => handleDeleteOffer(offer.id)}
-                              disabled={deletingOfferId === offer.id}
-                              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded transition-colors disabled:opacity-50"
-                              title="Delete offer"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => setEditingOffer(offer)}
+                                className="text-zinc-600 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 p-1 rounded transition-colors"
+                                title="Edit offer"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteOffer(offer.id)}
+                                disabled={deletingOfferId === offer.id}
+                                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded transition-colors disabled:opacity-50"
+                                title="Delete offer"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
                           )}
                         </div>
                         <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
@@ -337,16 +358,27 @@ export default function TransportSection({
                             </p>
                           </div>
                           {user?.uid === req.createdBy.id && !isViewer && (
-                            <button
-                              onClick={() => handleDeleteRequirement(req.id)}
-                              disabled={deletingRequirementId === req.id}
-                              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded transition-colors disabled:opacity-50"
-                              title="Delete request"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => setEditingRequirement(req)}
+                                className="text-zinc-600 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 p-1 rounded transition-colors"
+                                title="Edit request"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRequirement(req.id)}
+                                disabled={deletingRequirementId === req.id}
+                                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded transition-colors disabled:opacity-50"
+                                title="Delete request"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
                           )}
                         </div>
                         <div className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
@@ -383,14 +415,35 @@ export default function TransportSection({
         isOpen={isOfferDialogOpen}
         onClose={() => setIsOfferDialogOpen(false)}
         tripId={tripId}
+        tripStartDate={tripStartDate}
         onSuccess={fetchTransport}
       />
       <CreateTransportRequirementDialog
         isOpen={isRequirementDialogOpen}
         onClose={() => setIsRequirementDialogOpen(false)}
         tripId={tripId}
+        tripStartDate={tripStartDate}
+        tripEndDate={tripEndDate}
         onSuccess={fetchTransport}
       />
+      {editingOffer && (
+        <EditTransportOfferDialog
+          isOpen={true}
+          onClose={() => setEditingOffer(null)}
+          tripId={tripId}
+          offer={editingOffer}
+          onSuccess={fetchTransport}
+        />
+      )}
+      {editingRequirement && (
+        <EditTransportRequirementDialog
+          isOpen={true}
+          onClose={() => setEditingRequirement(null)}
+          tripId={tripId}
+          requirement={editingRequirement}
+          onSuccess={fetchTransport}
+        />
+      )}
     </div>
   );
 }

@@ -1,47 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 
-interface CreateTransportRequirementDialogProps {
+interface TransportOffer {
+  id: string;
+  fromLocation: string;
+  toLocation: string;
+  departureTime: string | null;
+  maxPeople: number | null;
+  maxGearDescription: string | null;
+  notes: string | null;
+}
+
+interface EditTransportOfferDialogProps {
   isOpen: boolean;
   onClose: () => void;
   tripId: string;
-  tripStartDate: string;
-  tripEndDate: string;
+  offer: TransportOffer;
   onSuccess: () => void;
 }
 
 // Helper to format date for datetime-local input (YYYY-MM-DDTHH:MM)
-function formatDateTimeLocal(dateString: string, time: string): string {
+function formatDateTimeLocal(dateString: string | null): string {
+  if (!dateString) return "";
   const date = new Date(dateString);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}T${time}`;
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-export default function CreateTransportRequirementDialog({
+export default function EditTransportOfferDialog({
   isOpen,
   onClose,
   tripId,
-  tripStartDate,
-  tripEndDate,
+  offer,
   onSuccess,
-}: CreateTransportRequirementDialogProps) {
+}: EditTransportOfferDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    fromLocation: "",
-    toLocation: "",
-    earliestTime: formatDateTimeLocal(tripStartDate, "00:00"),
-    latestTime: formatDateTimeLocal(tripEndDate, "23:59"),
-    peopleCount: "1",
-    gearDescription: "",
-    notes: "",
+    fromLocation: offer.fromLocation,
+    toLocation: offer.toLocation,
+    departureTime: formatDateTimeLocal(offer.departureTime),
+    maxPeople: offer.maxPeople?.toString() || "",
+    maxGearDescription: offer.maxGearDescription || "",
+    notes: offer.notes || "",
   });
+
+  // Update form when offer changes
+  useEffect(() => {
+    setFormData({
+      fromLocation: offer.fromLocation,
+      toLocation: offer.toLocation,
+      departureTime: formatDateTimeLocal(offer.departureTime),
+      maxPeople: offer.maxPeople?.toString() || "",
+      maxGearDescription: offer.maxGearDescription || "",
+      notes: offer.notes || "",
+    });
+  }, [offer]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,24 +78,31 @@ export default function CreateTransportRequirementDialog({
       const requestBody: any = {
         fromLocation: formData.fromLocation,
         toLocation: formData.toLocation,
-        peopleCount: parseInt(formData.peopleCount, 10) || 1,
       };
 
-      if (formData.earliestTime) {
-        requestBody.earliestTime = new Date(formData.earliestTime).toISOString();
+      if (formData.departureTime) {
+        requestBody.departureTime = new Date(formData.departureTime).toISOString();
+      } else {
+        requestBody.departureTime = null;
       }
-      if (formData.latestTime) {
-        requestBody.latestTime = new Date(formData.latestTime).toISOString();
+      if (formData.maxPeople) {
+        requestBody.maxPeople = parseInt(formData.maxPeople, 10);
+      } else {
+        requestBody.maxPeople = null;
       }
-      if (formData.gearDescription) {
-        requestBody.gearDescription = formData.gearDescription;
+      if (formData.maxGearDescription) {
+        requestBody.maxGearDescription = formData.maxGearDescription;
+      } else {
+        requestBody.maxGearDescription = null;
       }
       if (formData.notes) {
         requestBody.notes = formData.notes;
+      } else {
+        requestBody.notes = null;
       }
 
-      const response = await fetch(`/api/trips/${tripId}/transport/requirements`, {
-        method: "POST",
+      const response = await fetch(`/api/trips/${tripId}/transport/offers/${offer.id}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
@@ -83,24 +112,13 @@ export default function CreateTransportRequirementDialog({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to create transport requirement");
+        throw new Error(data.error || "Failed to update transport offer");
       }
-
-      // Reset form
-      setFormData({
-        fromLocation: "",
-        toLocation: "",
-        earliestTime: formatDateTimeLocal(tripStartDate, "00:00"),
-        latestTime: formatDateTimeLocal(tripEndDate, "23:59"),
-        peopleCount: "1",
-        gearDescription: "",
-        notes: "",
-      });
 
       onClose();
       onSuccess();
     } catch (err: any) {
-      console.error("Error creating transport requirement:", err);
+      console.error("Error updating transport offer:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -115,7 +133,7 @@ export default function CreateTransportRequirementDialog({
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              I Need a Lift
+              Edit Lift Offer
             </h2>
             <button
               onClick={onClose}
@@ -144,7 +162,7 @@ export default function CreateTransportRequirementDialog({
                 value={formData.fromLocation}
                 onChange={(e) => setFormData({ ...formData, fromLocation: e.target.value })}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., Manchester, UK"
+                placeholder="e.g., London, UK"
               />
             </div>
 
@@ -162,55 +180,42 @@ export default function CreateTransportRequirementDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Earliest Time
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.earliestTime}
-                  onChange={(e) => setFormData({ ...formData, earliestTime: e.target.value })}
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Latest Time
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.latestTime}
-                  onChange={(e) => setFormData({ ...formData, latestTime: e.target.value })}
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Number of People
+                Departure Time
               </label>
               <input
-                type="number"
-                min="1"
-                value={formData.peopleCount}
-                onChange={(e) => setFormData({ ...formData, peopleCount: e.target.value })}
+                type="datetime-local"
+                value={formData.departureTime}
+                onChange={(e) => setFormData({ ...formData, departureTime: e.target.value })}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="1"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Gear to Transport
+                Max People (approx.)
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.maxPeople}
+                onChange={(e) => setFormData({ ...formData, maxPeople: e.target.value })}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., 3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Gear Capacity
               </label>
               <input
                 type="text"
-                value={formData.gearDescription}
-                onChange={(e) => setFormData({ ...formData, gearDescription: e.target.value })}
+                value={formData.maxGearDescription}
+                onChange={(e) => setFormData({ ...formData, maxGearDescription: e.target.value })}
                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., 1 pair of skis, 1 large suitcase"
+                placeholder="e.g., Several pairs of skis, large luggage"
               />
             </div>
 
@@ -238,9 +243,9 @@ export default function CreateTransportRequirementDialog({
               <button
                 type="submit"
                 disabled={loading || !formData.fromLocation || !formData.toLocation}
-                className="flex-1 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
               >
-                {loading ? "Creating..." : "Request Lift"}
+                {loading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>

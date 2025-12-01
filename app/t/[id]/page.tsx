@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
-import { SpendStatus } from "@/lib/generated/prisma";
+import { SpendStatus, UserRole } from "@/lib/generated/prisma";
 import { useTripPasswordStore } from "@/lib/stores/tripPasswordStore";
 import TripPasswordLogin from "@/components/TripPasswordLogin";
 import { JoinTripDialog } from "@/components/JoinTripDialog";
@@ -1387,7 +1387,8 @@ export default function TripDetailPage() {
   };
 
   const isOwner = trip?.userRole === "OWNER";
-  const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
+  const isGlobalAdmin = userProfile?.role === UserRole.ADMIN || userProfile?.role === UserRole.SUPERADMIN;
+  const canInvite = isOwner || isGlobalAdmin;
 
   // Logout handler
   const handleLogout = async () => {
