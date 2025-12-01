@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useAdminMode } from "@/lib/admin/AdminModeContext";
@@ -35,20 +35,13 @@ interface Trip {
   }>;
 }
 
-export default function Home() {
+// Component that handles the returnTo redirect - needs to be in Suspense
+function ReturnToHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, userProfile, loading: authLoading } = useAuth();
-  const { isAdminMode } = useAdminMode();
-  const canCreateTrip = userProfile && userProfile.role !== UserRole.VIEWER;
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Handle redirect after login (returnTo parameter)
+  const { user, loading: authLoading } = useAuth();
   const returnTo = searchParams.get("returnTo");
 
-  // Redirect to returnTo URL after login
   useEffect(() => {
     if (!authLoading && user && returnTo) {
       // Validate returnTo is a relative path (security)
@@ -57,6 +50,27 @@ export default function Home() {
       }
     }
   }, [user, authLoading, returnTo, router]);
+
+  return null;
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <ReturnToHandler />
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
+  const router = useRouter();
+  const { user, userProfile, loading: authLoading } = useAuth();
+  const { isAdminMode } = useAdminMode();
+  const canCreateTrip = userProfile && userProfile.role !== UserRole.VIEWER;
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTrips = async () => {
