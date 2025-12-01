@@ -412,21 +412,23 @@ function EditKitListPageContent() {
                 />
               </div>
 
-              <div>
-                <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={visibility === "PUBLIC"}
-                    onChange={(e) => setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")}
-                    className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
-                    disabled={saving}
-                  />
-                  <span className="font-medium">Public</span>
-                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                    (Make this list visible to others)
-                  </span>
-                </label>
-              </div>
+              {!inventory && (
+                <div>
+                  <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={visibility === "PUBLIC"}
+                      onChange={(e) => setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")}
+                      className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                      disabled={saving}
+                    />
+                    <span className="font-medium">Public</span>
+                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                      (Make this list visible to others)
+                    </span>
+                  </label>
+                </div>
+              )}
             </div>
           </div>
 
