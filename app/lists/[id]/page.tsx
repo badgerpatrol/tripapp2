@@ -36,7 +36,10 @@ interface ListTemplate {
     cost: number | null;
     url: string | null;
     orderIndex: number;
+    perPerson: boolean;
+    required: boolean;
   }>;
+  inventory?: boolean;
 }
 
 function ViewListPageContent() {
@@ -368,13 +371,31 @@ function ViewListPageContent() {
                         {index + 1}
                       </span>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-zinc-900 dark:text-white font-medium">
                             {item.label}
                           </p>
                           <span className="text-sm text-zinc-500 dark:text-zinc-400">
                             × {item.quantity}
                           </span>
+                          {!template.inventory && (
+                            <span className={`px-1.5 py-0.5 text-xs rounded ${
+                              item.perPerson
+                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                            }`}>
+                              {item.perPerson ? "per person" : "shared"}
+                            </span>
+                          )}
+                          {!template.inventory && (
+                            <span className={`px-1.5 py-0.5 text-xs rounded ${
+                              item.required
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                                : "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400"
+                            }`}>
+                              {item.required ? "mandatory" : "optional"}
+                            </span>
+                          )}
                         </div>
                         {item.notes && (
                           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
