@@ -153,6 +153,72 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const handleToggleItem = async (listType: ListType, itemId: string, currentState: boolean) => {
     if (!user) return;
 
+    const newState = !currentState;
+
+    // Create the new tick object for optimistic update
+    const newTickObj: ItemTick = {
+      id: `temp-${Date.now()}`,
+      userId: user.uid,
+      isShared: false, // Will be set correctly below based on item
+      createdAt: new Date().toISOString(),
+      user: {
+        id: user.uid,
+        displayName: user.displayName || user.email || "You",
+        photoURL: user.photoURL || null,
+      },
+    };
+
+    // Optimistically update the UI immediately - only update the specific item
+    setLists(prevLists => prevLists.map(list => {
+      if (list.type === "TODO" && listType === "TODO" && list.todoItems) {
+        const itemExists = list.todoItems.some(item => item.id === itemId);
+        if (!itemExists) return list;
+
+        return {
+          ...list,
+          todoItems: list.todoItems.map(item => {
+            if (item.id === itemId) {
+              const tickWithShared = { ...newTickObj, isShared: !item.perPerson };
+              const newTicks = newState
+                ? [...(item.ticks || []), tickWithShared]
+                : (item.ticks || []).filter(t => t.userId !== user.uid);
+              return {
+                ...item,
+                ticks: newTicks,
+                isDone: newTicks.length > 0,
+                doneBy: newTicks.length > 0 ? newTicks[0].userId : null,
+              };
+            }
+            return item;
+          }),
+        };
+      } else if (list.type === "KIT" && listType === "KIT" && list.kitItems) {
+        const itemExists = list.kitItems.some(item => item.id === itemId);
+        if (!itemExists) return list;
+
+        return {
+          ...list,
+          kitItems: list.kitItems.map(item => {
+            if (item.id === itemId) {
+              const tickWithShared = { ...newTickObj, isShared: !item.perPerson };
+              const newTicks = newState
+                ? [...(item.ticks || []), tickWithShared]
+                : (item.ticks || []).filter(t => t.userId !== user.uid);
+              return {
+                ...item,
+                ticks: newTicks,
+                isPacked: newTicks.length > 0,
+                packedBy: newTicks.length > 0 ? newTicks[0].userId : null,
+              };
+            }
+            return item;
+          }),
+        };
+      }
+      return list;
+    }));
+
+    // Send API request in background - don't await or refetch on success
     try {
       const token = await user.getIdToken();
       const response = await fetch(`/api/lists/items/${listType}/${itemId}/toggle`, {
@@ -162,20 +228,54 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          state: !currentState,
+          state: newState,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to toggle item");
-      }
-
-      // Refresh lists locally
-      await fetchLists();
-
-      // Notify parent component to refresh if callback exists
-      if (onRefreshLists) {
-        onRefreshLists();
+        // Revert on error by toggling back
+        console.error("Failed to toggle item, reverting...");
+        setLists(prevLists => prevLists.map(list => {
+          if (list.type === "TODO" && listType === "TODO" && list.todoItems) {
+            return {
+              ...list,
+              todoItems: list.todoItems.map(item => {
+                if (item.id === itemId) {
+                  // Revert: if we tried to tick, remove the tick; if we tried to untick, add it back
+                  const revertedTicks = newState
+                    ? (item.ticks || []).filter(t => t.userId !== user.uid)
+                    : [...(item.ticks || []), newTickObj];
+                  return {
+                    ...item,
+                    ticks: revertedTicks,
+                    isDone: revertedTicks.length > 0,
+                    doneBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
+                  };
+                }
+                return item;
+              }),
+            };
+          } else if (list.type === "KIT" && listType === "KIT" && list.kitItems) {
+            return {
+              ...list,
+              kitItems: list.kitItems.map(item => {
+                if (item.id === itemId) {
+                  const revertedTicks = newState
+                    ? (item.ticks || []).filter(t => t.userId !== user.uid)
+                    : [...(item.ticks || []), newTickObj];
+                  return {
+                    ...item,
+                    ticks: revertedTicks,
+                    isPacked: revertedTicks.length > 0,
+                    packedBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
+                  };
+                }
+                return item;
+              }),
+            };
+          }
+          return list;
+        }));
       }
     } catch (err) {
       console.error("Error toggling item:", err);
