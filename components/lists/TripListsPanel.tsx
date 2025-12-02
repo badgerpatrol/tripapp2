@@ -6,6 +6,18 @@ import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
 
+interface ItemTick {
+  id: string;
+  userId: string;
+  isShared: boolean;
+  createdAt: string;
+  user: {
+    id: string;
+    displayName: string;
+    photoURL: string | null;
+  };
+}
+
 interface TodoItem {
   id: string;
   label: string;
@@ -17,6 +29,8 @@ interface TodoItem {
   actionData: any | null;
   parameters: Record<string, any> | null;
   orderIndex: number;
+  perPerson: boolean;
+  ticks?: ItemTick[];
 }
 
 interface KitItem {
@@ -34,6 +48,7 @@ interface KitItem {
   packedBy: string | null;
   packedAt: string | null;
   orderIndex: number;
+  ticks?: ItemTick[];
 }
 
 interface ListInstance {
@@ -424,10 +439,30 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           {displayedLists.map((list) => {
             const isExpanded = expandedListId === list.id;
             const items = list.type === "TODO" ? list.todoItems || [] : list.kitItems || [];
-            const completedCount =
-              list.type === "TODO"
-                ? list.todoItems?.filter((i) => i.isDone).length || 0
-                : list.kitItems?.filter((i) => i.isPacked).length || 0;
+
+            // Calculate completed count based on ticks
+            // For shared items: count as complete if any tick exists
+            // For per-person items: count as complete if current user has ticked
+            const completedCount = list.type === "TODO"
+              ? list.todoItems?.filter((item) => {
+                  if (item.perPerson) {
+                    // Per-person: check if current user has ticked
+                    return item.ticks?.some(t => t.userId === user?.uid);
+                  } else {
+                    // Shared: check if any tick exists
+                    return item.ticks && item.ticks.length > 0;
+                  }
+                }).length || 0
+              : list.kitItems?.filter((item) => {
+                  if (item.perPerson) {
+                    // Per-person: check if current user has ticked
+                    return item.ticks?.some(t => t.userId === user?.uid);
+                  } else {
+                    // Shared: check if any tick exists
+                    return item.ticks && item.ticks.length > 0;
+                  }
+                }).length || 0;
+
             const totalCount = items.length;
             const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
@@ -507,113 +542,158 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50">
                     {list.type === "TODO" ? (
                       <div className="space-y-2">
-                        {(list.todoItems || []).map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800"
-                          >
-                            <label className="flex items-start gap-3 flex-1 cursor-pointer">
+                        {(list.todoItems || []).map((item) => {
+                          // Check if current user has ticked this item
+                          const userTick = item.ticks?.find(t => t.userId === user?.uid);
+                          const isTickedByUser = !!userTick;
+                          const isSharedItem = !item.perPerson;
+                          // For shared items, check if someone else has ticked it
+                          const otherUserTick = isSharedItem ? item.ticks?.find(t => t.userId !== user?.uid) : null;
+                          const isTickedByOther = !!otherUserTick;
+                          // Determine if checkbox should be disabled (shared item ticked by someone else)
+                          const isDisabled = isSharedItem && isTickedByOther && !isTickedByUser;
+
+                          return (
+                            <div
+                              key={item.id}
+                              className={`flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800 ${isDisabled ? "opacity-60" : ""}`}
+                            >
+                              <label className="flex items-start gap-3 flex-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isTickedByUser}
+                                  onChange={() => handleToggleItem("TODO", item.id, isTickedByUser)}
+                                  disabled={isDisabled}
+                                  className={`mt-1 w-4 h-4 rounded focus:ring-blue-500 ${isDisabled ? "text-zinc-400 cursor-not-allowed" : "text-blue-600"}`}
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p
+                                      className={`text-sm ${
+                                        isTickedByUser || isTickedByOther
+                                          ? "line-through text-zinc-400 dark:text-zinc-600"
+                                          : "text-zinc-900 dark:text-white"
+                                      }`}
+                                    >
+                                      {item.label}
+                                    </p>
+                                    {item.perPerson && (
+                                      <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                                        per person
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.notes && (
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                      {item.notes}
+                                    </p>
+                                  )}
+                                  {/* Show who ticked shared items */}
+                                  {isSharedItem && item.ticks && item.ticks.length > 0 && (
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                      Done by: {item.ticks.map(t => t.user.displayName).join(", ")}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                              {item.actionType && !isTickedByUser && !isDisabled && (
+                                <Button
+                                  onClick={() => handleLaunchAction(item)}
+                                  className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                                >
+                                  {getActionButtonText(item.actionType)}
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {(list.kitItems || []).map((item) => {
+                          // Check if current user has ticked this item
+                          const userTick = item.ticks?.find(t => t.userId === user?.uid);
+                          const isTickedByUser = !!userTick;
+                          const isSharedItem = !item.perPerson;
+                          // For shared items, check if someone else has ticked it
+                          const otherUserTick = isSharedItem ? item.ticks?.find(t => t.userId !== user?.uid) : null;
+                          const isTickedByOther = !!otherUserTick;
+                          // Determine if checkbox should be disabled (shared item ticked by someone else)
+                          const isDisabled = isSharedItem && isTickedByOther && !isTickedByUser;
+
+                          return (
+                            <label
+                              key={item.id}
+                              className={`flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800 cursor-pointer ${isDisabled ? "opacity-60" : ""}`}
+                            >
                               <input
                                 type="checkbox"
-                                checked={item.isDone}
-                                onChange={() => handleToggleItem("TODO", item.id, item.isDone)}
-                                className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                checked={isTickedByUser}
+                                onChange={() => handleToggleItem("KIT", item.id, isTickedByUser)}
+                                disabled={isDisabled}
+                                className={`mt-1 w-4 h-4 rounded focus:ring-green-500 ${isDisabled ? "text-zinc-400 cursor-not-allowed" : "text-green-600"}`}
                               />
                               <div className="flex-1">
-                                <p
-                                  className={`text-sm ${
-                                    item.isDone
-                                      ? "line-through text-zinc-400 dark:text-zinc-600"
-                                      : "text-zinc-900 dark:text-white"
-                                  }`}
-                                >
-                                  {item.label}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p
+                                    className={`text-sm ${
+                                      isTickedByUser || isTickedByOther
+                                        ? "line-through text-zinc-400 dark:text-zinc-600"
+                                        : "text-zinc-900 dark:text-white"
+                                    }`}
+                                  >
+                                    {item.label}
+                                  </p>
+                                  {item.quantity !== 1 && (
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                      ×{item.quantity}
+                                    </span>
+                                  )}
+                                  {item.perPerson && (
+                                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                                      per person
+                                    </span>
+                                  )}
+                                  {item.category && (
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                      {item.category}
+                                    </span>
+                                  )}
+                                </div>
                                 {item.notes && (
                                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                     {item.notes}
                                   </p>
                                 )}
+                                {/* Show who packed shared items */}
+                                {isSharedItem && item.ticks && item.ticks.length > 0 && (
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                    Packed by: {item.ticks.map(t => t.user.displayName).join(", ")}
+                                  </p>
+                                )}
+                                <div className="flex flex-wrap gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                  {item.weightGrams && (
+                                    <span>{item.weightGrams}g</span>
+                                  )}
+                                  {item.cost && (
+                                    <span>${Number(item.cost).toFixed(2)}</span>
+                                  )}
+                                  {item.url && (
+                                    <a
+                                      href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      link
+                                    </a>
+                                  )}
+                                </div>
                               </div>
                             </label>
-                            {item.actionType && !item.isDone && (
-                              <Button
-                                onClick={() => handleLaunchAction(item)}
-                                className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-                              >
-                                {getActionButtonText(item.actionType)}
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {(list.kitItems || []).map((item) => (
-                          <label
-                            key={item.id}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={item.isPacked}
-                              onChange={() => handleToggleItem("KIT", item.id, item.isPacked)}
-                              className="mt-1 w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p
-                                  className={`text-sm ${
-                                    item.isPacked
-                                      ? "line-through text-zinc-400 dark:text-zinc-600"
-                                      : "text-zinc-900 dark:text-white"
-                                  }`}
-                                >
-                                  {item.label}
-                                </p>
-                                {item.quantity !== 1 && (
-                                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                    ×{item.quantity}
-                                  </span>
-                                )}
-                                {item.perPerson && (
-                                  <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
-                                    per person
-                                  </span>
-                                )}
-                                {item.category && (
-                                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                    {item.category}
-                                  </span>
-                                )}
-                              </div>
-                              {item.notes && (
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                  {item.notes}
-                                </p>
-                              )}
-                              <div className="flex flex-wrap gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                {item.weightGrams && (
-                                  <span>{item.weightGrams}g</span>
-                                )}
-                                {item.cost && (
-                                  <span>${Number(item.cost).toFixed(2)}</span>
-                                )}
-                                {item.url && (
-                                  <a
-                                    href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    link
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          </label>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

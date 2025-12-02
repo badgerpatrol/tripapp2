@@ -715,9 +715,35 @@ export async function listTripInstances(
     include: {
       todoItems: {
         orderBy: { orderIndex: "asc" },
+        include: {
+          ticks: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  displayName: true,
+                  photoURL: true,
+                },
+              },
+            },
+          },
+        },
       },
       kitItems: {
         orderBy: { orderIndex: "asc" },
+        include: {
+          ticks: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  displayName: true,
+                  photoURL: true,
+                },
+              },
+            },
+          },
+        },
       },
     },
     orderBy: { createdAt: "desc" },

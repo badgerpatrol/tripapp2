@@ -258,6 +258,7 @@ model User {
 
   transportOffersCreated       TransportOffer[]       @relation("TransportOfferCreator")
   transportRequirementsCreated TransportRequirement[] @relation("TransportRequirementCreator")
+  itemTicks                    ItemTick[]
 
   @@index([email])
   @@map("users")
@@ -869,6 +870,7 @@ model TodoItemTemplate {
   actionData Json?
   parameters Json?
   orderIndex Int             @default(0)
+  perPerson  Boolean         @default(false) // Whether this is a per-person item
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
@@ -888,8 +890,10 @@ model TodoItemInstance {
   actionData Json?
   parameters Json?
   orderIndex Int             @default(0)
+  perPerson  Boolean         @default(false) // Whether this is a per-person item
 
-  list ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
+  list  ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
+  ticks ItemTick[]   @relation("TodoItemTicks")
 
   @@index([listId])
   @@map("todo_item_instances")
@@ -947,10 +951,40 @@ model KitItemInstance {
   lastSeenText     String?
   lastSeenDate     DateTime?
 
-  list ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
+  list  ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
+  ticks ItemTick[]   @relation("KitItemTicks")
 
   @@index([listId])
   @@map("kit_item_instances")
+}
+
+// ============================================================================
+// ITEM TICKS - Per-user tick tracking for list items
+// ============================================================================
+
+model ItemTick {
+  id        String   @id @default(cuid())
+  itemType  ListType // TODO or KIT
+  userId    String
+  isShared  Boolean  @default(false) // True if the item was shared (not per-person)
+  createdAt DateTime @default(now())
+
+  // Polymorphic relation - only one will be set based on itemType
+  todoItemId String?
+  kitItemId  String?
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todoItem TodoItemInstance? @relation("TodoItemTicks", fields: [todoItemId], references: [id], onDelete: Cascade)
+  kitItem  KitItemInstance?  @relation("KitItemTicks", fields: [kitItemId], references: [id], onDelete: Cascade)
+
+  // Ensure a user can only tick an item once
+  @@unique([todoItemId, userId])
+  @@unique([kitItemId, userId])
+  @@index([userId])
+  @@index([todoItemId])
+  @@index([kitItemId])
+  @@index([itemType])
+  @@map("item_ticks")
 }
 
 // ============================================================================

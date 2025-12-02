@@ -26,6 +26,7 @@ import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
 import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
+import ListTicksReportDialog from "./ListTicksReportDialog";
 import TransportSection from "./TransportSection";
 
 interface TripDetail {
@@ -156,6 +157,7 @@ export default function TripDetailPage() {
   const [isChoiceDetailDialogOpen, setIsChoiceDetailDialogOpen] = useState(false);
   const [isManageChoiceDialogOpen, setIsManageChoiceDialogOpen] = useState(false);
   const [isChoiceReportsDialogOpen, setIsChoiceReportsDialogOpen] = useState(false);
+  const [isListTicksReportDialogOpen, setIsListTicksReportDialogOpen] = useState(false);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [manageChoiceInitialTab, setManageChoiceInitialTab] = useState<"details" | "items">("details");
   const [createChoiceInitialName, setCreateChoiceInitialName] = useState("");
@@ -1802,6 +1804,16 @@ export default function TripDetailPage() {
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 flex-wrap flex-1">
                 <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Lists</h2>
+                {/* Report Button */}
+                <button
+                  onClick={() => setIsListTicksReportDialogOpen(true)}
+                  className="tap-target p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 transition-colors"
+                  title="View completion report"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </button>
               </div>
               <button
                 onClick={() => toggleSection('lists')}
@@ -3236,6 +3248,13 @@ export default function TripDetailPage() {
           }}
         />
       )}
+
+      {/* List Ticks Report Dialog */}
+      <ListTicksReportDialog
+        tripId={trip?.id || ""}
+        isOpen={isListTicksReportDialogOpen}
+        onClose={() => setIsListTicksReportDialogOpen(false)}
+      />
 
       {/* List Workflow Modal */}
       <ListWorkflowModal
