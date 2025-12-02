@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
+import { ListReportDialog } from "./ListReportDialog";
 
 interface ItemTick {
   id: string;
@@ -92,6 +93,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [deleteConfirmation, setDeleteConfirmation] = useState<{listId: string; listTitle: string} | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+  const [reportListId, setReportListId] = useState<string | null>(null);
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -610,6 +612,30 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   </div>
                 </button>
 
+                {/* Report Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReportListId(list.id);
+                  }}
+                  className="p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                  title="View report"
+                >
+                  <svg
+                    className="w-5 h-5 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                </button>
+
                 {/* Delete Button */}
                 {!inWorkflowMode && isOrganizer && (
                   <button
@@ -864,6 +890,23 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           fetchLists(); // Refresh the lists after adding
         }}
       />
+
+      {/* List Report Dialog */}
+      {reportListId && (() => {
+        const reportList = lists.find(l => l.id === reportListId);
+        if (!reportList) return null;
+        return (
+          <ListReportDialog
+            isOpen={true}
+            onClose={() => setReportListId(null)}
+            listTitle={reportList.title}
+            listType={reportList.type}
+            todoItems={reportList.type === "TODO" ? reportList.todoItems : undefined}
+            kitItems={reportList.type === "KIT" ? reportList.kitItems : undefined}
+            currentUserId={user?.uid}
+          />
+        );
+      })()}
     </>
   );
 
