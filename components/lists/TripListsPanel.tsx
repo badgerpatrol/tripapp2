@@ -542,31 +542,24 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
             const isExpanded = expandedListId === list.id;
             const items = list.type === "TODO" ? list.todoItems || [] : list.kitItems || [];
 
-            // Calculate completed count based on ticks
-            // For shared items: count as complete if any tick exists
-            // For per-person items: count as complete if current user has ticked
-            const completedCount = list.type === "TODO"
-              ? list.todoItems?.filter((item) => {
-                  if (item.perPerson) {
-                    // Per-person: check if current user has ticked
-                    return item.ticks?.some(t => t.userId === user?.uid);
-                  } else {
-                    // Shared: check if any tick exists
-                    return item.ticks && item.ticks.length > 0;
-                  }
-                }).length || 0
-              : list.kitItems?.filter((item) => {
-                  if (item.perPerson) {
-                    // Per-person: check if current user has ticked
-                    return item.ticks?.some(t => t.userId === user?.uid);
-                  } else {
-                    // Shared: check if any tick exists
-                    return item.ticks && item.ticks.length > 0;
-                  }
-                }).length || 0;
+            // Calculate separate personal and shared completion stats
+            const allItems = list.type === "TODO" ? list.todoItems || [] : list.kitItems || [];
 
-            const totalCount = items.length;
-            const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+            // Personal items (perPerson = true) - check if current user has ticked
+            const personalItems = allItems.filter(item => item.perPerson);
+            const personalCompleted = personalItems.filter(item =>
+              item.ticks?.some(t => t.userId === user?.uid)
+            ).length;
+            const personalTotal = personalItems.length;
+            const personalPercentage = personalTotal > 0 ? Math.round((personalCompleted / personalTotal) * 100) : 0;
+
+            // Shared items (perPerson = false) - check if anyone has ticked
+            const sharedItems = allItems.filter(item => !item.perPerson);
+            const sharedCompleted = sharedItems.filter(item =>
+              item.ticks && item.ticks.length > 0
+            ).length;
+            const sharedTotal = sharedItems.length;
+            const sharedPercentage = sharedTotal > 0 ? Math.round((sharedCompleted / sharedTotal) * 100) : 0;
 
             return (
               <div
@@ -591,26 +584,38 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         <h3 className="font-medium text-zinc-900 dark:text-white">
                           {list.title}
                         </h3>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                          {completedCount} / {totalCount} {list.type === "TODO" ? "done" : "packed"}
-                        </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                    {/* Progress Bar */}
-                    <div className="w-32 bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          list.type === "TODO" ? "bg-blue-600" : "bg-green-600"
-                        }`}
-                        style={{ width: `${percentage}%` }}
-                      />
+                    <div className="flex flex-col gap-1.5">
+                      {/* Personal Progress Bar */}
+                      {personalTotal > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12 text-right">You</span>
+                          <div className="w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                            <div
+                              className="h-1.5 rounded-full transition-all bg-blue-600"
+                              style={{ width: `${personalPercentage}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-8">{personalCompleted}/{personalTotal}</span>
+                        </div>
+                      )}
+                      {/* Shared Progress Bar */}
+                      {sharedTotal > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12 text-right">Shared</span>
+                          <div className="w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                            <div
+                              className="h-1.5 rounded-full transition-all bg-green-600"
+                              style={{ width: `${sharedPercentage}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-8">{sharedCompleted}/{sharedTotal}</span>
+                        </div>
+                      )}
                     </div>
-
-
-                  </div>
-                </button>
+                  </button>
 
                 {/* Report Button */}
                 <button
