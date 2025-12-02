@@ -7,13 +7,24 @@ interface CreateTransportOfferDialogProps {
   isOpen: boolean;
   onClose: () => void;
   tripId: string;
+  tripStartDate: string;
   onSuccess: () => void;
+}
+
+// Helper to format date for datetime-local input (YYYY-MM-DDTHH:MM)
+function formatDateTimeLocal(dateString: string, time: string): string {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}T${time}`;
 }
 
 export default function CreateTransportOfferDialog({
   isOpen,
   onClose,
   tripId,
+  tripStartDate,
   onSuccess,
 }: CreateTransportOfferDialogProps) {
   const { user } = useAuth();
@@ -23,7 +34,7 @@ export default function CreateTransportOfferDialog({
   const [formData, setFormData] = useState({
     fromLocation: "",
     toLocation: "",
-    departureTime: "",
+    departureTime: formatDateTimeLocal(tripStartDate, "00:00"),
     maxPeople: "",
     maxGearDescription: "",
     notes: "",
@@ -75,7 +86,7 @@ export default function CreateTransportOfferDialog({
       setFormData({
         fromLocation: "",
         toLocation: "",
-        departureTime: "",
+        departureTime: formatDateTimeLocal(tripStartDate, "00:00"),
         maxPeople: "",
         maxGearDescription: "",
         notes: "",

@@ -1,47 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 
-interface CreateTransportRequirementDialogProps {
+interface TransportRequirement {
+  id: string;
+  fromLocation: string;
+  toLocation: string;
+  earliestTime: string | null;
+  latestTime: string | null;
+  peopleCount: number;
+  gearDescription: string | null;
+  notes: string | null;
+}
+
+interface EditTransportRequirementDialogProps {
   isOpen: boolean;
   onClose: () => void;
   tripId: string;
-  tripStartDate: string;
-  tripEndDate: string;
+  requirement: TransportRequirement;
   onSuccess: () => void;
 }
 
 // Helper to format date for datetime-local input (YYYY-MM-DDTHH:MM)
-function formatDateTimeLocal(dateString: string, time: string): string {
+function formatDateTimeLocal(dateString: string | null): string {
+  if (!dateString) return "";
   const date = new Date(dateString);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}T${time}`;
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-export default function CreateTransportRequirementDialog({
+export default function EditTransportRequirementDialog({
   isOpen,
   onClose,
   tripId,
-  tripStartDate,
-  tripEndDate,
+  requirement,
   onSuccess,
-}: CreateTransportRequirementDialogProps) {
+}: EditTransportRequirementDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    fromLocation: "",
-    toLocation: "",
-    earliestTime: formatDateTimeLocal(tripStartDate, "00:00"),
-    latestTime: formatDateTimeLocal(tripEndDate, "23:59"),
-    peopleCount: "1",
-    gearDescription: "",
-    notes: "",
+    fromLocation: requirement.fromLocation,
+    toLocation: requirement.toLocation,
+    earliestTime: formatDateTimeLocal(requirement.earliestTime),
+    latestTime: formatDateTimeLocal(requirement.latestTime),
+    peopleCount: requirement.peopleCount.toString(),
+    gearDescription: requirement.gearDescription || "",
+    notes: requirement.notes || "",
   });
+
+  // Update form when requirement changes
+  useEffect(() => {
+    setFormData({
+      fromLocation: requirement.fromLocation,
+      toLocation: requirement.toLocation,
+      earliestTime: formatDateTimeLocal(requirement.earliestTime),
+      latestTime: formatDateTimeLocal(requirement.latestTime),
+      peopleCount: requirement.peopleCount.toString(),
+      gearDescription: requirement.gearDescription || "",
+      notes: requirement.notes || "",
+    });
+  }, [requirement]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,19 +86,27 @@ export default function CreateTransportRequirementDialog({
 
       if (formData.earliestTime) {
         requestBody.earliestTime = new Date(formData.earliestTime).toISOString();
+      } else {
+        requestBody.earliestTime = null;
       }
       if (formData.latestTime) {
         requestBody.latestTime = new Date(formData.latestTime).toISOString();
+      } else {
+        requestBody.latestTime = null;
       }
       if (formData.gearDescription) {
         requestBody.gearDescription = formData.gearDescription;
+      } else {
+        requestBody.gearDescription = null;
       }
       if (formData.notes) {
         requestBody.notes = formData.notes;
+      } else {
+        requestBody.notes = null;
       }
 
-      const response = await fetch(`/api/trips/${tripId}/transport/requirements`, {
-        method: "POST",
+      const response = await fetch(`/api/trips/${tripId}/transport/requirements/${requirement.id}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
@@ -83,24 +116,13 @@ export default function CreateTransportRequirementDialog({
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to create transport requirement");
+        throw new Error(data.error || "Failed to update transport requirement");
       }
-
-      // Reset form
-      setFormData({
-        fromLocation: "",
-        toLocation: "",
-        earliestTime: formatDateTimeLocal(tripStartDate, "00:00"),
-        latestTime: formatDateTimeLocal(tripEndDate, "23:59"),
-        peopleCount: "1",
-        gearDescription: "",
-        notes: "",
-      });
 
       onClose();
       onSuccess();
     } catch (err: any) {
-      console.error("Error creating transport requirement:", err);
+      console.error("Error updating transport requirement:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -115,7 +137,7 @@ export default function CreateTransportRequirementDialog({
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              I Need a Lift
+              Edit Lift Request
             </h2>
             <button
               onClick={onClose}
@@ -240,7 +262,7 @@ export default function CreateTransportRequirementDialog({
                 disabled={loading || !formData.fromLocation || !formData.toLocation}
                 className="flex-1 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
               >
-                {loading ? "Creating..." : "Request Lift"}
+                {loading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>

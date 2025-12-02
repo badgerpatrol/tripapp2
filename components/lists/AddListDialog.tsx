@@ -244,7 +244,7 @@ export function AddListDialog({
           </Button>
           <Button
             onClick={handleAddList}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
             disabled={loading || !selectedTemplateId}
           >
             {loading ? "Adding..." : "Add List"}
@@ -254,7 +254,7 @@ export function AddListDialog({
     >
       <div className="space-y-4">
         <p className="text-zinc-600 dark:text-zinc-400">
-          Choose a template to add to your trip.
+          Create a copy of a list in your trip. Note: Changes to the original will not change the one in the trip.
         </p>
 
         {/* Tabs */}
@@ -266,7 +266,7 @@ export function AddListDialog({
             }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === "my-templates"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
@@ -286,7 +286,7 @@ export function AddListDialog({
             }}
             className={`px-4 py-2 font-medium border-b-2 transition-colors ${
               activeTab === "public-gallery"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
@@ -310,14 +310,14 @@ export function AddListDialog({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
-              className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+              className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
             />
           )}
 
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-            className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+            className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
           >
             <option value="ALL">All Types</option>
             <option value="TODO">TODO Lists</option>
@@ -327,7 +327,7 @@ export function AddListDialog({
           {activeTab === "public-gallery" && searchQuery && (
             <Button
               onClick={fetchPublicTemplates}
-              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2"
+              className="text-sm bg-zinc-800 hover:bg-zinc-900 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 px-4 py-2"
             >
               Search
             </Button>
@@ -338,7 +338,7 @@ export function AddListDialog({
         <div>
           {loadingTemplates ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-600 dark:border-zinc-400"></div>
             </div>
           ) : templates.length === 0 ? (
             <p className="text-zinc-500 dark:text-zinc-400 text-sm text-center py-8">
@@ -353,7 +353,7 @@ export function AddListDialog({
                   key={template.id}
                   className={`flex items-start p-3 border-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer transition-colors ${
                     selectedTemplateId === template.id
-                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
+                      ? "border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800"
                       : "border-zinc-300 dark:border-zinc-600"
                   }`}
                 >
@@ -425,7 +425,7 @@ export function AddListDialog({
         {/* Merge Mode - only show when template is selected AND there's a conflict */}
         {selectedTemplateId && checkingConflict && (
           <div className="flex items-center justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-zinc-600 dark:border-zinc-400"></div>
             <span className="ml-2 text-sm text-zinc-600 dark:text-zinc-400">
               Checking for conflicts...
             </span>
@@ -435,7 +435,7 @@ export function AddListDialog({
         {selectedTemplateId && !checkingConflict && hasConflict && (
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-              What if a list with the same name exists?
+              There's already a list with this name. How do you want to handle it?
             </label>
             <div className="space-y-2">
               <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">

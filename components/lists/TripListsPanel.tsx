@@ -5,6 +5,19 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
+import { ListReportDialog } from "./ListReportDialog";
+
+interface ItemTick {
+  id: string;
+  userId: string;
+  isShared: boolean;
+  createdAt: string;
+  user: {
+    id: string;
+    displayName: string;
+    photoURL: string | null;
+  };
+}
 
 interface TodoItem {
   id: string;
@@ -17,6 +30,8 @@ interface TodoItem {
   actionData: any | null;
   parameters: Record<string, any> | null;
   orderIndex: number;
+  perPerson: boolean;
+  ticks?: ItemTick[];
 }
 
 interface KitItem {
@@ -34,6 +49,7 @@ interface KitItem {
   packedBy: string | null;
   packedAt: string | null;
   orderIndex: number;
+  ticks?: ItemTick[];
 }
 
 interface ListInstance {
@@ -45,6 +61,8 @@ interface ListInstance {
   description: string | null;
   createdAt: string;
   updatedAt: string;
+  sourceTemplateId: string | null;
+  hasTemplateUpdated?: boolean;
   todoItems?: TodoItem[];
   kitItems?: KitItem[];
 }
@@ -77,6 +95,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [deleteConfirmation, setDeleteConfirmation] = useState<{listId: string; listTitle: string} | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+  const [reportListId, setReportListId] = useState<string | null>(null);
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -138,6 +157,72 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const handleToggleItem = async (listType: ListType, itemId: string, currentState: boolean) => {
     if (!user) return;
 
+    const newState = !currentState;
+
+    // Create the new tick object for optimistic update
+    const newTickObj: ItemTick = {
+      id: `temp-${Date.now()}`,
+      userId: user.uid,
+      isShared: false, // Will be set correctly below based on item
+      createdAt: new Date().toISOString(),
+      user: {
+        id: user.uid,
+        displayName: user.displayName || user.email || "You",
+        photoURL: user.photoURL || null,
+      },
+    };
+
+    // Optimistically update the UI immediately - only update the specific item
+    setLists(prevLists => prevLists.map(list => {
+      if (list.type === "TODO" && listType === "TODO" && list.todoItems) {
+        const itemExists = list.todoItems.some(item => item.id === itemId);
+        if (!itemExists) return list;
+
+        return {
+          ...list,
+          todoItems: list.todoItems.map(item => {
+            if (item.id === itemId) {
+              const tickWithShared = { ...newTickObj, isShared: !item.perPerson };
+              const newTicks = newState
+                ? [...(item.ticks || []), tickWithShared]
+                : (item.ticks || []).filter(t => t.userId !== user.uid);
+              return {
+                ...item,
+                ticks: newTicks,
+                isDone: newTicks.length > 0,
+                doneBy: newTicks.length > 0 ? newTicks[0].userId : null,
+              };
+            }
+            return item;
+          }),
+        };
+      } else if (list.type === "KIT" && listType === "KIT" && list.kitItems) {
+        const itemExists = list.kitItems.some(item => item.id === itemId);
+        if (!itemExists) return list;
+
+        return {
+          ...list,
+          kitItems: list.kitItems.map(item => {
+            if (item.id === itemId) {
+              const tickWithShared = { ...newTickObj, isShared: !item.perPerson };
+              const newTicks = newState
+                ? [...(item.ticks || []), tickWithShared]
+                : (item.ticks || []).filter(t => t.userId !== user.uid);
+              return {
+                ...item,
+                ticks: newTicks,
+                isPacked: newTicks.length > 0,
+                packedBy: newTicks.length > 0 ? newTicks[0].userId : null,
+              };
+            }
+            return item;
+          }),
+        };
+      }
+      return list;
+    }));
+
+    // Send API request in background - don't await or refetch on success
     try {
       const token = await user.getIdToken();
       const response = await fetch(`/api/lists/items/${listType}/${itemId}/toggle`, {
@@ -147,20 +232,54 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          state: !currentState,
+          state: newState,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to toggle item");
-      }
-
-      // Refresh lists locally
-      await fetchLists();
-
-      // Notify parent component to refresh if callback exists
-      if (onRefreshLists) {
-        onRefreshLists();
+        // Revert on error by toggling back
+        console.error("Failed to toggle item, reverting...");
+        setLists(prevLists => prevLists.map(list => {
+          if (list.type === "TODO" && listType === "TODO" && list.todoItems) {
+            return {
+              ...list,
+              todoItems: list.todoItems.map(item => {
+                if (item.id === itemId) {
+                  // Revert: if we tried to tick, remove the tick; if we tried to untick, add it back
+                  const revertedTicks = newState
+                    ? (item.ticks || []).filter(t => t.userId !== user.uid)
+                    : [...(item.ticks || []), newTickObj];
+                  return {
+                    ...item,
+                    ticks: revertedTicks,
+                    isDone: revertedTicks.length > 0,
+                    doneBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
+                  };
+                }
+                return item;
+              }),
+            };
+          } else if (list.type === "KIT" && listType === "KIT" && list.kitItems) {
+            return {
+              ...list,
+              kitItems: list.kitItems.map(item => {
+                if (item.id === itemId) {
+                  const revertedTicks = newState
+                    ? (item.ticks || []).filter(t => t.userId !== user.uid)
+                    : [...(item.ticks || []), newTickObj];
+                  return {
+                    ...item,
+                    ticks: revertedTicks,
+                    isPacked: revertedTicks.length > 0,
+                    packedBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
+                  };
+                }
+                return item;
+              }),
+            };
+          }
+          return list;
+        }));
       }
     } catch (err) {
       console.error("Error toggling item:", err);
@@ -424,12 +543,25 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           {displayedLists.map((list) => {
             const isExpanded = expandedListId === list.id;
             const items = list.type === "TODO" ? list.todoItems || [] : list.kitItems || [];
-            const completedCount =
-              list.type === "TODO"
-                ? list.todoItems?.filter((i) => i.isDone).length || 0
-                : list.kitItems?.filter((i) => i.isPacked).length || 0;
-            const totalCount = items.length;
-            const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+            // Calculate separate personal and shared completion stats
+            const allItems = list.type === "TODO" ? list.todoItems || [] : list.kitItems || [];
+
+            // Personal items (perPerson = true) - check if current user has ticked
+            const personalItems = allItems.filter(item => item.perPerson);
+            const personalCompleted = personalItems.filter(item =>
+              item.ticks?.some(t => t.userId === user?.uid)
+            ).length;
+            const personalTotal = personalItems.length;
+            const personalPercentage = personalTotal > 0 ? Math.round((personalCompleted / personalTotal) * 100) : 0;
+
+            // Shared items (perPerson = false) - check if anyone has ticked
+            const sharedItems = allItems.filter(item => !item.perPerson);
+            const sharedCompleted = sharedItems.filter(item =>
+              item.ticks && item.ticks.length > 0
+            ).length;
+            const sharedTotal = sharedItems.length;
+            const sharedPercentage = sharedTotal > 0 ? Math.round((sharedCompleted / sharedTotal) * 100) : 0;
 
             return (
               <div
@@ -451,28 +583,74 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{getTypeIcon(list.type)}</span>
                       <div className="text-left">
-                        <h3 className="font-medium text-zinc-900 dark:text-white">
-                          {list.title}
-                        </h3>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                          {completedCount} / {totalCount} {list.type === "TODO" ? "done" : "packed"}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-zinc-900 dark:text-white">
+                            {list.title}
+                          </h3>
+                          {list.hasTemplateUpdated && (
+                            <span
+                              className="px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                              title="The original template has been modified since this list was added to the trip"
+                            >
+                              Original list has changed
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                    {/* Progress Bar */}
-                    <div className="w-32 bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          list.type === "TODO" ? "bg-blue-600" : "bg-green-600"
-                        }`}
-                        style={{ width: `${percentage}%` }}
-                      />
+                    <div className="flex flex-col gap-1.5">
+                      {/* Personal Progress Bar */}
+                      {personalTotal > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12 text-right">You</span>
+                          <div className="w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                            <div
+                              className="h-1.5 rounded-full transition-all bg-blue-600"
+                              style={{ width: `${personalPercentage}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-8">{personalCompleted}/{personalTotal}</span>
+                        </div>
+                      )}
+                      {/* Shared Progress Bar */}
+                      {sharedTotal > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12 text-right">Shared</span>
+                          <div className="w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                            <div
+                              className="h-1.5 rounded-full transition-all bg-green-600"
+                              style={{ width: `${sharedPercentage}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 w-8">{sharedCompleted}/{sharedTotal}</span>
+                        </div>
+                      )}
                     </div>
+                  </button>
 
-
-                  </div>
+                {/* Report Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReportListId(list.id);
+                  }}
+                  className="p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                  title="View report"
+                >
+                  <svg
+                    className="w-5 h-5 text-zinc-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
                 </button>
 
                 {/* Delete Button */}
@@ -507,113 +685,150 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50">
                     {list.type === "TODO" ? (
                       <div className="space-y-2">
-                        {(list.todoItems || []).map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800"
-                          >
-                            <label className="flex items-start gap-3 flex-1 cursor-pointer">
+                        {(list.todoItems || []).map((item) => {
+                          // Check if current user has ticked this item
+                          const userTick = item.ticks?.find(t => t.userId === user?.uid);
+                          const isTickedByUser = !!userTick;
+                          const isSharedItem = !item.perPerson;
+                          // For shared items, check if someone else has ticked it
+                          const otherUserTick = isSharedItem ? item.ticks?.find(t => t.userId !== user?.uid) : null;
+                          const isTickedByOther = !!otherUserTick;
+                          // Determine if checkbox should be disabled (shared item ticked by someone else)
+                          const isDisabled = isSharedItem && isTickedByOther && !isTickedByUser;
+
+                          return (
+                            <div
+                              key={item.id}
+                              className={`flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800 ${isDisabled ? "opacity-60" : ""}`}
+                            >
+                              <label className="flex items-start gap-3 flex-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isTickedByUser}
+                                  onChange={() => handleToggleItem("TODO", item.id, isTickedByUser)}
+                                  disabled={isDisabled}
+                                  className={`mt-1 w-4 h-4 rounded focus:ring-blue-500 ${isDisabled ? "text-zinc-400 cursor-not-allowed" : "text-blue-600"}`}
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm text-zinc-900 dark:text-white">
+                                      {item.label}
+                                    </p>
+                                    {item.perPerson && (
+                                      <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                                        per person
+                                      </span>
+                                    )}
+                                  </div>
+                                  {item.notes && (
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                      {item.notes}
+                                    </p>
+                                  )}
+                                  {/* Always show status for shared items */}
+                                  {isSharedItem && (
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                      {item.ticks && item.ticks.length > 0
+                                        ? `Done by: ${item.ticks.map(t => t.user.displayName).join(", ")}`
+                                        : "No one yet"}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                              {item.actionType && !isTickedByUser && !isDisabled && (
+                                <Button
+                                  onClick={() => handleLaunchAction(item)}
+                                  className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
+                                >
+                                  {getActionButtonText(item.actionType)}
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {(list.kitItems || []).map((item) => {
+                          // Check if current user has ticked this item
+                          const userTick = item.ticks?.find(t => t.userId === user?.uid);
+                          const isTickedByUser = !!userTick;
+                          const isSharedItem = !item.perPerson;
+                          // For shared items, check if someone else has ticked it
+                          const otherUserTick = isSharedItem ? item.ticks?.find(t => t.userId !== user?.uid) : null;
+                          const isTickedByOther = !!otherUserTick;
+                          // Determine if checkbox should be disabled (shared item ticked by someone else)
+                          const isDisabled = isSharedItem && isTickedByOther && !isTickedByUser;
+
+                          return (
+                            <label
+                              key={item.id}
+                              className={`flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800 cursor-pointer ${isDisabled ? "opacity-60" : ""}`}
+                            >
                               <input
                                 type="checkbox"
-                                checked={item.isDone}
-                                onChange={() => handleToggleItem("TODO", item.id, item.isDone)}
-                                className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                checked={isTickedByUser}
+                                onChange={() => handleToggleItem("KIT", item.id, isTickedByUser)}
+                                disabled={isDisabled}
+                                className={`mt-1 w-4 h-4 rounded focus:ring-green-500 ${isDisabled ? "text-zinc-400 cursor-not-allowed" : "text-green-600"}`}
                               />
                               <div className="flex-1">
-                                <p
-                                  className={`text-sm ${
-                                    item.isDone
-                                      ? "line-through text-zinc-400 dark:text-zinc-600"
-                                      : "text-zinc-900 dark:text-white"
-                                  }`}
-                                >
-                                  {item.label}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-zinc-900 dark:text-white">
+                                    {item.label}
+                                  </p>
+                                  {item.quantity !== 1 && (
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                      ×{item.quantity}
+                                    </span>
+                                  )}
+                                  {item.perPerson && (
+                                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                                      per person
+                                    </span>
+                                  )}
+                                  {item.category && (
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                      {item.category}
+                                    </span>
+                                  )}
+                                </div>
                                 {item.notes && (
                                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                                     {item.notes}
                                   </p>
                                 )}
+                                {/* Always show status for shared items */}
+                                {isSharedItem && (
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                                    {item.ticks && item.ticks.length > 0
+                                      ? `Packed by: ${item.ticks.map(t => t.user.displayName).join(", ")}`
+                                      : "No one yet"}
+                                  </p>
+                                )}
+                                <div className="flex flex-wrap gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                  {item.weightGrams && (
+                                    <span>{item.weightGrams}g</span>
+                                  )}
+                                  {item.cost && (
+                                    <span>${Number(item.cost).toFixed(2)}</span>
+                                  )}
+                                  {item.url && (
+                                    <a
+                                      href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      link
+                                    </a>
+                                  )}
+                                </div>
                               </div>
                             </label>
-                            {item.actionType && !item.isDone && (
-                              <Button
-                                onClick={() => handleLaunchAction(item)}
-                                className="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-                              >
-                                {getActionButtonText(item.actionType)}
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {(list.kitItems || []).map((item) => (
-                          <label
-                            key={item.id}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-white dark:hover:bg-zinc-800 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={item.isPacked}
-                              onChange={() => handleToggleItem("KIT", item.id, item.isPacked)}
-                              className="mt-1 w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p
-                                  className={`text-sm ${
-                                    item.isPacked
-                                      ? "line-through text-zinc-400 dark:text-zinc-600"
-                                      : "text-zinc-900 dark:text-white"
-                                  }`}
-                                >
-                                  {item.label}
-                                </p>
-                                {item.quantity !== 1 && (
-                                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                    ×{item.quantity}
-                                  </span>
-                                )}
-                                {item.perPerson && (
-                                  <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
-                                    per person
-                                  </span>
-                                )}
-                                {item.category && (
-                                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                    {item.category}
-                                  </span>
-                                )}
-                              </div>
-                              {item.notes && (
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                  {item.notes}
-                                </p>
-                              )}
-                              <div className="flex flex-wrap gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                {item.weightGrams && (
-                                  <span>{item.weightGrams}g</span>
-                                )}
-                                {item.cost && (
-                                  <span>${Number(item.cost).toFixed(2)}</span>
-                                )}
-                                {item.url && (
-                                  <a
-                                    href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    link
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          </label>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -692,6 +907,23 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           fetchLists(); // Refresh the lists after adding
         }}
       />
+
+      {/* List Report Dialog */}
+      {reportListId && (() => {
+        const reportList = lists.find(l => l.id === reportListId);
+        if (!reportList) return null;
+        return (
+          <ListReportDialog
+            isOpen={true}
+            onClose={() => setReportListId(null)}
+            listTitle={reportList.title}
+            listType={reportList.type}
+            todoItems={reportList.type === "TODO" ? reportList.todoItems : undefined}
+            kitItems={reportList.type === "KIT" ? reportList.kitItems : undefined}
+            currentUserId={user?.uid}
+          />
+        );
+      })()}
     </>
   );
 

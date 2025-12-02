@@ -11,6 +11,7 @@ interface TodoItem {
   id: string;
   label: string;
   notes: string;
+  perPerson: boolean;
   actionType: TodoActionType | null;
   actionData: Record<string, any> | null;
   parameters: Record<string, any> | null;
@@ -95,6 +96,7 @@ function EditListPageContent() {
         id: `new-${crypto.randomUUID()}`, // Prefix new items with 'new-'
         label: "",
         notes: "",
+        perPerson: false,
         actionType: null,
         actionData: null,
         parameters: null,
@@ -203,6 +205,7 @@ function EditListPageContent() {
           id: item.id.startsWith('new-') ? undefined : item.id, // Don't send ID for new items
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
+          perPerson: item.perPerson,
           actionType: item.actionType || undefined,
           actionData: item.actionData || undefined,
           parameters: item.parameters || undefined,
@@ -331,36 +334,52 @@ function EditListPageContent() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Visibility
-                  </label>
-                  <select
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value as Visibility)}
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                    disabled={saving}
-                  >
-                    <option value="PRIVATE">Private (only you)</option>
-                    <option value="PUBLIC">Public (share with others)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Tags (comma-separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                    placeholder="e.g., planning, essentials"
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                    disabled={saving}
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="e.g., planning, essentials"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  disabled={saving}
+                />
               </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="visibility-public"
+                  checked={visibility === "PUBLIC"}
+                  onChange={(e) => setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")}
+                  className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-600 rounded focus:ring-blue-500"
+                  disabled={saving}
+                />
+                <label htmlFor="visibility-public" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Public
+                </label>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-4 justify-end pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
+              <Button
+                type="button"
+                onClick={() => router.push(`/lists/${templateId}`)}
+                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
           </div>
 
@@ -434,6 +453,20 @@ function EditListPageContent() {
                         className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                         disabled={saving}
                       />
+
+                      {/* Per Person Toggle */}
+                      <div className="flex gap-4 text-sm">
+                        <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={item.perPerson}
+                            onChange={(e) => updateItem(item.id, "perPerson", e.target.checked)}
+                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                            disabled={saving}
+                          />
+                          Per person
+                        </label>
+                      </div>
 
                       {/* Action Type */}
                       <div>
@@ -527,25 +560,6 @@ function EditListPageContent() {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-4 justify-end">
-            <Button
-              type="button"
-              onClick={() => router.push(`/lists/${templateId}`)}
-              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
           </div>
         </form>
       </div>

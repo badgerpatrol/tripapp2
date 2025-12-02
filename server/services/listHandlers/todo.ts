@@ -26,6 +26,7 @@ export const todoHandler: ListTypeHandler = {
         actionData: item.actionData as any,
         parameters: item.parameters as any,
         orderIndex: item.orderIndex,
+        perPerson: item.perPerson,
         isDone: false,
       })),
     });
@@ -67,6 +68,7 @@ export const todoHandler: ListTypeHandler = {
             actionData: templateItem.actionData as any,
             parameters: templateItem.parameters as any,
             orderIndex: templateItem.orderIndex,
+            perPerson: templateItem.perPerson,
             isDone: false,
           },
         });
@@ -83,6 +85,7 @@ export const todoHandler: ListTypeHandler = {
               actionData: templateItem.actionData as any,
               parameters: templateItem.parameters as any,
               orderIndex: templateItem.orderIndex,
+              perPerson: templateItem.perPerson,
               isDone: false,
             },
           });
@@ -99,14 +102,84 @@ export const todoHandler: ListTypeHandler = {
   async toggleItemState(ctx) {
     const { prisma, itemId, state, actorId } = ctx;
 
-    await prisma.todoItemInstance.update({
+    // Get the item to check if it's perPerson
+    const item = await prisma.todoItemInstance.findUnique({
       where: { id: itemId },
-      data: {
-        isDone: state,
-        doneBy: state ? actorId : null,
-        doneAt: state ? new Date() : null,
-      },
     });
+
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    const isShared = !item.perPerson;
+
+    if (state) {
+      // Ticking the item - create an ItemTick for this user
+      await prisma.itemTick.upsert({
+        where: {
+          todoItemId_userId: {
+            todoItemId: itemId,
+            userId: actorId,
+          },
+        },
+        create: {
+          itemType: "TODO",
+          userId: actorId,
+          todoItemId: itemId,
+          isShared,
+        },
+        update: {
+          // Update timestamp by touching the record
+          createdAt: new Date(),
+        },
+      });
+
+      // Update the legacy isDone field for backward compatibility
+      await prisma.todoItemInstance.update({
+        where: { id: itemId },
+        data: {
+          isDone: true,
+          doneBy: actorId,
+          doneAt: new Date(),
+        },
+      });
+    } else {
+      // Unticking the item - delete the ItemTick for this user
+      await prisma.itemTick.deleteMany({
+        where: {
+          todoItemId: itemId,
+          userId: actorId,
+        },
+      });
+
+      // Check if any other ticks remain
+      const remainingTicks = await prisma.itemTick.findFirst({
+        where: { todoItemId: itemId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (remainingTicks) {
+        // Other ticks remain, update to the most recent ticker
+        await prisma.todoItemInstance.update({
+          where: { id: itemId },
+          data: {
+            isDone: true,
+            doneBy: remainingTicks.userId,
+            doneAt: remainingTicks.createdAt,
+          },
+        });
+      } else {
+        // No ticks remain, mark as not done
+        await prisma.todoItemInstance.update({
+          where: { id: itemId },
+          data: {
+            isDone: false,
+            doneBy: null,
+            doneAt: null,
+          },
+        });
+      }
+    }
   },
 
   async launchItemAction(ctx) {

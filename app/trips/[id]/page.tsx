@@ -1327,7 +1327,8 @@ export default function TripDetailPage() {
   };
 
   const isOwner = trip?.userRole === "OWNER";
-  const canInvite = trip?.userRole === "OWNER" || trip?.userRole === "ADMIN";
+  const isGlobalAdmin = userProfile?.role === UserRole.ADMIN || userProfile?.role === UserRole.SUPERADMIN;
+  const canInvite = isOwner || isGlobalAdmin;
 
   // Get filtered participants based on RSVP status
   const getFilteredParticipants = () => {
@@ -2371,9 +2372,11 @@ export default function TripDetailPage() {
         )}
 
         {/* Transport / Lift Share Section (hidden for non-admins while in development) */}
-        {trip.userRsvpStatus === "ACCEPTED" && trip.userRole === "ADMIN" && (
+        {trip.userRsvpStatus === "ACCEPTED" && isGlobalAdmin && (
           <TransportSection
             tripId={tripId}
+            tripStartDate={trip.startDate || new Date().toISOString()}
+            tripEndDate={trip.endDate || new Date().toISOString()}
             collapsed={collapsedSections.transport}
             onToggle={() => toggleSection('transport')}
             isViewer={isViewer}
