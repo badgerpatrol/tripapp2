@@ -254,7 +254,7 @@ export function AddListDialog({
     >
       <div className="space-y-4">
         <p className="text-zinc-600 dark:text-zinc-400">
-          Choose a template to add to your trip.
+          Create a copy of a list in your trip. Note: Changes to the original will not change the one in the trip. 
         </p>
 
         {/* Tabs */}

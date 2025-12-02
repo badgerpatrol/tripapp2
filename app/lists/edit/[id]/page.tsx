@@ -11,6 +11,7 @@ interface TodoItem {
   id: string;
   label: string;
   notes: string;
+  perPerson: boolean;
   actionType: TodoActionType | null;
   actionData: Record<string, any> | null;
   parameters: Record<string, any> | null;
@@ -95,6 +96,7 @@ function EditListPageContent() {
         id: `new-${crypto.randomUUID()}`, // Prefix new items with 'new-'
         label: "",
         notes: "",
+        perPerson: false,
         actionType: null,
         actionData: null,
         parameters: null,
@@ -203,6 +205,7 @@ function EditListPageContent() {
           id: item.id.startsWith('new-') ? undefined : item.id, // Don't send ID for new items
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
+          perPerson: item.perPerson,
           actionType: item.actionType || undefined,
           actionData: item.actionData || undefined,
           parameters: item.parameters || undefined,
@@ -450,6 +453,20 @@ function EditListPageContent() {
                         className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
                         disabled={saving}
                       />
+
+                      {/* Per Person Toggle */}
+                      <div className="flex gap-4 text-sm">
+                        <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={item.perPerson}
+                            onChange={(e) => updateItem(item.id, "perPerson", e.target.checked)}
+                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                            disabled={saving}
+                          />
+                          Per person
+                        </label>
+                      </div>
 
                       {/* Action Type */}
                       <div>

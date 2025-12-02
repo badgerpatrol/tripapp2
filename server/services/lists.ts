@@ -275,6 +275,7 @@ export async function updateTemplate(
             templateId,
             label: item.label,
             notes: item.notes,
+            perPerson: item.perPerson ?? false,
             actionType: item.actionType,
             actionData: item.actionData as any,
             parameters: item.parameters as any,
@@ -594,6 +595,7 @@ async function createInstanceFromTemplate(
       tripId,
       type: template.type,
       sourceTemplateId: templateId,
+      sourceTemplateUpdatedAt: template.updatedAt, // Track when template was last updated at copy time
       title: title ?? template.title,
       description: template.description,
       createdBy: actorId,
@@ -649,6 +651,7 @@ export async function createInstanceAdHoc(
         listId: instance.id,
         label: item.label,
         notes: item.notes,
+        perPerson: item.perPerson ?? false,
         actionType: item.actionType,
         actionData: item.actionData,
         parameters: item.parameters,
@@ -749,9 +752,41 @@ export async function listTripInstances(
     orderBy: { createdAt: "desc" },
   });
 
+  // Fetch source templates for instances that have one
+  const templateIds = instances
+    .map((i) => i.sourceTemplateId)
+    .filter((id): id is string => id !== null);
+
+  const templates = templateIds.length > 0
+    ? await prisma.listTemplate.findMany({
+        where: { id: { in: templateIds } },
+        select: { id: true, updatedAt: true },
+      })
+    : [];
+
+  const templateMap = new Map(templates.map((t) => [t.id, t]));
+
+  // Add hasTemplateUpdated flag to each instance
+  const instancesWithUpdateFlag = instances.map((instance) => {
+    let hasTemplateUpdated = false;
+
+    if (instance.sourceTemplateId && instance.sourceTemplateUpdatedAt) {
+      const template = templateMap.get(instance.sourceTemplateId);
+      if (template) {
+        // Compare timestamps - template has been updated if its updatedAt is newer
+        hasTemplateUpdated = template.updatedAt > instance.sourceTemplateUpdatedAt;
+      }
+    }
+
+    return {
+      ...instance,
+      hasTemplateUpdated,
+    };
+  });
+
   // Filter by completion status if specified
   if (query.completionStatus && query.completionStatus !== "all") {
-    return instances.filter((instance) => {
+    return instancesWithUpdateFlag.filter((instance) => {
       const items = instance.type === "TODO" ? instance.todoItems : instance.kitItems;
 
       // If no items, consider it as "done"
@@ -773,7 +808,7 @@ export async function listTripInstances(
     });
   }
 
-  return instances;
+  return instancesWithUpdateFlag;
 }
 
 /**

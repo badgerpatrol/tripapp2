@@ -24,6 +24,7 @@ interface ListTemplate {
     id: string;
     label: string;
     notes: string | null;
+    perPerson: boolean;
     orderIndex: number;
   }>;
   kitItems?: Array<{
@@ -346,9 +347,18 @@ function ViewListPageContent() {
                         {index + 1}
                       </span>
                       <div className="flex-1">
-                        <p className="text-zinc-900 dark:text-white font-medium">
-                          {item.label}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-zinc-900 dark:text-white font-medium">
+                            {item.label}
+                          </p>
+                          <span className={`px-1.5 py-0.5 text-xs rounded ${
+                            item.perPerson
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                          }`}>
+                            {item.perPerson ? "per person" : "shared"}
+                          </span>
+                        </div>
                         {item.notes && (
                           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                             {item.notes}

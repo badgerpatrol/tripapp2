@@ -840,16 +840,17 @@ model ListTemplate {
 }
 
 model ListInstance {
-  id               String   @id @default(cuid())
-  tripId           String
-  type             ListType
-  sourceTemplateId String?
-  title            String
-  description      String?
-  inventory        Boolean  @default(false) // If true, shows in inventory section
-  createdBy        String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                      String    @id @default(cuid())
+  tripId                  String
+  type                    ListType
+  sourceTemplateId        String?
+  sourceTemplateUpdatedAt DateTime? // Template's updatedAt when this instance was created
+  title                   String
+  description             String?
+  inventory               Boolean   @default(false) // If true, shows in inventory section
+  createdBy               String
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   // Per-type item relations
   todoItems TodoItemInstance[]

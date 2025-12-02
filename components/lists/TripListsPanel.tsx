@@ -61,6 +61,8 @@ interface ListInstance {
   description: string | null;
   createdAt: string;
   updatedAt: string;
+  sourceTemplateId: string | null;
+  hasTemplateUpdated?: boolean;
   todoItems?: TodoItem[];
   kitItems?: KitItem[];
 }
@@ -581,9 +583,19 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     <div className="flex items-center gap-3">
                       <span className="text-xl">{getTypeIcon(list.type)}</span>
                       <div className="text-left">
-                        <h3 className="font-medium text-zinc-900 dark:text-white">
-                          {list.title}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-zinc-900 dark:text-white">
+                            {list.title}
+                          </h3>
+                          {list.hasTemplateUpdated && (
+                            <span
+                              className="px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                              title="The original template has been modified since this list was added to the trip"
+                            >
+                              Original list has changed
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
