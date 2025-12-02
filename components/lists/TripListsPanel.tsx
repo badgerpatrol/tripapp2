@@ -668,13 +668,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                                 />
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <p
-                                      className={`text-sm ${
-                                        isTickedByUser || isTickedByOther
-                                          ? "line-through text-zinc-400 dark:text-zinc-600"
-                                          : "text-zinc-900 dark:text-white"
-                                      }`}
-                                    >
+                                    <p className="text-sm text-zinc-900 dark:text-white">
                                       {item.label}
                                     </p>
                                     {item.perPerson && (
@@ -688,10 +682,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                                       {item.notes}
                                     </p>
                                   )}
-                                  {/* Show who ticked shared items */}
-                                  {isSharedItem && item.ticks && item.ticks.length > 0 && (
+                                  {/* Always show status for shared items */}
+                                  {isSharedItem && (
                                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                      Done by: {item.ticks.map(t => t.user.displayName).join(", ")}
+                                      {item.ticks && item.ticks.length > 0
+                                        ? `Done by: ${item.ticks.map(t => t.user.displayName).join(", ")}`
+                                        : "No one yet"}
                                     </p>
                                   )}
                                 </div>
@@ -735,13 +731,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                               />
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                  <p
-                                    className={`text-sm ${
-                                      isTickedByUser || isTickedByOther
-                                        ? "line-through text-zinc-400 dark:text-zinc-600"
-                                        : "text-zinc-900 dark:text-white"
-                                    }`}
-                                  >
+                                  <p className="text-sm text-zinc-900 dark:text-white">
                                     {item.label}
                                   </p>
                                   {item.quantity !== 1 && (
@@ -765,10 +755,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                                     {item.notes}
                                   </p>
                                 )}
-                                {/* Show who packed shared items */}
-                                {isSharedItem && item.ticks && item.ticks.length > 0 && (
+                                {/* Always show status for shared items */}
+                                {isSharedItem && (
                                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                                    Packed by: {item.ticks.map(t => t.user.displayName).join(", ")}
+                                    {item.ticks && item.ticks.length > 0
+                                      ? `Packed by: ${item.ticks.map(t => t.user.displayName).join(", ")}`
+                                      : "No one yet"}
                                   </p>
                                 )}
                                 <div className="flex flex-wrap gap-2 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
