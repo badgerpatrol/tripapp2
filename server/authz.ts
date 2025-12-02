@@ -127,6 +127,8 @@ export async function getAuthTokenFromHeader(
 
 /**
  * Checks if a user has a specific role or higher in a trip.
+ * Returns false only for authorization failures.
+ * Throws on database errors or other system failures.
  */
 export async function hasRole(
   userId: string,
@@ -136,8 +138,16 @@ export async function hasRole(
   try {
     await requireTripMember(userId, tripId, requiredRole);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // Only catch authorization errors - let database errors propagate
+    if (error instanceof Error && error.message.startsWith("Forbidden:")) {
+      return false;
+    }
+    if (error instanceof Error && error.message.includes("not found")) {
+      return false;
+    }
+    // Re-throw database errors and other system failures
+    throw error;
   }
 }
 
@@ -194,6 +204,8 @@ export async function requireUserRole(
 
 /**
  * Checks if a user has a specific global role or higher.
+ * Returns false only for authorization failures.
+ * Throws on database errors or other system failures.
  */
 export async function hasUserRole(
   userId: string,
@@ -202,8 +214,13 @@ export async function hasUserRole(
   try {
     await requireUserRole(userId, requiredRole);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // Only catch authorization errors - let database errors propagate
+    if (error instanceof Error && error.message.startsWith("Forbidden:")) {
+      return false;
+    }
+    // Re-throw database errors and other system failures
+    throw error;
   }
 }
 
@@ -288,6 +305,8 @@ export async function requireGroupAdmin(userId: string, groupId: string) {
 
 /**
  * Checks if a user is an admin of a group (owner or admin member).
+ * Returns false only for authorization failures.
+ * Throws on database errors or other system failures.
  */
 export async function isGroupAdmin(
   userId: string,
@@ -296,8 +315,16 @@ export async function isGroupAdmin(
   try {
     await requireGroupAdmin(userId, groupId);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // Only catch authorization errors - let database errors propagate
+    if (error instanceof Error && error.message.startsWith("Forbidden:")) {
+      return false;
+    }
+    if (error instanceof Error && error.message.includes("not found")) {
+      return false;
+    }
+    // Re-throw database errors and other system failures
+    throw error;
   }
 }
 

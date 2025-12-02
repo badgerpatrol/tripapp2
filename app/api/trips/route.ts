@@ -110,12 +110,18 @@ export async function GET(request: NextRequest) {
     let trips;
     if (adminMode) {
       // Verify user is admin
-      const isAdmin = await hasUserRole(auth.uid, UserRole.ADMIN);
-      if (!isAdmin) {
-        return NextResponse.json(
-          { error: "Admin privileges required" },
-          { status: 403 }
-        );
+      try {
+        const isAdmin = await hasUserRole(auth.uid, UserRole.ADMIN);
+        if (!isAdmin) {
+          console.warn(`[TRIPS] User ${auth.uid} attempted to access admin mode without privileges`);
+          return NextResponse.json(
+            { error: "Admin privileges required" },
+            { status: 403 }
+          );
+        }
+      } catch (error) {
+        console.error("[TRIPS] Database error checking user role:", error);
+        throw error; // Re-throw to be caught by outer error handler
       }
       // Get all trips
       trips = await getAllTrips();
