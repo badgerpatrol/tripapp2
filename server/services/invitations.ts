@@ -397,6 +397,29 @@ export async function removeTripMember(
     },
   });
 
+  // Delete the user's tick items for all lists in this trip
+  await prisma.itemTick.deleteMany({
+    where: {
+      userId: userIdToRemove,
+      OR: [
+        {
+          todoItem: {
+            list: {
+              tripId,
+            },
+          },
+        },
+        {
+          kitItem: {
+            list: {
+              tripId,
+            },
+          },
+        },
+      ],
+    },
+  });
+
   // Log the removal event
   await logEvent(
     "TripMember",
