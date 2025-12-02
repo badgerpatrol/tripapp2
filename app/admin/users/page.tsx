@@ -382,28 +382,30 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">User Management</h1>
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Add New User
-              </Button>
-              {selectedUserIds.size > 0 && (
-                <Button
-                  onClick={handleDeleteSelected}
-                  disabled={deletingUsers}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {deletingUsers ? "Deleting..." : `Delete Selected (${selectedUserIds.size})`}
-                </Button>
-              )}
-              <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                Total Users: {users.length}
-              </div>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-white">User Management</h1>
+            <div className="text-sm text-zinc-600 dark:text-zinc-400">
+              {users.length} users
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-2"
+            >
+              Add User
+            </Button>
+            {selectedUserIds.size > 0 && (
+              <Button
+                onClick={handleDeleteSelected}
+                disabled={deletingUsers}
+                className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-2"
+              >
+                {deletingUsers ? "Deleting..." : `Delete (${selectedUserIds.size})`}
+              </Button>
+            )}
           </div>
 
           {/* Search */}
@@ -438,114 +440,95 @@ export default function AdminUsersPage() {
             </p>
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                <tr>
-                  <th className="px-4 py-3 w-12">
+          <div className="space-y-3">
+            {/* Select All Header */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
+              <input
+                type="checkbox"
+                checked={selectedUserIds.size === filteredUsers.filter(u => u.id !== user?.uid).length && filteredUsers.length > 0}
+                onChange={toggleAllUsers}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                Select all ({filteredUsers.filter(u => u.id !== user?.uid).length})
+              </span>
+            </div>
+
+            {/* User Cards */}
+            {filteredUsers.map((u) => (
+              <div
+                key={u.id}
+                className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-4 shadow-sm"
+              >
+                {/* Top row: Checkbox + Avatar + Name/Email + Edit */}
+                <div className="flex items-start gap-3">
+                  {u.id !== user?.uid ? (
                     <input
                       type="checkbox"
-                      checked={selectedUserIds.size === filteredUsers.filter(u => u.id !== user?.uid).length && filteredUsers.length > 0}
-                      onChange={toggleAllUsers}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                      checked={selectedUserIds.has(u.id)}
+                      onChange={() => toggleUserSelection(u.id)}
+                      className="w-4 h-4 mt-1 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 flex-shrink-0"
                     />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Activity
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Joined
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                    <td className="px-4 py-3">
-                      {u.id !== user?.uid && (
-                        <input
-                          type="checkbox"
-                          checked={selectedUserIds.has(u.id)}
-                          onChange={() => toggleUserSelection(u.id)}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                        />
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {u.photoURL ? (
-                          <img
-                            src={u.photoURL}
-                            alt={u.displayName}
-                            className="w-10 h-10 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center font-semibold">
-                            {u.displayName?.[0]?.toUpperCase() || u.email[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-medium text-zinc-900 dark:text-white">
-                            {u.displayName || "No name"}
-                          </div>
-                          <div className="text-sm text-zinc-500 dark:text-zinc-400">{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getRoleBadgeColor(
-                          u.role
-                        )}`}
-                      >
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
-                          u.deletedAt
-                            ? "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800"
-                            : "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800"
-                        }`}
-                      >
-                        {u.deletedAt ? "Suspended" : "Active"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                        {u.tripCount} trips, {u.groupCount} groups
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                        {new Date(u.createdAt).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleEditUser(u)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-3 py-1 text-sm font-medium"
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  ) : (
+                    <div className="w-4 flex-shrink-0" />
+                  )}
+
+                  {u.photoURL ? (
+                    <img
+                      src={u.photoURL}
+                      alt={u.displayName}
+                      className="w-10 h-10 rounded-full flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center font-semibold flex-shrink-0">
+                      {u.displayName?.[0]?.toUpperCase() || u.email[0].toUpperCase()}
+                    </div>
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-zinc-900 dark:text-white truncate">
+                      {u.displayName || "No name"}
+                    </div>
+                    <div className="text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                      {u.email}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleEditUser(u)}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-3 py-1 text-sm font-medium flex-shrink-0"
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                {/* Badges row: Role + Status */}
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getRoleBadgeColor(
+                      u.role
+                    )}`}
+                  >
+                    {u.role}
+                  </span>
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
+                      u.deletedAt
+                        ? "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800"
+                        : "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800"
+                    }`}
+                  >
+                    {u.deletedAt ? "Suspended" : "Active"}
+                  </span>
+                </div>
+
+                {/* Info row: Activity + Joined */}
+                <div className="flex items-center justify-between mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+                  <span>{u.tripCount} trips, {u.groupCount} groups</span>
+                  <span>Joined {new Date(u.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
