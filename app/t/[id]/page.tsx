@@ -253,23 +253,23 @@ export default function TripDetailPage() {
   const tripId = params.id as string;
 
   // Fetch public trip info (for login screen display)
-  useEffect(() => {
-    const fetchPublicInfo = async () => {
-      try {
-        const response = await fetch(`/api/trips/${tripId}/public`);
-        if (response.ok) {
-          const data = await response.json();
-          setPublicTripInfo({
-            tripName: data.tripName,
-            signUpEnabled: data.signUpEnabled,
-            participants: data.participants || [],
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching public trip info:", err);
+  const fetchPublicInfo = async () => {
+    try {
+      const response = await fetch(`/api/trips/${tripId}/public`);
+      if (response.ok) {
+        const data = await response.json();
+        setPublicTripInfo({
+          tripName: data.tripName,
+          signUpEnabled: data.signUpEnabled,
+          participants: data.participants || [],
+        });
       }
-    };
+    } catch (err) {
+      console.error("Error fetching public trip info:", err);
+    }
+  };
 
+  useEffect(() => {
     fetchPublicInfo();
   }, [tripId]);
 
@@ -324,6 +324,9 @@ export default function TripDetailPage() {
 
   const fetchTrip = useCallback(async () => {
     if (!user) return;
+
+    // Clear any previous error when starting a new fetch
+    setError(null);
 
     try {
       const idToken = await user.getIdToken();
@@ -3351,6 +3354,7 @@ export default function TripDetailPage() {
             // This callback is not used with the current flow
             console.log("Login required for:", email);
           }}
+          onParticipantCreated={fetchPublicInfo}
         />
       )}
     </div>
