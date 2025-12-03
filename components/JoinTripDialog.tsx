@@ -25,6 +25,7 @@ interface JoinTripDialogProps {
   tripName: string;
   participants: TripParticipant[];
   onLoginRequired: (email: string) => void;
+  onParticipantCreated?: () => void;
 }
 
 function getAuthErrorMessage(error: AuthError): string {
@@ -51,6 +52,7 @@ export function JoinTripDialog({
   tripName,
   participants,
   onLoginRequired,
+  onParticipantCreated,
 }: JoinTripDialogProps) {
   const [step, setStep] = useState<Step>('select');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -60,9 +62,6 @@ export function JoinTripDialog({
   const [loading, setLoading] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
 
-  // Get stored trip password (from when user first logged into trip as viewer)
-  const storedPassword = useTripPasswordStore.getState().getTripPassword(tripId);
-
   // Filter to show only users created through the trip join flow (with .fake emails)
   // but exclude the viewer account (tripplanner.local emails)
   // These are the accounts that can be logged into with the trip password
@@ -70,12 +69,27 @@ export function JoinTripDialog({
     (p) => !p.user.email.endsWith('@tripplanner.local')
   );
 
+  // Check if this is a trip-created account (.fake email)
+  const isTripCreatedAccount = (email: string) => email.endsWith('.fake');
+
   // Auto-login using stored password for .fake accounts
   const attemptAutoLogin = async (email: string) => {
-    if (!storedPassword || !email.endsWith('.fake')) {
+    // Get the password fresh from the store to avoid stale closure
+    const currentPassword = useTripPasswordStore.getState().getTripPassword(tripId);
+
+    console.log('[JoinTripDialog] attemptAutoLogin called', {
+      email,
+      hasPassword: !!currentPassword,
+      isFakeAccount: isTripCreatedAccount(email),
+      tripId,
+    });
+
+    if (!currentPassword || !isTripCreatedAccount(email)) {
       // No stored password or not a .fake account - show manual login
+      console.log('[JoinTripDialog] Falling back to manual login - no stored password or not .fake account');
       setPendingEmail(email);
       setStep('login');
+      setLoading(false);
       return;
     }
 
@@ -87,7 +101,7 @@ export function JoinTripDialog({
       const verifyResponse = await fetch(`/api/trips/${tripId}/verify-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: storedPassword }),
+        body: JSON.stringify({ password: currentPassword }),
       });
       const verifyData = await verifyResponse.json();
 
@@ -99,7 +113,7 @@ export function JoinTripDialog({
       }
 
       // Sign in with Firebase
-      await signInWithEmailAndPassword(auth, email, storedPassword);
+      await signInWithEmailAndPassword(auth, email, currentPassword);
       handleClose();
     } catch (err) {
       // On any error, fall back to manual password entry
@@ -190,6 +204,9 @@ export function JoinTripDialog({
         throw new Error(data.error || 'Failed to create account');
       }
 
+      // Notify parent to refresh participants list
+      onParticipantCreated?.();
+
       // Try auto-login with stored password for the new .fake account
       // Note: setLoading(false) will be called in attemptAutoLogin's finally block
       await attemptAutoLogin(data.email);
@@ -202,7 +219,7 @@ export function JoinTripDialog({
 
   const handleLogin = async () => {
     if (!password) {
-      setError('Please enter the trip password');
+      setError(isTripCreatedAccount(pendingEmail) ? 'Please enter the trip password' : 'Please enter your account password');
       return;
     }
 
@@ -215,26 +232,28 @@ export function JoinTripDialog({
     setError('');
 
     try {
-      // First verify the password is correct via our API
-      // This prevents unnecessary Firebase login attempts
-      const verifyResponse = await fetch(`/api/trips/${tripId}/verify-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          password,
-        }),
-      });
+      if (isTripCreatedAccount(pendingEmail)) {
+        // For trip-created accounts (.fake), verify against trip password first
+        const verifyResponse = await fetch(`/api/trips/${tripId}/verify-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            password,
+          }),
+        });
 
-      const verifyData = await verifyResponse.json();
+        const verifyData = await verifyResponse.json();
 
-      if (!verifyResponse.ok || !verifyData.valid) {
-        throw new Error(verifyData.error || 'Invalid password');
+        if (!verifyResponse.ok || !verifyData.valid) {
+          throw new Error(verifyData.error || 'Invalid trip password');
+        }
       }
 
-      // Password is valid - now sign in with Firebase
-      // The password for the trip account is the same as the signUpPassword
+      // Sign in with Firebase
+      // For .fake accounts: password is the trip password
+      // For real accounts: password is their account password
       await signInWithEmailAndPassword(auth, pendingEmail, password);
 
       // Success! Auth state change will trigger re-render with new user
@@ -281,6 +300,9 @@ export function JoinTripDialog({
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
                     {participant.user.displayName ?? "Unknown"}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                    {participant.user.email}
                   </p>
                 </div>
                 <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -416,13 +438,16 @@ export function JoinTripDialog({
             </div>
           )}
 
-          <Field label="Trip Password" htmlFor="tripPassword">
+          <Field
+            label={isTripCreatedAccount(pendingEmail) ? "Trip Password" : "Account Password"}
+            htmlFor="tripPassword"
+          >
             <Input
               id="tripPassword"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter trip password"
+              placeholder={isTripCreatedAccount(pendingEmail) ? "Enter trip password" : "Enter your account password"}
               autoFocus
             />
           </Field>
