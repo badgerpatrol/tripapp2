@@ -220,6 +220,9 @@ export function JoinTripDialog({
         throw new Error(joinData.error || 'Failed to join trip');
       }
 
+      // Notify parent to refresh participants list
+      onParticipantCreated?.();
+
       // Success - close the dialog
       handleClose();
     } catch (err) {
