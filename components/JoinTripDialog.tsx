@@ -371,9 +371,7 @@ export function JoinTripDialog({
                   <p className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
                     {participant.user.displayName ?? "Unknown"}
                   </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-                    {participant.user.email}
-                  </p>
+                 
                 </div>
                 <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -434,11 +432,11 @@ export function JoinTripDialog({
               Select account
             </button>
             <span>/</span>
-            <span className="text-zinc-900 dark:text-zinc-100">New account</span>
+            <span className="text-zinc-900 dark:text-zinc-100">Join without account</span>
           </div>
 
           <p className="text-zinc-600 dark:text-zinc-400">
-            Enter your name to create a new account:
+            Enter a name to join just this trip if you don't have an account
           </p>
 
           <Field label="Your Name" htmlFor="newName">
