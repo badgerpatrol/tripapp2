@@ -43,7 +43,7 @@ function getAuthErrorMessage(error: AuthError): string {
   }
 }
 
-type Step = 'select' | 'newUser' | 'login';
+type Step = 'select' | 'newUser' | 'login' | 'fullAccountLogin';
 
 export function JoinTripDialog({
   isOpen,
@@ -61,6 +61,9 @@ export function JoinTripDialog({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
+  const [fullAccountEmail, setFullAccountEmail] = useState('');
+  const [fullAccountPassword, setFullAccountPassword] = useState('');
+  const [tripPassword, setTripPassword] = useState('');
 
   // Filter to show only users created through the trip join flow (with .fake emails)
   // but exclude the viewer account (tripplanner.local emails)
@@ -135,6 +138,9 @@ export function JoinTripDialog({
     setError('');
     setLoading(false);
     setPendingEmail('');
+    setFullAccountEmail('');
+    setFullAccountPassword('');
+    setTripPassword('');
   };
 
   const handleClose = () => {
@@ -164,6 +170,67 @@ export function JoinTripDialog({
     setSelectedUserId('');
     setNewName('');
     setError('');
+    setFullAccountEmail('');
+    setFullAccountPassword('');
+    setTripPassword('');
+  };
+
+  const handleFullAccountLogin = () => {
+    setStep('fullAccountLogin');
+    setError('');
+  };
+
+  const handleFullAccountSubmit = async () => {
+    if (!fullAccountEmail.trim()) {
+      setError('Please enter your email');
+      return;
+    }
+    if (!fullAccountPassword) {
+      setError('Please enter your password');
+      return;
+    }
+    if (!tripPassword) {
+      setError('Please enter the trip password');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Sign in with Firebase using full account credentials
+      const userCredential = await signInWithEmailAndPassword(auth, fullAccountEmail.trim(), fullAccountPassword);
+
+      // Get the Firebase token
+      const token = await userCredential.user.getIdToken();
+
+      // Join the trip using the trip password
+      const joinResponse = await fetch(`/api/trips/${tripId}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: tripPassword }),
+      });
+
+      const joinData = await joinResponse.json();
+
+      if (!joinResponse.ok) {
+        throw new Error(joinData.error || 'Failed to join trip');
+      }
+
+      // Success - close the dialog
+      handleClose();
+    } catch (err) {
+      if ((err as AuthError).code) {
+        setError(getAuthErrorMessage(err as AuthError));
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to log in');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateAndLogin = async () => {
@@ -336,6 +403,21 @@ export function JoinTripDialog({
               I'm new here
             </span>
           </button>
+
+          {/* Log in with full account button */}
+          <button
+            onClick={handleFullAccountLogin}
+            className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 hover:border-purple-500 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors text-left"
+          >
+            <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <span className="font-medium text-zinc-900 dark:text-zinc-100">
+              Log in with my account
+            </span>
+          </button>
         </div>
       )}
 
@@ -474,6 +556,81 @@ export function JoinTripDialog({
               full
             >
               Log In
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 'fullAccountLogin' && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+            <button
+              onClick={handleBackToSelect}
+              className="hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+            >
+              Select account
+            </button>
+            <span>/</span>
+            <span className="text-zinc-900 dark:text-zinc-100">Log in with account</span>
+          </div>
+
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Log in with your existing account to join this trip:
+          </p>
+
+          <Field label="Email" htmlFor="fullAccountEmail">
+            <Input
+              id="fullAccountEmail"
+              type="email"
+              value={fullAccountEmail}
+              onChange={(e) => setFullAccountEmail(e.target.value)}
+              placeholder="Enter your email"
+              autoFocus
+            />
+          </Field>
+
+          <Field label="Account Password" htmlFor="fullAccountPassword">
+            <Input
+              id="fullAccountPassword"
+              type="password"
+              value={fullAccountPassword}
+              onChange={(e) => setFullAccountPassword(e.target.value)}
+              placeholder="Enter your account password"
+            />
+          </Field>
+
+          <Field label="Trip Password" htmlFor="tripPasswordField">
+            <Input
+              id="tripPasswordField"
+              type="password"
+              value={tripPassword}
+              onChange={(e) => setTripPassword(e.target.value)}
+              placeholder="Enter the trip password"
+            />
+          </Field>
+
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={handleBackToSelect}
+              disabled={loading}
+            >
+              Back
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleFullAccountSubmit}
+              loading={loading}
+              disabled={loading || !fullAccountEmail.trim() || !fullAccountPassword || !tripPassword}
+              full
+            >
+              Log In & Join Trip
             </Button>
           </div>
         </div>

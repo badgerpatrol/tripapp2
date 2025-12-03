@@ -325,6 +325,9 @@ export default function TripDetailPage() {
   const fetchTrip = useCallback(async () => {
     if (!user) return;
 
+    // Clear any previous error when starting a new fetch
+    setError(null);
+
     try {
       const idToken = await user.getIdToken();
       const response = await fetch(`/api/trips/${tripId}`, {
