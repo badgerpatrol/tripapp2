@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth, requireUserRole } from "@/server/authz";
 import { listAllUsers } from "@/server/services/admin";
 import { ListUsersResponseSchema, SignUpSchema } from "@/types/schemas";
-import { UserRole } from "@/lib/generated/prisma";
+import { UserRole, UserType } from "@/lib/generated/prisma";
 import { adminAuth } from "@/lib/firebase/admin";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/server/eventLog";
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
         photoURL: u.photoURL,
         phoneNumber: u.phoneNumber,
         role: u.role,
+        userType: u.userType,
         subscription: u.subscription,
         timezone: u.timezone || "UTC",
         language: u.language || "en",
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
         photoURL: null,
         phoneNumber: null,
         role: UserRole.USER,
+        userType: UserType.FULL, // Created by admin
         subscription: "FREE",
         timezone: "UTC",
         language: "en",

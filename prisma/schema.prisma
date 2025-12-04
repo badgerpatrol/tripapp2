@@ -22,6 +22,12 @@ enum UserRole {
   SUPERADMIN
 }
 
+enum UserType {
+  FULL   // Real account created by a user or via admin
+  SYSTEM // Account created by the system (e.g., trip viewer)
+  SIGNUP // Account created during trip sign-up process
+}
+
 enum SubscriptionTier {
   FREE
   PREMIUM
@@ -219,6 +225,7 @@ model User {
   photoURL    String?
   phoneNumber String?
   role        UserRole @default(USER)
+  userType    UserType @default(FULL)
   subscription SubscriptionTier @default(FREE)
   timezone    String?  @default("UTC")
   language    String?  @default("en")

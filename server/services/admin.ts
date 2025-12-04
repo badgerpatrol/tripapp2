@@ -21,6 +21,7 @@ export async function listAllUsers() {
       photoURL: true,
       phoneNumber: true,
       role: true,
+      userType: true,
       subscription: true,
       timezone: true,
       language: true,

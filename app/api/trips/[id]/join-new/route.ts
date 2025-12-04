@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { adminAuth } from "@/lib/firebase/admin";
-import { TripMemberRole, UserRole, EventType } from "@/lib/generated/prisma";
+import { TripMemberRole, UserRole, UserType, EventType } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
 
 /**
@@ -143,6 +143,7 @@ export async function POST(
         email,
         displayName: trimmedName,
         role: UserRole.USER, // Regular user, not viewer
+        userType: UserType.SIGNUP, // Created during trip sign-up
         timezone: "UTC",
         language: "en",
         defaultCurrency: "GBP",
