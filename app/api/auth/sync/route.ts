@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthTokenFromHeader } from '@/server/authz';
 import { prisma } from '@/lib/prisma';
 import { logEvent } from '@/server/eventLog';
-import { EventType } from '@/lib/generated/prisma';
+import { EventType, UserType } from '@/lib/generated/prisma';
 
 /**
  * POST /api/auth/sync
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
           displayName,
           photoURL: null,
           phoneNumber: null,
+          userType: UserType.FULL, // Real user account
           timezone: 'UTC',
           language: 'en',
           defaultCurrency: 'GBP',

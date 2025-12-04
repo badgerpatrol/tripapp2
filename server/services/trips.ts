@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { TripMemberRole, TripStatus, EventType, MilestoneTriggerType, UserRole } from "@/lib/generated/prisma";
+import { TripMemberRole, TripStatus, EventType, MilestoneTriggerType, UserRole, UserType } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
 import { adminAuth } from "@/lib/firebase/admin";
 import type { CreateTripInput, UpdateTripInput } from "@/types/schemas";
@@ -100,6 +100,7 @@ async function createOrUpdateSignUpViewer(
       email,
       displayName,
       role: UserRole.VIEWER,
+      userType: UserType.SYSTEM,
       timezone: "UTC",
       language: "en",
       defaultCurrency: "GBP",
@@ -107,6 +108,7 @@ async function createOrUpdateSignUpViewer(
     update: {
       displayName,
       role: UserRole.VIEWER,
+      userType: UserType.SYSTEM,
     },
   });
 

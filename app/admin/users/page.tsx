@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
-import { UserRole } from "@/lib/generated/prisma";
+import { UserRole, UserType } from "@/lib/generated/prisma";
 
 interface User {
   id: string;
@@ -13,6 +13,7 @@ interface User {
   photoURL: string | null;
   phoneNumber: string | null;
   role: UserRole;
+  userType: UserType;
   subscription: string;
   timezone: string;
   language: string;
@@ -48,6 +49,7 @@ export default function AdminUsersPage() {
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserDisplayName, setNewUserDisplayName] = useState("");
   const [creatingUser, setCreatingUser] = useState(false);
+  const [showSystemUsers, setShowSystemUsers] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -361,10 +363,21 @@ export default function AdminUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter((user) =>
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users.filter((u) => {
+    // Filter by search query
+    const matchesSearch =
+      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.displayName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Filter out non-FULL users unless showSystemUsers is enabled
+    // SYSTEM = viewer accounts created by the system
+    // SIGNUP = accounts created during trip sign-up
+    if (!showSystemUsers && u.userType !== UserType.FULL) {
+      return false;
+    }
+
+    return matchesSearch;
+  });
 
   if (authLoading || loading) {
     return (
@@ -406,14 +419,25 @@ export default function AdminUsersPage() {
             </div>
           </div>
 
-          {/* Search */}
-          <input
-            type="text"
-            placeholder="Search by email or name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
-          />
+          {/* Search and Filters */}
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              placeholder="Search by email or name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-zinc-500"
+            />
+            <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 whitespace-nowrap cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showSystemUsers}
+                onChange={(e) => setShowSystemUsers(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              Show system users
+            </label>
+          </div>
         </div>
       </div>
 
