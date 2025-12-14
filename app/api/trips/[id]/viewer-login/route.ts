@@ -37,12 +37,13 @@ export async function POST(
       );
     }
 
-    // 2. Get trip and verify signUpMode is enabled
+    // 2. Get trip and check access modes
     const trip = await prisma.trip.findUnique({
       where: { id: tripId, deletedAt: null },
       select: {
         id: true,
         signUpMode: true,
+        signInMode: true,
         signUpPassword: true,
         signUpViewerUserId: true,
         signUpViewerUser: {
@@ -54,11 +55,19 @@ export async function POST(
     });
 
     // Use generic error message to avoid leaking information about trip existence
-    // Password login works regardless of signUpMode - only requires a password to be set
     if (!trip || !trip.signUpPassword) {
       return NextResponse.json(
         { valid: false, error: "Incorrect password for this trip" },
         { status: 401 }
+      );
+    }
+
+    // Password login only allowed if signUpMode or signInMode is enabled
+    // If neither is enabled ("Users with accounts only"), users must log in with their own account
+    if (!trip.signUpMode && !trip.signInMode) {
+      return NextResponse.json(
+        { valid: false, error: "This trip requires a full account login" },
+        { status: 403 }
       );
     }
 

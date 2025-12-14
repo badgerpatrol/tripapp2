@@ -270,7 +270,13 @@ export default function TripDetailPage() {
   // Fetch public trip info (for login screen display)
   const fetchPublicInfo = async () => {
     try {
-      const response = await fetch(`/api/trips/${tripId}/public`);
+      // Add cache-busting to ensure we always get fresh config
+      const response = await fetch(`/api/trips/${tripId}/public`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setPublicTripInfo({
@@ -288,7 +294,7 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     fetchPublicInfo();
-  }, [tripId]);
+  }, [tripId, user]);
 
   // Set default filter based on trip RSVP status
   useEffect(() => {

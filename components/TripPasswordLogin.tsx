@@ -25,6 +25,7 @@ interface TripPublicInfo {
   signUpEnabled: boolean;
   signInEnabled: boolean;
   passwordRequired: boolean;
+  passwordLoginAllowed: boolean;
   participants: Participant[];
 }
 
@@ -54,6 +55,7 @@ export default function TripPasswordLogin({
   const [fullAccountPassword, setFullAccountPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tripInfoLoading, setTripInfoLoading] = useState(true);
   const [tripInfo, setTripInfo] = useState<TripPublicInfo | null>(null);
   const [selectedMember, setSelectedMember] = useState<Participant | null>(null);
   const [selectedMemberEmail, setSelectedMemberEmail] = useState<string | null>(null);
@@ -63,17 +65,32 @@ export default function TripPasswordLogin({
   useEffect(() => {
     const fetchTripInfo = async () => {
       try {
-        const response = await fetch(`/api/trips/${tripId}/public`);
+        // Add cache-busting to ensure we always get fresh config
+        const response = await fetch(`/api/trips/${tripId}/public`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        });
         if (response.ok) {
           const data = await response.json();
           setTripInfo(data);
         }
       } catch (err) {
         console.error("Failed to fetch trip info:", err);
+      } finally {
+        setTripInfoLoading(false);
       }
     };
     fetchTripInfo();
   }, [tripId]);
+
+  // If password login is not allowed (users with accounts only), redirect to full account login
+  useEffect(() => {
+    if (!tripInfoLoading && tripInfo && !tripInfo.passwordLoginAllowed) {
+      onFullAccountLogin();
+    }
+  }, [tripInfoLoading, tripInfo, onFullAccountLogin]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,12 +227,12 @@ export default function TripPasswordLogin({
     }
   };
 
-  const handleNoneOfThese = () => {
+  const handleNoneOfThese = async () => {
     if (tripInfo?.signUpEnabled && onSignUp) {
+      // Set the flag to open sign-up dialog after login
       onSignUp();
-    } else {
-      // If sign-up is not enabled, just sign in as viewer
-      handleViewerLogin();
+      // Then log in as viewer so the user can access the trip page
+      await handleViewerLogin();
     }
   };
 
@@ -247,6 +264,24 @@ export default function TripPasswordLogin({
       setLoading(false);
     }
   };
+
+  // Show loading while fetching trip info or if redirecting to full account login
+  if (tripInfoLoading || (tripInfo && !tripInfo.passwordLoginAllowed)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-zinc-600 dark:text-zinc-400">
+              {tripInfo && !tripInfo.passwordLoginAllowed
+                ? "Redirecting to login..."
+                : "Loading..."}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Step 1: Password entry
   if (step === "password") {
@@ -354,17 +389,19 @@ export default function TripPasswordLogin({
               ))}
             </div>
 
-            {/* None of these button */}
-            <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
-              <button
-                type="button"
-                onClick={handleNoneOfThese}
-                disabled={loading}
-                className="w-full p-3 text-center rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
-              >
-                {tripInfo?.signUpEnabled ? "None of these - Sign up instead" : "None of these - View as guest"}
-              </button>
-            </div>
+            {/* None of these button - only show if sign-up mode is enabled */}
+            {tripInfo?.signUpEnabled && (
+              <div className="mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                <button
+                  type="button"
+                  onClick={handleNoneOfThese}
+                  disabled={loading}
+                  className="w-full p-3 text-center rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  None of these - Sign up instead
+                </button>
+              </div>
+            )}
 
             {/* Back button */}
             <button

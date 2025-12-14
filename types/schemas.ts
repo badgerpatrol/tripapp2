@@ -59,6 +59,7 @@ export const CreateTripSchema = z.object({
   endDate: z.coerce.date().optional(),
   location: z.string().optional(),
   signUpMode: z.boolean().optional().default(false),
+  signInMode: z.boolean().optional().default(false),
   signUpPassword: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.string().min(6, "Password must be at least 6 characters").optional()
@@ -612,6 +613,7 @@ export type CreateTripInput = {
   endDate?: Date;
   location?: string;
   signUpMode?: boolean;
+  signInMode?: boolean;
   signUpPassword?: string;
   headerImageData?: string;
 };

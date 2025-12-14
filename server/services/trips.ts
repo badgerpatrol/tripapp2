@@ -248,6 +248,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
         status: TripStatus.PLANNING,
         createdById: userId,
         signUpMode: data.signUpMode || false,
+        signInMode: data.signInMode || false,
         headerImageData: data.headerImageData || null,
       },
     });
@@ -277,9 +278,11 @@ export async function createTrip(userId: string, data: CreateTripInput) {
     return newTrip;
   });
 
-  // Handle sign-up mode (outside transaction to use Firebase Admin SDK)
+  // Handle sign-up/sign-in mode (outside transaction to use Firebase Admin SDK)
   let signUpPassword: string | null = null;
+
   if (data.signUpMode) {
+    // Sign-up mode: create viewer user and set password
     const { userId: viewerUserId, password } = await createOrUpdateSignUpViewer(
       trip.id,
       data.name,
@@ -306,6 +309,15 @@ export async function createTrip(userId: string, data: CreateTripInput) {
         rsvpStatus: "ACCEPTED",
       },
     });
+  } else if (data.signInMode && data.signUpPassword) {
+    // Sign-in mode only (no sign-up): just set the password, no viewer user needed
+    signUpPassword = data.signUpPassword;
+    await prisma.trip.update({
+      where: { id: trip.id },
+      data: {
+        signUpPassword: data.signUpPassword,
+      },
+    });
   }
 
   // Log the event (outside transaction for idempotency)
@@ -315,6 +327,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
     startDate: trip.startDate,
     endDate: trip.endDate,
     signUpMode: data.signUpMode || false,
+    signInMode: data.signInMode || false,
   });
 
   // Return trip with sign-up password if applicable
@@ -322,6 +335,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
     ...trip,
     signUpPassword,
     signUpMode: data.signUpMode || false,
+    signInMode: data.signInMode || false,
   };
 }
 

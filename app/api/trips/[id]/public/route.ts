@@ -77,6 +77,11 @@ export async function GET(
 
     // Note: We intentionally do NOT return the signUpPassword here
     // Password verification is handled by POST /api/trips/[id]/verify-password
+
+    // Password login is only allowed if signUpMode or signInMode is enabled
+    // If neither is enabled ("Users with accounts only"), users must log in with their own account
+    const passwordLoginAllowed = trip.signUpMode || trip.signInMode;
+
     return NextResponse.json(
       {
         tripId: trip.id,
@@ -84,9 +89,15 @@ export async function GET(
         signUpEnabled: trip.signUpMode,
         signInEnabled: trip.signInMode,
         passwordRequired: !!trip.signUpPassword,
+        passwordLoginAllowed,
         participants: selectableParticipants,
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
     );
   } catch (error) {
     console.error("Error getting public trip info:", error);
