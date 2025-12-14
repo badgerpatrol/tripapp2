@@ -85,6 +85,7 @@ export const UpdateTripSchema = z.object({
   endDate: z.coerce.date().nullable().optional(),
   location: z.string().nullable().optional(),
   signUpMode: z.boolean().optional(),
+  signInMode: z.boolean().optional(),
   signUpPassword: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.string().min(6, "Password must be at least 6 characters").nullable().optional()

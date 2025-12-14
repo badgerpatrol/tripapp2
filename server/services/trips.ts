@@ -433,6 +433,7 @@ export async function updateTrip(
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
         ...(data.signUpMode !== undefined && { signUpMode: data.signUpMode }),
+        ...(data.signInMode !== undefined && { signInMode: data.signInMode }),
         ...(data.headerImageData !== undefined && { headerImageData: data.headerImageData }),
       },
     });
@@ -572,6 +573,9 @@ export async function updateTrip(
   }
   if (data.signUpMode !== undefined && data.signUpMode !== existingTrip.signUpMode) {
     changes.signUpMode = { old: existingTrip.signUpMode, new: data.signUpMode };
+  }
+  if (data.signInMode !== undefined && data.signInMode !== existingTrip.signInMode) {
+    changes.signInMode = { old: existingTrip.signInMode, new: data.signInMode };
   }
 
   if (Object.keys(changes).length > 0 || result.affectedTimelineItems.length > 0) {
@@ -916,8 +920,9 @@ export async function getTripOverviewForMember(
     spendStatus: trip.spendStatus,
     rsvpStatus: trip.rsvpStatus,
     headerImageData: trip.headerImageData,
-    // Sign-up mode fields (only visible to owners)
+    // Sign-up/sign-in mode fields (only visible to owners)
     signUpMode: isOwner ? trip.signUpMode : undefined,
+    signInMode: isOwner ? trip.signInMode : undefined,
     signUpPassword: isOwner ? trip.signUpPassword : undefined,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,

@@ -13,6 +13,7 @@ interface EditTripDialogProps {
     startDate: string | null;
     endDate: string | null;
     signUpMode?: boolean;
+    signInMode?: boolean;
     signUpPassword?: string | null;
     headerImageData?: string | null;
   };
@@ -36,6 +37,7 @@ export default function EditTripDialog({
     startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
     endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
     signUpMode: trip.signUpMode || false,
+    signInMode: trip.signInMode || false,
     signUpPassword: trip.signUpPassword || "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -188,6 +190,7 @@ export default function EditTripDialog({
         description: formData.description || null,
         baseCurrency: formData.baseCurrency,
         signUpMode: formData.signUpMode,
+        signInMode: formData.signInMode,
       };
 
       // Only include dates if they are set
@@ -589,6 +592,29 @@ export default function EditTripDialog({
               )}
             </div>
 
+            {/* Sign-in Mode */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="signInMode"
+                name="signInMode"
+                checked={formData.signInMode}
+                onChange={handleChange}
+                className="mt-1 h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
+              />
+              <div>
+                <label
+                  htmlFor="signInMode"
+                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                >
+                  Enable Sign-in Mode
+                </label>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Show a list of invitees so visitors can identify themselves and sign in.
+                </p>
+              </div>
+            </div>
+
             {/* Sign-up Mode */}
             <div className="flex items-start gap-3">
               <input
@@ -607,7 +633,7 @@ export default function EditTripDialog({
                   Enable Sign-up Mode
                 </label>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Publish a page for the trip where people can sign up.
+                  Allow new users to sign up for the trip with their own name.
                 </p>
               </div>
             </div>

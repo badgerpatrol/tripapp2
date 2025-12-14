@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 /**
  * GET /api/trips/:id/public
  * Gets public trip info for the account selector (no auth required).
- * Only returns data if signUpMode is enabled.
+ * Returns data if signUpMode or signInMode is enabled, or if a password is set.
  *
  * Note: Password is intentionally NOT returned here for security.
  * Use POST /api/trips/:id/verify-password to verify passwords.
@@ -12,7 +12,9 @@ import { prisma } from "@/lib/prisma";
  * Returns:
  * - Trip name
  * - Sign-up enabled status
- * - List of participants (for account selection)
+ * - Sign-in enabled status
+ * - Whether password is required
+ * - List of participants with user types (for sign-in mode)
  */
 export async function GET(
   request: NextRequest,
@@ -27,16 +29,19 @@ export async function GET(
         id: true,
         name: true,
         signUpMode: true,
+        signInMode: true,
         signUpPassword: true,
         members: {
           where: { deletedAt: null },
           select: {
             id: true,
+            role: true,
             user: {
               select: {
                 id: true,
                 email: true,
                 displayName: true,
+                userType: true,
               },
             },
           },
@@ -52,21 +57,23 @@ export async function GET(
       );
     }
 
-    // Only return sign-up info if signUpMode is enabled
-    if (!trip.signUpMode) {
-      return NextResponse.json(
-        {
-          tripId: trip.id,
-          tripName: trip.name,
-          signUpEnabled: false,
-          participants: trip.members.map((m) => ({
-            id: m.id,
-            user: m.user,
-          })),
+    // Filter out SYSTEM users (viewer accounts) from the participant list
+    // They shouldn't appear as selectable options
+    const selectableParticipants = trip.members
+      .filter((m) => m.user.userType !== "SYSTEM")
+      .map((m) => ({
+        id: m.id,
+        role: m.role,
+        user: {
+          id: m.user.id,
+          email: m.user.email,
+          displayName: m.user.displayName,
+          // Include userType so frontend knows if it's SIGNUP (trip password) or FULL (own password)
+          userType: m.user.userType,
+          // For FULL users, provide a masked email hint for identification
+          emailHint: m.user.userType === "FULL" ? maskEmail(m.user.email) : null,
         },
-        { status: 200 }
-      );
-    }
+      }));
 
     // Note: We intentionally do NOT return the signUpPassword here
     // Password verification is handled by POST /api/trips/[id]/verify-password
@@ -74,11 +81,10 @@ export async function GET(
       {
         tripId: trip.id,
         tripName: trip.name,
-        signUpEnabled: true,
-        participants: trip.members.map((m) => ({
-          id: m.id,
-          user: m.user,
-        })),
+        signUpEnabled: trip.signUpMode,
+        signInEnabled: trip.signInMode,
+        passwordRequired: !!trip.signUpPassword,
+        participants: selectableParticipants,
       },
       { status: 200 }
     );
@@ -89,4 +95,26 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+/**
+ * Masks an email address for privacy while still being identifiable
+ * e.g., "john.doe@example.com" -> "j***e@e***e.com"
+ */
+function maskEmail(email: string): string {
+  const [localPart, domain] = email.split("@");
+  if (!domain) return "***";
+
+  const maskedLocal = localPart.length <= 2
+    ? "***"
+    : `${localPart[0]}***${localPart[localPart.length - 1]}`;
+
+  const domainParts = domain.split(".");
+  const maskedDomain = domainParts.map((part, index) => {
+    if (index === domainParts.length - 1) return part; // Keep TLD
+    if (part.length <= 2) return "***";
+    return `${part[0]}***${part[part.length - 1]}`;
+  }).join(".");
+
+  return `${maskedLocal}@${maskedDomain}`;
 }

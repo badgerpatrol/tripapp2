@@ -4,6 +4,7 @@ import { logEvent } from "@/server/eventLog";
 import { createBatchNotifications } from "./notifications";
 import { getDiscoverableUsers } from "./groups";
 import { randomUUID } from "crypto";
+import { adminAuth } from "@/lib/firebase/admin";
 
 /**
  * Invites users to a trip by email or userId.
@@ -90,18 +91,48 @@ export async function inviteUsersToTrip(
 
   // Handle invitations by name (create SIGNUP users with .fake emails)
   if (inviteData.nonUserNames && inviteData.nonUserNames.length > 0) {
+    // Get the trip password - required to create SIGNUP users in Firebase
+    const trip = await prisma.trip.findUnique({
+      where: { id: tripId },
+      select: { signUpPassword: true },
+    });
+
+    if (!trip?.signUpPassword) {
+      throw new Error("Trip password must be set to invite people by name. Set a trip password in trip settings.");
+    }
+
     for (const name of inviteData.nonUserNames) {
       const trimmedName = name.trim();
       if (!trimmedName) continue;
 
       // Generate a unique .fake email for this user
+      // Format: <name>@<uniqueId>.fake
       const uniqueId = randomUUID();
-      const fakeEmail = `${trimmedName.toLowerCase().replace(/\s+/g, "-")}-${uniqueId.slice(0, 8)}.fake`;
+      const shortId = uniqueId.slice(0, 8);
+      const cleanName = trimmedName
+        .toLowerCase()
+        .replace(/\s+/g, ".")
+        .replace(/[^a-z0-9.]/g, "");
+      const fakeEmail = `${cleanName}@${shortId}.fake`;
 
-      // Create the SIGNUP user
+      // Create the user in Firebase first
+      let firebaseUser;
+      try {
+        firebaseUser = await adminAuth.createUser({
+          uid: uniqueId,
+          email: fakeEmail,
+          password: trip.signUpPassword,
+          displayName: trimmedName,
+        });
+      } catch (firebaseError: any) {
+        console.error("Failed to create Firebase user:", firebaseError);
+        throw new Error(`Failed to create user account for ${trimmedName}`);
+      }
+
+      // Create the SIGNUP user in database
       const newUser = await prisma.user.create({
         data: {
-          id: uniqueId,
+          id: firebaseUser.uid,
           email: fakeEmail,
           displayName: trimmedName,
           userType: UserType.SIGNUP,
