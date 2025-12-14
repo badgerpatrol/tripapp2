@@ -50,8 +50,6 @@ export default function InviteUsersDialog({
     notFound: Array<{ email: string; status: "not_found" }>;
   } | null>(null);
   const [nonUserName, setNonUserName] = useState("");
-  const [nonUserNames, setNonUserNames] = useState<string[]>([]);
-  const [isAddingNonUser, setIsAddingNonUser] = useState(false);
 
   // Fetch available users when dialog opens
   useEffect(() => {
@@ -300,7 +298,6 @@ export default function InviteUsersDialog({
         setResult(null);
         setRemovingUserId(null);
         setNonUserName("");
-        setNonUserNames([]);
       }, 300);
     }
   };
@@ -462,6 +459,8 @@ export default function InviteUsersDialog({
               </div>
             </div>
 
+            
+
             {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -469,7 +468,7 @@ export default function InviteUsersDialog({
               </div>
               <div className="relative flex justify-center">
                 <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  Invite people
+                  Invite other users
                 </span>
               </div>
             </div>
@@ -606,18 +605,17 @@ export default function InviteUsersDialog({
               </div>
               <div className="relative flex justify-center">
                 <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  Add non-user by name
+                  or invite new people who do not have accounts yet
                 </span>
               </div>
             </div>
-
-            {/* Non-user Name Input */}
+            {/* Add by name Input */}
             <div>
               <label
                 htmlFor="nonUserName"
                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
               >
-                Name
+                Add by name
               </label>
               <div className="flex gap-2">
                 <input
