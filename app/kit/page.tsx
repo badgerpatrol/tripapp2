@@ -216,7 +216,7 @@ function KitPageContent() {
                 🎒 Kit
               </h1>
               <p className="text-zinc-600 dark:text-zinc-400">
-                Create and manage reusable packing list templates
+                Create and manage reusable packing lists
               </p>
             </div>
           </div>

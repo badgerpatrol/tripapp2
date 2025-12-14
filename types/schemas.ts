@@ -204,16 +204,18 @@ export const InviteUsersSchema = z.object({
   emails: z.array(z.string().email("Invalid email address")).optional(),
   userIds: z.array(z.string()).optional(),
   groupIds: z.array(z.string()).optional(), // Groups used for filtering
+  nonUserNames: z.array(z.string().min(1, "Name is required")).optional(), // Names for creating SIGNUP users
 }).refine(
   (data) => {
-    // At least one of emails or userIds must be provided
+    // At least one of emails, userIds, or nonUserNames must be provided
     return (
       (data.emails && data.emails.length > 0) ||
-      (data.userIds && data.userIds.length > 0)
+      (data.userIds && data.userIds.length > 0) ||
+      (data.nonUserNames && data.nonUserNames.length > 0)
     );
   },
   {
-    message: "At least one email or userId is required",
+    message: "At least one email, userId, or name is required",
   }
 );
 
@@ -852,7 +854,6 @@ export const GroupMemberResponseSchema = z.object({
   joinedAt: z.coerce.date(),
   user: z.object({
     id: z.string(),
-    email: z.string(),
     displayName: z.string().nullable(),
     photoURL: z.string().nullable(),
   }).optional(),

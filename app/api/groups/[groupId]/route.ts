@@ -74,7 +74,6 @@ export async function GET(request: NextRequest, { params }: Params) {
           user: m.user
             ? {
                 id: m.user.id,
-                email: m.user.email,
                 displayName: m.user.displayName,
                 photoURL: m.user.photoURL,
               }

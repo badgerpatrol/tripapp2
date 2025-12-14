@@ -15,7 +15,6 @@ interface GroupMember {
   joinedAt: string;
   user?: {
     id: string;
-    email: string;
     displayName: string | null;
     photoURL: string | null;
   };

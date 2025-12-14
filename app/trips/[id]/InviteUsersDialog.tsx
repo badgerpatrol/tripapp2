@@ -49,6 +49,9 @@ export default function InviteUsersDialog({
     alreadyMembers: Array<{ email: string; userId: string; status: "already_member" }>;
     notFound: Array<{ email: string; status: "not_found" }>;
   } | null>(null);
+  const [nonUserName, setNonUserName] = useState("");
+  const [nonUserNames, setNonUserNames] = useState<string[]>([]);
+  const [isAddingNonUser, setIsAddingNonUser] = useState(false);
 
   // Fetch available users when dialog opens
   useEffect(() => {
@@ -120,21 +123,20 @@ export default function InviteUsersDialog({
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setResult(null);
-
+  // Add selected users to the trip immediately
+  const handleAddSelectedUsers = async () => {
     if (selectedUserIds.length === 0) {
-      setError("Please select at least one user to invite");
+      setError("Please select at least one user to add");
       return;
     }
 
     setIsSubmitting(true);
+    setError(null);
+    setResult(null);
 
     try {
       if (!user) {
-        throw new Error("You must be logged in to invite users");
+        throw new Error("You must be logged in to add users");
       }
 
       // Get emails of selected users
@@ -157,7 +159,7 @@ export default function InviteUsersDialog({
           .json()
           .catch(() => ({ error: "Unknown error" }));
         throw new Error(
-          errorData.error || `Failed to send invitations (${response.status})`
+          errorData.error || `Failed to add users (${response.status})`
         );
       }
 
@@ -166,17 +168,73 @@ export default function InviteUsersDialog({
       // Refresh the trip data to show new members
       onSuccess();
 
-      // Clear the selected users so more can be invited
+      // Clear the selected users
       setSelectedUserIds([]);
 
-      // Refresh the available users list to remove newly invited users
+      // Refresh the available users list to remove newly added users
       await fetchAvailableUsers();
     } catch (err) {
-      console.error("Error inviting users:", err);
+      console.error("Error adding users:", err);
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to send invitations. Please try again."
+          : "Failed to add users. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Add a non-user to the trip immediately
+  const handleAddNonUser = async () => {
+    const trimmedName = nonUserName.trim();
+    if (!trimmedName) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      if (!user) {
+        throw new Error("You must be logged in to add users");
+      }
+
+      const idToken = await user.getIdToken();
+
+      const response = await fetch(`/api/trips/${tripId}/invitations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ nonUserNames: [trimmedName] }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          errorData.error || `Failed to add user (${response.status})`
+        );
+      }
+
+      await response.json();
+
+      // Refresh the trip data to show new members
+      onSuccess();
+
+      // Clear the input
+      setNonUserName("");
+
+      // Refresh the available users list
+      await fetchAvailableUsers();
+    } catch (err) {
+      console.error("Error adding non-user:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to add user. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -241,6 +299,8 @@ export default function InviteUsersDialog({
         setError(null);
         setResult(null);
         setRemovingUserId(null);
+        setNonUserName("");
+        setNonUserNames([]);
       }, 300);
     }
   };
@@ -320,7 +380,7 @@ export default function InviteUsersDialog({
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
             {/* Current Members Section */}
             <div className="p-4 bg-zinc-50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-700 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
@@ -338,11 +398,12 @@ export default function InviteUsersDialog({
                   />
                 </svg>
                 <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Current Members ({currentMembers.length})
+                  Trip Members ({currentMembers.length})
                 </label>
               </div>
               <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg p-2 max-h-48 overflow-y-auto bg-white dark:bg-zinc-800">
                 <div className="space-y-1.5">
+                  {/* Trip members */}
                   {currentMembers.map((member) => (
                     <div
                       key={member.id}
@@ -490,63 +551,116 @@ export default function InviteUsersDialog({
                   </p>
                 </div>
               ) : (
-                <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg max-h-96 overflow-y-auto bg-white dark:bg-zinc-900">
-                  <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
-                    {filteredUsers.map((availableUser) => {
-                      const isSelected = selectedUserIds.includes(availableUser.id);
-                      return (
-                        <label
-                          key={availableUser.id}
-                          className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
-                            isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : ''
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleUser(availableUser.id)}
-                            disabled={isSubmitting}
-                            className="w-4 h-4 text-blue-600 border-zinc-300 rounded focus:ring-blue-500"
-                          />
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-semibold text-white">
-                              {(availableUser.displayName ?? "?")[0].toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                              {availableUser.displayName ?? "Unknown"}
-                            </p>
-                          </div>
-                        </label>
-                      );
-                    })}
+                <>
+                  <div className="border border-zinc-300 dark:border-zinc-600 rounded-lg max-h-96 overflow-y-auto bg-white dark:bg-zinc-900">
+                    <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
+                      {filteredUsers.map((availableUser) => {
+                        const isSelected = selectedUserIds.includes(availableUser.id);
+                        return (
+                          <label
+                            key={availableUser.id}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${
+                              isSelected ? 'bg-blue-50 dark:bg-blue-900/10' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleUser(availableUser.id)}
+                              disabled={isSubmitting}
+                              className="w-4 h-4 text-blue-600 border-zinc-300 rounded focus:ring-blue-500"
+                            />
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0">
+                              <span className="text-sm font-semibold text-white">
+                                {(availableUser.displayName ?? "?")[0].toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                                {availableUser.displayName ?? "Unknown"}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                  {selectedUserIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleAddSelectedUsers}
+                      disabled={isSubmitting}
+                      className="mt-3 w-full px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? "Adding..." : `Add ${selectedUserIds.length} ${selectedUserIds.length !== 1 ? 'Users' : 'User'}`}
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
-            
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-300 dark:border-zinc-600"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  Add non-user by name
+                </span>
+              </div>
+            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            {/* Non-user Name Input */}
+            <div>
+              <label
+                htmlFor="nonUserName"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+              >
+                Name
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="nonUserName"
+                  value={nonUserName}
+                  onChange={(e) => setNonUserName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddNonUser();
+                    }
+                  }}
+                  placeholder="Enter name..."
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNonUser}
+                  disabled={isSubmitting || !nonUserName.trim()}
+                  className="px-4 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Add people who don&apos;t have an account yet. They will appear in the members list above.
+              </p>
+            </div>
+
+            {/* Done Button */}
+            <div className="flex justify-center pt-4">
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="tap-target flex-1 px-6 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="tap-target px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Done
               </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || selectedUserIds.length === 0}
-                className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Sending..." : `Invite ${selectedUserIds.length} User${selectedUserIds.length !== 1 ? 's' : ''}`}
-              </button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>

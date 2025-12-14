@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { RsvpStatus, TripMemberRole, EventType, NotificationType, NotificationStatus } from "@/lib/generated/prisma";
+import { RsvpStatus, TripMemberRole, EventType, NotificationType, NotificationStatus, UserType, UserRole } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
 import { createBatchNotifications } from "./notifications";
 import { getDiscoverableUsers } from "./groups";
+import { randomUUID } from "crypto";
 
 /**
  * Invites users to a trip by email or userId.
@@ -20,10 +21,12 @@ export async function inviteUsersToTrip(
     emails?: string[];
     userIds?: string[];
     groupIds?: string[];
+    nonUserNames?: string[];
   },
   invitedById: string
 ) {
   let users: Array<{ id: string; email: string; displayName: string | null; photoURL: string | null }> = [];
+  const createdUsers: Array<{ id: string; email: string; displayName: string | null; photoURL: string | null }> = [];
 
   // Handle invitations by userId (with group filtering)
   if (inviteData.userIds && inviteData.userIds.length > 0) {
@@ -83,6 +86,40 @@ export async function inviteUsersToTrip(
         photoURL: true,
       },
     });
+  }
+
+  // Handle invitations by name (create SIGNUP users with .fake emails)
+  if (inviteData.nonUserNames && inviteData.nonUserNames.length > 0) {
+    for (const name of inviteData.nonUserNames) {
+      const trimmedName = name.trim();
+      if (!trimmedName) continue;
+
+      // Generate a unique .fake email for this user
+      const uniqueId = randomUUID();
+      const fakeEmail = `${trimmedName.toLowerCase().replace(/\s+/g, "-")}-${uniqueId.slice(0, 8)}.fake`;
+
+      // Create the SIGNUP user
+      const newUser = await prisma.user.create({
+        data: {
+          id: uniqueId,
+          email: fakeEmail,
+          displayName: trimmedName,
+          userType: UserType.SIGNUP,
+          role: UserRole.USER,
+        },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          photoURL: true,
+        },
+      });
+
+      createdUsers.push(newUser);
+    }
+
+    // Add created users to the users array
+    users = [...users, ...createdUsers];
   }
 
   if (users.length === 0) {
