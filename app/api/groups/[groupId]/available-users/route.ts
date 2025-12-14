@@ -43,13 +43,14 @@ export async function GET(
 
     const currentMemberIds = currentMembers.map(m => m.userId);
 
-    // 4. Get all users who are NOT in this group
+    // 4. Get all FULL users who are NOT in this group
     const availableUsers = await prisma.user.findMany({
       where: {
         id: {
           notIn: currentMemberIds,
         },
         deletedAt: null,
+        userType: "FULL",
       },
       select: {
         id: true,

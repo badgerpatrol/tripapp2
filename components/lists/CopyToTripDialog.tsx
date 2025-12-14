@@ -229,7 +229,7 @@ export function CopyToTripDialog({
         {selectedTripId && !checkingConflict && hasConflict && (
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-              What if a list with the same name exists?
+              There's already a list with this name. How do you want to handle it?
             </label>
             <div className="space-y-2">
               <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
