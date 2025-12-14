@@ -54,7 +54,8 @@ export async function POST(
     });
 
     // Use generic error message to avoid leaking information about trip existence
-    if (!trip || !trip.signUpMode || !trip.signUpPassword) {
+    // Password login works regardless of signUpMode - only requires a password to be set
+    if (!trip || !trip.signUpPassword) {
       return NextResponse.json(
         { valid: false, error: "Incorrect password for this trip" },
         { status: 401 }

@@ -43,6 +43,9 @@ export default function EditTripDialog({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [isClearingPassword, setIsClearingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Header image state
   const [headerImageData, setHeaderImageData] = useState<string | null>(trip.headerImageData || null);
@@ -270,6 +273,82 @@ export default function EditTripDialog({
     }
   };
 
+  const handleSetPassword = async () => {
+    if (!formData.signUpPassword.trim() || formData.signUpPassword.trim().length < 6) {
+      setPasswordMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    setIsSettingPassword(true);
+    setPasswordMessage(null);
+
+    try {
+      if (!user) {
+        throw new Error("You must be logged in");
+      }
+
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${trip.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ signUpPassword: formData.signUpPassword.trim() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to set password");
+      }
+
+      setPasswordMessage({ type: 'success', text: 'Password set successfully' });
+      setTimeout(() => setPasswordMessage(null), 3000);
+      onSuccess();
+    } catch (err) {
+      console.error("Error setting password:", err);
+      setPasswordMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to set password' });
+    } finally {
+      setIsSettingPassword(false);
+    }
+  };
+
+  const handleClearPassword = async () => {
+    setIsClearingPassword(true);
+    setPasswordMessage(null);
+
+    try {
+      if (!user) {
+        throw new Error("You must be logged in");
+      }
+
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/trips/${trip.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ signUpPassword: null }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to clear password");
+      }
+
+      setFormData(prev => ({ ...prev, signUpPassword: '' }));
+      setPasswordMessage({ type: 'success', text: 'Password cleared - trip has no password' });
+      setTimeout(() => setPasswordMessage(null), 3000);
+      onSuccess();
+    } catch (err) {
+      console.error("Error clearing password:", err);
+      setPasswordMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to clear password' });
+    } finally {
+      setIsClearingPassword(false);
+    }
+  };
+
   const handleDelete = async () => {
     setError(null);
     setIsDeleting(true);
@@ -440,6 +519,97 @@ export default function EditTripDialog({
               <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
                 Share this URL with trip members for direct access without the main navigation menu.
               </p>
+            </div>
+
+            {/* Viewer Password */}
+            <div className="space-y-3">
+              <div>
+                <label
+                  htmlFor="signUpPassword"
+                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                >
+                  Viewer Password
+                </label>
+                <input
+                  type="text"
+                  id="signUpPassword"
+                  name="signUpPassword"
+                  value={formData.signUpPassword}
+                  onChange={handleChange}
+                  placeholder={trip.signUpPassword ? "Enter new password to change" : "No password set"}
+                  minLength={6}
+                  className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                />
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Set a password to require viewers to enter it before accessing the trip. Min 6 characters.
+                </p>
+              </div>
+
+              {/* Current password display */}
+              {trip.signUpPassword && (
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-300">
+                    <span className="font-medium">Current password:</span>{" "}
+                    <code className="bg-zinc-200 dark:bg-zinc-600 px-1 py-0.5 rounded">
+                      {trip.signUpPassword}
+                    </code>
+                  </p>
+                </div>
+              )}
+
+              {/* Password action buttons */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSetPassword}
+                  disabled={isSettingPassword || isClearingPassword || !formData.signUpPassword.trim()}
+                  className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSettingPassword ? "Setting..." : "Set Password"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearPassword}
+                  disabled={isSettingPassword || isClearingPassword || (!trip.signUpPassword && !formData.signUpPassword.trim())}
+                  className="flex-1 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isClearingPassword ? "Clearing..." : "Clear Password"}
+                </button>
+              </div>
+
+              {/* Password message */}
+              {passwordMessage && (
+                <div className={`p-3 rounded-lg text-sm ${
+                  passwordMessage.type === 'success'
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+                }`}>
+                  {passwordMessage.text}
+                </div>
+              )}
+            </div>
+
+            {/* Sign-up Mode */}
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="signUpMode"
+                name="signUpMode"
+                checked={formData.signUpMode}
+                onChange={handleChange}
+                className="mt-1 h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
+              />
+              <div>
+                <label
+                  htmlFor="signUpMode"
+                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                >
+                  Enable Sign-up Mode
+                </label>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Publish a page for the trip where people can sign up.
+                </p>
+              </div>
             </div>
 
             {/* Base Currency */}
@@ -648,67 +818,6 @@ export default function EditTripDialog({
                 onChange={handleImageChange}
                 className="hidden"
               />
-            </div>
-
-            {/* Sign-up Mode */}
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="signUpMode"
-                  name="signUpMode"
-                  checked={formData.signUpMode}
-                  onChange={handleChange}
-                  className="mt-1 h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
-                />
-                <div>
-                  <label
-                    htmlFor="signUpMode"
-                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                  >
-                    Enable Sign-up Mode
-                  </label>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                    Publish a page for the trip where people can sign up.
-                  </p>
-                </div>
-              </div>
-
-              {formData.signUpMode && (
-                <div className="ml-7 space-y-3">
-                  <div>
-                    <label
-                      htmlFor="signUpPassword"
-                      className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-                    >
-                      Viewer Password
-                    </label>
-                    <input
-                      type="text"
-                      id="signUpPassword"
-                      name="signUpPassword"
-                      value={formData.signUpPassword}
-                      onChange={handleChange}
-                      placeholder={trip.signUpPassword ? "Current password shown" : "Leave empty for auto-generated"}
-                      minLength={6}
-                      className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                    />
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                      Min 6 characters. Change the password or leave as-is.
-                    </p>
-                  </div>
-                  {trip.signUpPassword && (
-                    <div className="p-3 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-                      <p className="text-xs text-zinc-600 dark:text-zinc-300">
-                        <span className="font-medium">Current password:</span>{" "}
-                        <code className="bg-zinc-200 dark:bg-zinc-600 px-1 py-0.5 rounded">
-                          {trip.signUpPassword}
-                        </code>
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Delete Confirmation */}
