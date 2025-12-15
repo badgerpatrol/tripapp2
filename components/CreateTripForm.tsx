@@ -502,7 +502,6 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
         signInMode={signInMode}
         signUpMode={signUpMode}
         signUpPassword={signUpPassword}
-        mode="create"
         onAccessChange={(config) => {
           setSignInMode(config.signInMode);
           setSignUpMode(config.signUpMode);

@@ -226,6 +226,8 @@ function EditKitListPageContent() {
 
       if (response.ok) {
         const data = await response.json();
+        // Clear edited state for all saved items
+        setEditedItemIds(new Set());
         // Update items with their new IDs from the database
         if (data.template?.kitItems) {
           const updatedItems = currentItems.map((item) => {
@@ -277,7 +279,7 @@ function EditKitListPageContent() {
     // Focus the new item's input after render
     setTimeout(() => {
       newItemInputRef.current?.focus();
-    }, 0);
+    }, 50);
   };
 
   const removeItem = (id: string) => {
