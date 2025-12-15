@@ -165,8 +165,85 @@ function EditKitListPageContent() {
     fetchTemplate();
   }, [user, templateId]);
 
-  const addItem = () => {
-    setItems([
+  const saveCurrentItems = async (currentItems: KitItem[]) => {
+    if (!user) return;
+
+    const validItems = currentItems.filter((item) => item.label.trim());
+    if (validItems.length === 0) return;
+
+    try {
+      const token = await user.getIdToken();
+      const tagsArray = tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      const payload = {
+        title: title.trim() || "Untitled",
+        description: description.trim() || undefined,
+        visibility,
+        tags: tagsArray.length > 0 ? tagsArray : undefined,
+        inventory,
+        kitItems: validItems.map((item, idx) => ({
+          id: item.id?.startsWith("kit-") ? undefined : item.id,
+          label: item.label.trim(),
+          notes: item.notes.trim() || undefined,
+          quantity: item.quantity || 1,
+          category: item.category.trim() || undefined,
+          weightGrams: item.weightGrams ? parseInt(item.weightGrams) : undefined,
+          cost: item.cost ? parseFloat(item.cost) : undefined,
+          url: item.url.trim() || undefined,
+          perPerson: item.perPerson,
+          required: item.required,
+          orderIndex: idx,
+          ...(inventory && {
+            date: item.date ? new Date(item.date).toISOString() : undefined,
+            needsRepair: item.needsRepair,
+            conditionNotes: item.conditionNotes.trim() || undefined,
+            lost: item.lost,
+            lastSeenText: item.lastSeenText.trim() || undefined,
+            lastSeenDate: item.lastSeenDate ? new Date(item.lastSeenDate).toISOString() : undefined,
+          }),
+        })),
+      };
+
+      const response = await fetch(`/api/lists/templates/${templateId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update items with their new IDs from the database
+        if (data.template?.kitItems) {
+          const updatedItems = currentItems.map((item) => {
+            const savedItem = data.template.kitItems.find(
+              (ki: any) => ki.label === item.label.trim() && ki.orderIndex === currentItems.indexOf(item)
+            );
+            if (savedItem && !item.id?.match(/^[0-9a-f-]{36}$/i)) {
+              return { ...item, id: savedItem.id };
+            }
+            return item;
+          });
+          return updatedItems;
+        }
+      }
+    } catch (err) {
+      console.error("Error auto-saving items:", err);
+    }
+    return currentItems;
+  };
+
+  const addItem = async () => {
+    // Save current items before adding a new one
+    const updatedItems = await saveCurrentItems(items);
+    const itemsToUse = updatedItems || items;
+
+    const newItems = [
       {
         id: crypto.randomUUID(),
         label: "",
@@ -186,8 +263,9 @@ function EditKitListPageContent() {
         lastSeenText: "",
         lastSeenDate: "",
       },
-      ...items,
-    ]);
+      ...itemsToUse,
+    ];
+    setItems(newItems);
     // Focus the new item's input after render
     setTimeout(() => {
       newItemInputRef.current?.focus();
