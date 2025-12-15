@@ -53,6 +53,9 @@ export default function TripAccessConfig({
     initialLevel > ACCESS_LEVELS.USERS_ONLY || !!currentPassword
   );
 
+  // Track if the code was just copied
+  const [codeCopied, setCodeCopied] = useState(false);
+
   // Sync external changes
   useEffect(() => {
     const newLevel = getAccessLevelFromModes(signInMode, signUpMode, !!signUpPassword || !!currentPassword);
@@ -176,6 +179,34 @@ export default function TripAccessConfig({
             <span className="font-mono text-xl tracking-wider text-zinc-900 dark:text-zinc-100">
               {password || <span className="text-zinc-400 dark:text-zinc-500 text-base font-sans">No code set</span>}
             </span>
+            {password && (
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(password);
+                  setCodeCopied(true);
+                  setTimeout(() => setCodeCopied(false), 2000);
+                }}
+                className="tap-target px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-2"
+                title="Copy code"
+              >
+                {codeCopied ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy
+                  </>
+                )}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {

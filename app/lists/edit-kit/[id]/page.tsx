@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
@@ -79,6 +79,7 @@ function EditKitListPageContent() {
   const [items, setItems] = useState<KitItem[]>([]);
   const [isPhotoScanOpen, setIsPhotoScanOpen] = useState(false);
   const [isInventorySheetOpen, setIsInventorySheetOpen] = useState(false);
+  const newItemInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user || !templateId) return;
@@ -187,6 +188,10 @@ function EditKitListPageContent() {
       },
       ...items,
     ]);
+    // Focus the new item's input after render
+    setTimeout(() => {
+      newItemInputRef.current?.focus();
+    }, 0);
   };
 
   const removeItem = (id: string) => {
@@ -535,6 +540,7 @@ function EditKitListPageContent() {
                       {/* Item Name */}
                       <input
                         type="text"
+                        ref={index === 0 ? newItemInputRef : undefined}
                         value={item.label}
                         onChange={(e) => updateItem(item.id!, "label", e.target.value)}
                         placeholder="Item name *"
