@@ -204,8 +204,8 @@ export default function EditTripDialog({
         payload.endDate = null;
       }
 
-      // Include sign-up password if sign-up mode is enabled and password is provided
-      if (formData.signUpMode && formData.signUpPassword.trim()) {
+      // Include sign-up password if sign-up or sign-in mode is enabled and password is provided
+      if ((formData.signUpMode || formData.signInMode) && formData.signUpPassword.trim()) {
         payload.signUpPassword = formData.signUpPassword.trim();
       }
 
@@ -452,7 +452,6 @@ export default function EditTripDialog({
               signUpMode={formData.signUpMode}
               signUpPassword={formData.signUpPassword}
               currentPassword={trip.signUpPassword}
-              mode="edit"
               onAccessChange={(config) => {
                 setFormData((prev) => ({
                   ...prev,

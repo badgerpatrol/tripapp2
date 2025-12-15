@@ -24,8 +24,6 @@ interface TripAccessConfigProps {
   }) => void;
   // Display password (for edit mode showing current password)
   currentPassword?: string | null;
-  // Mode: 'create' for new trips, 'edit' for existing trips
-  mode?: "create" | "edit";
 }
 
 function generateSixDigitCode(): string {
@@ -44,13 +42,11 @@ export default function TripAccessConfig({
   signUpPassword,
   onAccessChange,
   currentPassword,
-  mode = "edit",
 }: TripAccessConfigProps) {
   // Determine initial level from props
   const initialLevel = getAccessLevelFromModes(signInMode, signUpMode, !!signUpPassword || !!currentPassword);
   const [accessLevel, setAccessLevel] = useState<AccessLevel>(initialLevel);
   const [password, setPassword] = useState(signUpPassword || currentPassword || "");
-  const [hasGeneratedPassword, setHasGeneratedPassword] = useState(false);
 
   // Track if we've ever been above level 0 (to know if we should keep the password)
   const [hasMovedUpFromBottom, setHasMovedUpFromBottom] = useState(
@@ -79,7 +75,6 @@ export default function TripAccessConfig({
       if (!password && !currentPassword) {
         newPassword = generateSixDigitCode();
         setPassword(newPassword);
-        setHasGeneratedPassword(true);
       }
       setHasMovedUpFromBottom(true);
     }
@@ -117,20 +112,6 @@ export default function TripAccessConfig({
     });
   }, [accessLevel, password, currentPassword, onAccessChange]);
 
-  const handlePasswordChange = useCallback((newPassword: string) => {
-    setPassword(newPassword);
-    setHasGeneratedPassword(false);
-
-    // Only send if we're above level 0
-    if (accessLevel > ACCESS_LEVELS.USERS_ONLY) {
-      onAccessChange({
-        signInMode: accessLevel === ACCESS_LEVELS.NAMED_PEOPLE,
-        signUpMode: accessLevel === ACCESS_LEVELS.ALLOW_SIGNUP,
-        signUpPassword: newPassword,
-      });
-    }
-  }, [accessLevel, onAccessChange]);
-
   const levelLabels = [
     { level: ACCESS_LEVELS.USERS_ONLY, label: "Users with accounts only", description: "Only registered users can access this trip" },
     { level: ACCESS_LEVELS.NAMED_PEOPLE, label: "Named People", description: "Show a list of invitees so visitors can identify themselves" },
@@ -145,110 +126,61 @@ export default function TripAccessConfig({
         Access
       </label>
 
-      <div className="flex gap-6 items-stretch">
-        {/* Vertical Slider */}
-        <div className="flex flex-col items-center py-2">
-          <div className="relative h-32 w-12 flex flex-col items-center justify-between">
-            {/* Track */}
-            <div className="absolute left-1/2 -translate-x-1/2 w-2 h-full bg-zinc-200 dark:bg-zinc-700 rounded-full">
-              {/* Filled portion */}
-              <div
-                className="absolute bottom-0 w-full bg-blue-500 rounded-full transition-all duration-200"
-                style={{ height: `${(accessLevel / 2) * 100}%` }}
+      {/* Radio buttons - vertical list, highest option at top */}
+      <div className="space-y-3">
+        {[...levelLabels].reverse().map((levelInfo) => {
+          const isActive = accessLevel === levelInfo.level;
+          return (
+            <label
+              key={levelInfo.level}
+              className={clsx(
+                "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                isActive
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+              )}
+            >
+              <input
+                type="radio"
+                name="accessLevel"
+                value={levelInfo.level}
+                checked={isActive}
+                onChange={() => handleLevelChange(levelInfo.level)}
+                className="mt-0.5 h-4 w-4 text-blue-600 border-zinc-300 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
               />
-            </div>
-
-            {/* Tick marks and clickable areas */}
-            {[2, 1, 0].map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => handleLevelChange(level as AccessLevel)}
-                className={clsx(
-                  "relative z-10 w-6 h-6 rounded-full border-2 transition-all duration-200 tap-target",
-                  accessLevel === level
-                    ? "bg-blue-500 border-blue-500 scale-110"
-                    : accessLevel > level
-                    ? "bg-blue-500 border-blue-500"
-                    : "bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-600 hover:border-blue-400"
-                )}
-                aria-label={levelLabels.find(l => l.level === level)?.label}
-              >
-                {accessLevel === level && (
-                  <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-25" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Labels */}
-        <div className="flex-1 flex flex-col justify-between py-2">
-          {[2, 1, 0].map((level) => {
-            const levelInfo = levelLabels.find(l => l.level === level)!;
-            const isActive = accessLevel === level;
-            return (
-              <button
-                key={level}
-                type="button"
-                onClick={() => handleLevelChange(level as AccessLevel)}
-                className={clsx(
-                  "text-left py-1 transition-all tap-target",
-                  isActive
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"
-                )}
-              >
+              <div className="flex-1">
                 <span className={clsx(
                   "block text-sm font-medium",
-                  isActive && "font-semibold"
+                  isActive
+                    ? "text-blue-700 dark:text-blue-300"
+                    : "text-zinc-700 dark:text-zinc-300"
                 )}>
                   {levelInfo.label}
                 </span>
-                {isActive && (
-                  <span className="block text-xs mt-0.5 text-zinc-500 dark:text-zinc-400">
-                    {levelInfo.description}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                <span className="block text-xs mt-0.5 text-zinc-500 dark:text-zinc-400">
+                  {levelInfo.description}
+                </span>
+              </div>
+            </label>
+          );
+        })}
       </div>
 
-      {/* Password Field - only shown when above level 0 */}
+      {/* Access Code - only shown when above level 0 */}
       {showPasswordField && (
         <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-700">
-          <label
-            htmlFor="accessPassword"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-          >
+          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Access Code
           </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              id="accessPassword"
-              value={password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
-              placeholder="Enter 6+ character code"
-              minLength={6}
-              className={clsx(
-                "tap-target flex-1 min-w-0 appearance-none h-10 px-4 py-3 rounded-lg box-border",
-                "bg-white dark:bg-zinc-800",
-                "border border-zinc-300 dark:border-zinc-700",
-                "text-zinc-900 dark:text-zinc-100 font-mono text-lg tracking-wider",
-                "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
-                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
-                "transition-colors"
-              )}
-            />
+          <div className="flex gap-3 items-center">
+            <span className="font-mono text-xl tracking-wider text-zinc-900 dark:text-zinc-100">
+              {password || <span className="text-zinc-400 dark:text-zinc-500 text-base font-sans">No code set</span>}
+            </span>
             <button
               type="button"
               onClick={() => {
                 const newCode = generateSixDigitCode();
                 setPassword(newCode);
-                setHasGeneratedPassword(true);
                 if (accessLevel > ACCESS_LEVELS.USERS_ONLY) {
                   onAccessChange({
                     signInMode: accessLevel === ACCESS_LEVELS.NAMED_PEOPLE,
@@ -266,18 +198,8 @@ export default function TripAccessConfig({
             </button>
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Share this code with people who need access. Minimum 6 characters.
+            Share this code with people who need access. Click the button to generate a new code.
           </p>
-          {hasGeneratedPassword && (
-            <p className="text-xs text-blue-600 dark:text-blue-400">
-              Code auto-generated. You can change it if you prefer.
-            </p>
-          )}
-          {mode === "edit" && currentPassword && currentPassword !== password && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Current code: <code className="bg-zinc-200 dark:bg-zinc-600 px-1 py-0.5 rounded">{currentPassword}</code>
-            </p>
-          )}
         </div>
       )}
     </div>
