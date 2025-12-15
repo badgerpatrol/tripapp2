@@ -691,12 +691,12 @@ export const TodoItemTemplateInput = z.object({
 export const KitItemTemplateInput = z.object({
   label: z.string().min(1, "Label is required"),
   notes: z.string().optional(),
-  quantity: z.number().positive().default(1),
+  quantity: z.number().nonnegative().default(1),
   perPerson: z.boolean().default(false),
   required: z.boolean().default(true),
-  weightGrams: z.number().int().positive().optional(),
+  weightGrams: z.number().int().nonnegative().optional(),
   category: z.string().optional(),
-  cost: z.number().positive().optional(),
+  cost: z.number().nonnegative().optional(),
   url: z.string().optional().or(z.literal("")),
   orderIndex: z.number().int().nonnegative().default(0),
   // Inventory-specific fields
