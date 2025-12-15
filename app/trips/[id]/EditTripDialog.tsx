@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
+import TripAccessConfig from "@/components/TripAccessConfig";
 
 interface EditTripDialogProps {
   trip: {
@@ -13,6 +14,7 @@ interface EditTripDialogProps {
     startDate: string | null;
     endDate: string | null;
     signUpMode?: boolean;
+    signInMode?: boolean;
     signUpPassword?: string | null;
     headerImageData?: string | null;
   };
@@ -36,6 +38,7 @@ export default function EditTripDialog({
     startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
     endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
     signUpMode: trip.signUpMode || false,
+    signInMode: trip.signInMode || false,
     signUpPassword: trip.signUpPassword || "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -185,6 +188,7 @@ export default function EditTripDialog({
         description: formData.description || null,
         baseCurrency: formData.baseCurrency,
         signUpMode: formData.signUpMode,
+        signInMode: formData.signInMode,
       };
 
       // Only include dates if they are set
@@ -200,8 +204,8 @@ export default function EditTripDialog({
         payload.endDate = null;
       }
 
-      // Include sign-up password if sign-up mode is enabled and password is provided
-      if (formData.signUpMode && formData.signUpPassword.trim()) {
+      // Include sign-up password if sign-up or sign-in mode is enabled and password is provided
+      if ((formData.signUpMode || formData.signInMode) && formData.signUpPassword.trim()) {
         payload.signUpPassword = formData.signUpPassword.trim();
       }
 
@@ -442,6 +446,22 @@ export default function EditTripDialog({
               </p>
             </div>
 
+            {/* Trip Access Configuration */}
+            <TripAccessConfig
+              signInMode={formData.signInMode}
+              signUpMode={formData.signUpMode}
+              signUpPassword={formData.signUpPassword}
+              currentPassword={trip.signUpPassword}
+              onAccessChange={(config) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  signInMode: config.signInMode,
+                  signUpMode: config.signUpMode,
+                  signUpPassword: config.signUpPassword,
+                }));
+              }}
+            />
+
             {/* Base Currency */}
             <div>
               <label
@@ -648,67 +668,6 @@ export default function EditTripDialog({
                 onChange={handleImageChange}
                 className="hidden"
               />
-            </div>
-
-            {/* Sign-up Mode */}
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="signUpMode"
-                  name="signUpMode"
-                  checked={formData.signUpMode}
-                  onChange={handleChange}
-                  className="mt-1 h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
-                />
-                <div>
-                  <label
-                    htmlFor="signUpMode"
-                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-                  >
-                    Enable Sign-up Mode
-                  </label>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                    Publish a page for the trip where people can sign up.
-                  </p>
-                </div>
-              </div>
-
-              {formData.signUpMode && (
-                <div className="ml-7 space-y-3">
-                  <div>
-                    <label
-                      htmlFor="signUpPassword"
-                      className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-                    >
-                      Viewer Password
-                    </label>
-                    <input
-                      type="text"
-                      id="signUpPassword"
-                      name="signUpPassword"
-                      value={formData.signUpPassword}
-                      onChange={handleChange}
-                      placeholder={trip.signUpPassword ? "Current password shown" : "Leave empty for auto-generated"}
-                      minLength={6}
-                      className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                    />
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                      Min 6 characters. Change the password or leave as-is.
-                    </p>
-                  </div>
-                  {trip.signUpPassword && (
-                    <div className="p-3 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-                      <p className="text-xs text-zinc-600 dark:text-zinc-300">
-                        <span className="font-medium">Current password:</span>{" "}
-                        <code className="bg-zinc-200 dark:bg-zinc-600 px-1 py-0.5 rounded">
-                          {trip.signUpPassword}
-                        </code>
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Delete Confirmation */}

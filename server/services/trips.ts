@@ -248,6 +248,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
         status: TripStatus.PLANNING,
         createdById: userId,
         signUpMode: data.signUpMode || false,
+        signInMode: data.signInMode || false,
         headerImageData: data.headerImageData || null,
       },
     });
@@ -277,9 +278,11 @@ export async function createTrip(userId: string, data: CreateTripInput) {
     return newTrip;
   });
 
-  // Handle sign-up mode (outside transaction to use Firebase Admin SDK)
+  // Handle sign-up/sign-in mode (outside transaction to use Firebase Admin SDK)
   let signUpPassword: string | null = null;
+
   if (data.signUpMode) {
+    // Sign-up mode: create viewer user and set password
     const { userId: viewerUserId, password } = await createOrUpdateSignUpViewer(
       trip.id,
       data.name,
@@ -306,6 +309,15 @@ export async function createTrip(userId: string, data: CreateTripInput) {
         rsvpStatus: "ACCEPTED",
       },
     });
+  } else if (data.signInMode && data.signUpPassword) {
+    // Sign-in mode only (no sign-up): just set the password, no viewer user needed
+    signUpPassword = data.signUpPassword;
+    await prisma.trip.update({
+      where: { id: trip.id },
+      data: {
+        signUpPassword: data.signUpPassword,
+      },
+    });
   }
 
   // Log the event (outside transaction for idempotency)
@@ -315,6 +327,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
     startDate: trip.startDate,
     endDate: trip.endDate,
     signUpMode: data.signUpMode || false,
+    signInMode: data.signInMode || false,
   });
 
   // Return trip with sign-up password if applicable
@@ -322,6 +335,7 @@ export async function createTrip(userId: string, data: CreateTripInput) {
     ...trip,
     signUpPassword,
     signUpMode: data.signUpMode || false,
+    signInMode: data.signInMode || false,
   };
 }
 
@@ -433,6 +447,7 @@ export async function updateTrip(
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
         ...(data.signUpMode !== undefined && { signUpMode: data.signUpMode }),
+        ...(data.signInMode !== undefined && { signInMode: data.signInMode }),
         ...(data.headerImageData !== undefined && { headerImageData: data.headerImageData }),
       },
     });
@@ -455,8 +470,13 @@ export async function updateTrip(
   let signUpPassword: string | null = existingTrip.signUpPassword;
   const tripName = data.name || existingTrip.name;
 
-  // Case 1: Enabling sign-up mode (was off, now on)
-  if (data.signUpMode === true && !existingTrip.signUpMode) {
+  // Case 1: Setting a password (new password provided and different from existing)
+  // This creates/updates the viewer user regardless of signUpMode
+  if (
+    data.signUpPassword !== undefined &&
+    data.signUpPassword !== null &&
+    data.signUpPassword !== existingTrip.signUpPassword
+  ) {
     const { userId: viewerUserId, password } = await createOrUpdateSignUpViewer(
       tripId,
       tripName,
@@ -511,31 +531,8 @@ export async function updateTrip(
       });
     }
   }
-  // Case 2: Sign-up mode is on and password is being changed
-  else if (
-    existingTrip.signUpMode &&
-    data.signUpPassword !== undefined &&
-    data.signUpPassword !== null &&
-    data.signUpPassword !== existingTrip.signUpPassword
-  ) {
-    const { password } = await createOrUpdateSignUpViewer(
-      tripId,
-      tripName,
-      existingTrip.signUpViewerUserId,
-      data.signUpPassword
-    );
-    signUpPassword = password;
-
-    // Update trip with new password
-    await prisma.trip.update({
-      where: { id: tripId },
-      data: {
-        signUpPassword: password,
-      },
-    });
-  }
-  // Case 3: Disabling sign-up mode (was on, now off) - keep the user but clear the link
-  else if (data.signUpMode === false && existingTrip.signUpMode) {
+  // Case 2: Clearing the password (setting to null)
+  else if (data.signUpPassword === null && existingTrip.signUpPassword !== null) {
     // Remove the viewer from the trip (soft delete the membership)
     if (existingTrip.signUpViewerUserId) {
       await prisma.tripMember.updateMany({
@@ -549,7 +546,7 @@ export async function updateTrip(
       });
     }
 
-    // Clear sign-up mode fields on the trip
+    // Clear password and viewer user link on the trip
     await prisma.trip.update({
       where: { id: tripId },
       data: {
@@ -559,6 +556,16 @@ export async function updateTrip(
     });
 
     signUpPassword = null;
+  }
+  // Case 3: Enabling sign-up mode (was off, now on) - viewer already exists if password is set
+  else if (data.signUpMode === true && !existingTrip.signUpMode) {
+    // If there's already a viewer user (from setting password), just enable the mode
+    // If no password is set, this is a no-op for now (sign-up mode without password doesn't make sense)
+  }
+  // Case 4: Disabling sign-up mode (was on, now off) - keep password and viewer if set
+  else if (data.signUpMode === false && existingTrip.signUpMode) {
+    // Just disable sign-up mode, but keep the password and viewer user
+    // This allows password login to continue working without sign-up mode
   }
 
   // Log the event (outside transaction for idempotency)
@@ -580,6 +587,9 @@ export async function updateTrip(
   }
   if (data.signUpMode !== undefined && data.signUpMode !== existingTrip.signUpMode) {
     changes.signUpMode = { old: existingTrip.signUpMode, new: data.signUpMode };
+  }
+  if (data.signInMode !== undefined && data.signInMode !== existingTrip.signInMode) {
+    changes.signInMode = { old: existingTrip.signInMode, new: data.signInMode };
   }
 
   if (Object.keys(changes).length > 0 || result.affectedTimelineItems.length > 0) {
@@ -924,8 +934,9 @@ export async function getTripOverviewForMember(
     spendStatus: trip.spendStatus,
     rsvpStatus: trip.rsvpStatus,
     headerImageData: trip.headerImageData,
-    // Sign-up mode fields (only visible to owners)
+    // Sign-up/sign-in mode fields (only visible to owners)
     signUpMode: isOwner ? trip.signUpMode : undefined,
+    signInMode: isOwner ? trip.signInMode : undefined,
     signUpPassword: isOwner ? trip.signUpPassword : undefined,
     createdAt: trip.createdAt,
     organizer: trip.createdBy,

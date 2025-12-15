@@ -91,7 +91,6 @@ function EditListPageContent() {
 
   const addItem = () => {
     setItems([
-      ...items,
       {
         id: `new-${crypto.randomUUID()}`, // Prefix new items with 'new-'
         label: "",
@@ -100,8 +99,9 @@ function EditListPageContent() {
         actionType: null,
         actionData: null,
         parameters: null,
-        orderIndex: items.length
+        orderIndex: 0
       },
+      ...items,
     ]);
   };
 

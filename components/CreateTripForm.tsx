@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { CreateTripSchema, type CreateTripInput } from "@/types/schemas";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import TripAccessConfig from "@/components/TripAccessConfig";
 
 interface ListTemplate {
   id: string;
@@ -35,8 +36,9 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sign-up mode state
+  // Access mode state
   const [signUpMode, setSignUpMode] = useState(false);
+  const [signInMode, setSignInMode] = useState(false);
   const [signUpPassword, setSignUpPassword] = useState("");
 
   // Header image state
@@ -129,6 +131,8 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
       }
 
       // Prepare form data
+      // Password is needed if either signInMode or signUpMode is enabled
+      const needsPassword = signInMode || signUpMode;
       const formData: CreateTripInput = {
         name: name.trim(),
         description: description.trim() || undefined,
@@ -137,7 +141,8 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         signUpMode,
-        signUpPassword: signUpMode && signUpPassword.trim() ? signUpPassword.trim() : undefined,
+        signInMode,
+        signUpPassword: needsPassword && signUpPassword.trim() ? signUpPassword.trim() : undefined,
         headerImageData: headerImageData || undefined,
       };
 
@@ -492,47 +497,17 @@ export default function CreateTripForm({ onSuccess, onCancel }: CreateTripFormPr
         />
       </div>
 
-      {/* Sign-up Mode */}
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            id="signUpMode"
-            checked={signUpMode}
-            onChange={(e) => setSignUpMode(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800"
-          />
-          <div>
-            <label
-              htmlFor="signUpMode"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-            >
-              Enable Sign-up Mode
-            </label>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Publish a page for the trip where people can sign up. Get the URL in the EDIT page once the trip is created.
-            </p>
-          </div>
-        </div>
-
-        {signUpMode && (
-          <div className="ml-7 space-y-3">
-            <Field label="Viewer Password" htmlFor="signUpPassword">
-              <Input
-                id="signUpPassword"
-                type="text"
-                value={signUpPassword}
-                onChange={(e) => setSignUpPassword(e.target.value)}
-                placeholder="Leave empty for auto-generated password"
-                minLength={6}
-              />
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                Optional. Min 6 characters. A password will be auto-generated if left empty.
-              </p>
-            </Field>
-          </div>
-        )}
-      </div>
+      {/* Trip Access Configuration */}
+      <TripAccessConfig
+        signInMode={signInMode}
+        signUpMode={signUpMode}
+        signUpPassword={signUpPassword}
+        onAccessChange={(config) => {
+          setSignInMode(config.signInMode);
+          setSignUpMode(config.signUpMode);
+          setSignUpPassword(config.signUpPassword);
+        }}
+      />
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-2 min-w-0">

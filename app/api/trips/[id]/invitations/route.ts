@@ -57,12 +57,12 @@ export async function POST(
       );
     }
 
-    const { emails, userIds, groupIds } = validationResult.data;
+    const { emails, userIds, groupIds, nonUserNames } = validationResult.data;
 
     // 4. Invite users
     const result = await inviteUsersToTrip(
       tripId,
-      { emails, userIds, groupIds },
+      { emails, userIds, groupIds, nonUserNames },
       auth.uid
     );
 

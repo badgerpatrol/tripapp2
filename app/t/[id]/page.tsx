@@ -172,8 +172,23 @@ export default function TripDetailPage() {
   const [publicTripInfo, setPublicTripInfo] = useState<{
     tripName: string;
     signUpEnabled: boolean;
-    participants: Array<{ id: string; user: { id: string; email: string; displayName: string | null } }>;
+    signInEnabled: boolean;
+    passwordRequired: boolean;
+    participants: Array<{
+      id: string;
+      role: string;
+      user: {
+        id: string;
+        email: string;
+        displayName: string | null;
+        userType: "FULL" | "SIGNUP" | "SYSTEM";
+        emailHint: string | null;
+      };
+    }>;
   } | null>(null);
+
+  // State to track if we should show sign-up dialog after password entry
+  const [showSignUpAfterPassword, setShowSignUpAfterPassword] = useState(false);
 
   // Join trip dialog state (for participating in the trip)
   const [isJoinTripDialogOpen, setIsJoinTripDialogOpen] = useState(false);
@@ -255,12 +270,20 @@ export default function TripDetailPage() {
   // Fetch public trip info (for login screen display)
   const fetchPublicInfo = async () => {
     try {
-      const response = await fetch(`/api/trips/${tripId}/public`);
+      // Add cache-busting to ensure we always get fresh config
+      const response = await fetch(`/api/trips/${tripId}/public`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setPublicTripInfo({
           tripName: data.tripName,
           signUpEnabled: data.signUpEnabled,
+          signInEnabled: data.signInEnabled,
+          passwordRequired: data.passwordRequired,
           participants: data.participants || [],
         });
       }
@@ -271,7 +294,7 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     fetchPublicInfo();
-  }, [tripId]);
+  }, [tripId, user]);
 
   // Set default filter based on trip RSVP status
   useEffect(() => {
@@ -390,6 +413,14 @@ export default function TripDetailPage() {
     }
   }, [user, authLoading, fetchTrip, fetchChoices]);
 
+  // Open join dialog after sign-in mode "None of these" was clicked
+  useEffect(() => {
+    if (showSignUpAfterPassword && user && !authLoading) {
+      setIsJoinTripDialogOpen(true);
+      setShowSignUpAfterPassword(false);
+    }
+  }, [showSignUpAfterPassword, user, authLoading]);
+
   // Show loading if auth is loading OR if we have a user but no trip yet (and no error)
   if (authLoading || (user && !trip && !error)) {
     return (
@@ -408,6 +439,11 @@ export default function TripDetailPage() {
         onFullAccountLogin={() => {
           // Redirect to main login with return URL
           router.push(`/?returnTo=/t/${tripId}`);
+        }}
+        onSignUp={() => {
+          // This will open the join dialog after user logs in as viewer
+          // For now we set a flag that the page will check after auth
+          setShowSignUpAfterPassword(true);
         }}
       />
     );

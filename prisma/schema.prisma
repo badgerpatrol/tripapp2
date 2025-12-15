@@ -302,9 +302,10 @@ model Trip {
   status       TripStatus  @default(PLANNING)
   spendStatus  SpendStatus @default(OPEN) // Controls whether any spend can be added/edited on this trip
   rsvpStatus   RsvpWindowStatus @default(OPEN) // Controls whether RSVPs can be changed
-  signUpMode   Boolean     @default(false) // When true, creates a viewer user for sign-up access
+  signUpMode   Boolean     @default(false) // When true, allows new users to sign up for the trip
+  signInMode   Boolean     @default(false) // When true, shows list of invitees for user to identify themselves
   signUpViewerUserId String? // The viewer user created for sign-up mode
-  signUpPassword String?    // Password for the sign-up viewer account
+  signUpPassword String?    // Password for viewer access to the trip
   headerImageData String?   @db.Text // Base64 encoded header/theme image
   createdById  String
   createdAt    DateTime    @default(now())

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
@@ -51,11 +51,13 @@ function CreateKitListPageContent() {
   const [tags, setTags] = useState<string>("");
   const [inventory, setInventory] = useState(inventoryFromUrl);
   const [items, setItems] = useState<KitItem[]>([]);
+  const newItemInputRef = useRef<HTMLInputElement>(null);
 
   const addItem = () => {
+    const newId = crypto.randomUUID();
     setItems([
       {
-        id: crypto.randomUUID(),
+        id: newId,
         label: "",
         notes: "",
         quantity: 1,
@@ -74,6 +76,10 @@ function CreateKitListPageContent() {
       },
       ...items,
     ]);
+    // Focus the new item's input after render
+    setTimeout(() => {
+      newItemInputRef.current?.focus();
+    }, 0);
   };
 
   const removeItem = (id: string) => {
@@ -446,6 +452,7 @@ function CreateKitListPageContent() {
                       {/* Item Name */}
                       <input
                         type="text"
+                        ref={index === 0 ? newItemInputRef : undefined}
                         value={item.label}
                         onChange={(e) => updateItem(item.id, "label", e.target.value)}
                         placeholder="Item name *"

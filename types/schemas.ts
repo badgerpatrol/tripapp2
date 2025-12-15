@@ -59,6 +59,7 @@ export const CreateTripSchema = z.object({
   endDate: z.coerce.date().optional(),
   location: z.string().optional(),
   signUpMode: z.boolean().optional().default(false),
+  signInMode: z.boolean().optional().default(false),
   signUpPassword: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.string().min(6, "Password must be at least 6 characters").optional()
@@ -85,6 +86,7 @@ export const UpdateTripSchema = z.object({
   endDate: z.coerce.date().nullable().optional(),
   location: z.string().nullable().optional(),
   signUpMode: z.boolean().optional(),
+  signInMode: z.boolean().optional(),
   signUpPassword: z.preprocess(
     (val) => (val === "" ? undefined : val),
     z.string().min(6, "Password must be at least 6 characters").nullable().optional()
@@ -611,6 +613,7 @@ export type CreateTripInput = {
   endDate?: Date;
   location?: string;
   signUpMode?: boolean;
+  signInMode?: boolean;
   signUpPassword?: string;
   headerImageData?: string;
 };
@@ -688,12 +691,12 @@ export const TodoItemTemplateInput = z.object({
 export const KitItemTemplateInput = z.object({
   label: z.string().min(1, "Label is required"),
   notes: z.string().optional(),
-  quantity: z.number().positive().default(1),
+  quantity: z.number().nonnegative().default(1),
   perPerson: z.boolean().default(false),
   required: z.boolean().default(true),
-  weightGrams: z.number().int().positive().optional(),
+  weightGrams: z.number().int().nonnegative().optional(),
   category: z.string().optional(),
-  cost: z.number().positive().optional(),
+  cost: z.number().nonnegative().optional(),
   url: z.string().optional().or(z.literal("")),
   orderIndex: z.number().int().nonnegative().default(0),
   // Inventory-specific fields
@@ -729,6 +732,27 @@ export const TodoItemTemplateUpdateInput = TodoItemTemplateInput.extend({
 
 export const KitItemTemplateUpdateInput = KitItemTemplateInput.extend({
   id: z.string().optional(),
+}).strict();
+
+// Schema for updating a single kit item - allows 0 values and all fields are optional
+export const KitItemUpdateSchema = z.object({
+  label: z.string().min(1, "Label is required").optional(),
+  notes: z.string().optional(),
+  quantity: z.number().nonnegative().optional(),
+  perPerson: z.boolean().optional(),
+  required: z.boolean().optional(),
+  weightGrams: z.number().int().nonnegative().optional(),
+  category: z.string().optional(),
+  cost: z.number().nonnegative().optional(),
+  url: z.string().optional(),
+  orderIndex: z.number().int().nonnegative().optional(),
+  // Inventory-specific fields
+  date: z.coerce.date().optional().nullable(),
+  needsRepair: z.boolean().optional(),
+  conditionNotes: z.string().optional(),
+  lost: z.boolean().optional(),
+  lastSeenText: z.string().optional(),
+  lastSeenDate: z.coerce.date().optional().nullable()
 }).strict();
 
 export const ListTemplateUpdate = z.object({
@@ -794,6 +818,7 @@ export const ListTripInstancesQuerySchema = z.object({
 
 export type TodoItemTemplateInputType = z.infer<typeof TodoItemTemplateInput>;
 export type KitItemTemplateInputType = z.infer<typeof KitItemTemplateInput>;
+export type KitItemUpdateInput = z.infer<typeof KitItemUpdateSchema>;
 export type ListTemplateCreateInput = z.infer<typeof ListTemplateCreate>;
 export type ListTemplateUpdateInput = z.infer<typeof ListTemplateUpdate>;
 export type TodoMergeModeType = z.infer<typeof TodoMergeMode>;

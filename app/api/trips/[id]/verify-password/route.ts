@@ -41,16 +41,10 @@ export async function POST(
       );
     }
 
-    if (!trip.signUpMode) {
-      return NextResponse.json(
-        { error: "Sign-up is not enabled for this trip" },
-        { status: 400 }
-      );
-    }
-
+    // Password verification works regardless of signUpMode - only requires a password to be set
     if (!trip.signUpPassword) {
       return NextResponse.json(
-        { error: "Trip sign-up password not configured" },
+        { error: "This trip does not have a password set" },
         { status: 400 }
       );
     }
