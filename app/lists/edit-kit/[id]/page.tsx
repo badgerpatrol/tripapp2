@@ -80,6 +80,9 @@ function EditKitListPageContent() {
   const [isPhotoScanOpen, setIsPhotoScanOpen] = useState(false);
   const [isInventorySheetOpen, setIsInventorySheetOpen] = useState(false);
   const newItemInputRef = useRef<HTMLInputElement>(null);
+  const [editedItemIds, setEditedItemIds] = useState<Set<string>>(new Set());
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
+  const [originalItems, setOriginalItems] = useState<Map<string, KitItem>>(new Map());
 
   useEffect(() => {
     if (!user || !templateId) return;
@@ -109,27 +112,32 @@ function EditKitListPageContent() {
 
         // Populate items
         if (template.kitItems && template.kitItems.length > 0) {
-          setItems(
-            template.kitItems.map((item) => ({
-              id: item.id,
-              label: item.label,
-              notes: item.notes || "",
-              quantity: item.quantity,
-              category: item.category || "",
-              weightGrams: item.weightGrams?.toString() || "",
-              cost: item.cost?.toString() || "",
-              url: item.url || "",
-              perPerson: item.perPerson,
-              required: item.required,
-              orderIndex: item.orderIndex,
-              date: item.date || "",
-              needsRepair: item.needsRepair || false,
-              conditionNotes: item.conditionNotes || "",
-              lost: item.lost || false,
-              lastSeenText: item.lastSeenText || "",
-              lastSeenDate: item.lastSeenDate || "",
-            }))
-          );
+          const loadedItems = template.kitItems.map((item) => ({
+            id: item.id,
+            label: item.label,
+            notes: item.notes || "",
+            quantity: item.quantity,
+            category: item.category || "",
+            weightGrams: item.weightGrams?.toString() || "",
+            cost: item.cost?.toString() || "",
+            url: item.url || "",
+            perPerson: item.perPerson,
+            required: item.required,
+            orderIndex: item.orderIndex,
+            date: item.date || "",
+            needsRepair: item.needsRepair || false,
+            conditionNotes: item.conditionNotes || "",
+            lost: item.lost || false,
+            lastSeenText: item.lastSeenText || "",
+            lastSeenDate: item.lastSeenDate || "",
+          }));
+          setItems(loadedItems);
+          // Store original items for comparison
+          const origMap = new Map<string, KitItem>();
+          loadedItems.forEach((item) => {
+            if (item.id) origMap.set(item.id, { ...item });
+          });
+          setOriginalItems(origMap);
         } else {
           setItems([
             {
@@ -284,6 +292,74 @@ function EditKitListPageContent() {
         item.id === id ? { ...item, [field]: value } : item
       )
     );
+    // Mark item as edited
+    setEditedItemIds((prev) => new Set(prev).add(id));
+  };
+
+  const saveItem = async (itemId: string) => {
+    if (!user) return;
+
+    const item = items.find((i) => i.id === itemId);
+    if (!item || !item.label.trim()) return;
+
+    setSavingItemId(itemId);
+
+    try {
+      const token = await user.getIdToken();
+
+      // Build payload with only the fields that have values
+      const payload: Record<string, any> = {
+        label: item.label.trim(),
+        notes: item.notes.trim() || undefined,
+        quantity: item.quantity,
+        category: item.category.trim() || undefined,
+        weightGrams: item.weightGrams ? parseInt(item.weightGrams) : undefined,
+        cost: item.cost ? parseFloat(item.cost) : undefined,
+        url: item.url.trim() || undefined,
+        perPerson: item.perPerson,
+        required: item.required,
+      };
+
+      // Add inventory fields if in inventory mode
+      if (inventory) {
+        payload.date = item.date ? new Date(item.date).toISOString() : null;
+        payload.needsRepair = item.needsRepair;
+        payload.conditionNotes = item.conditionNotes.trim() || undefined;
+        payload.lost = item.lost;
+        payload.lastSeenText = item.lastSeenText.trim() || undefined;
+        payload.lastSeenDate = item.lastSeenDate ? new Date(item.lastSeenDate).toISOString() : null;
+      }
+
+      const response = await fetch(`/api/lists/templates/${templateId}/items/${itemId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        // Update original items and clear edited state for this item
+        setOriginalItems((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(itemId, { ...item });
+          return newMap;
+        });
+        setEditedItemIds((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(itemId);
+          return newSet;
+        });
+      } else {
+        const data = await response.json();
+        console.error("Error saving item:", data.error);
+      }
+    } catch (err) {
+      console.error("Error saving item:", err);
+    } finally {
+      setSavingItemId(null);
+    }
   };
 
   const moveItem = (id: string, direction: "up" | "down") => {
@@ -815,19 +891,45 @@ function EditKitListPageContent() {
                       )}
                     </div>
 
-                    {/* Delete Button */}
-                    {items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.id!)}
-                        className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                        disabled={saving}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    )}
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-1">
+                      {/* Save Button - only show if item is edited */}
+                      {editedItemIds.has(item.id!) && item.label.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => saveItem(item.id!)}
+                          className="mt-2 p-2 text-green-600 hover:text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                          disabled={saving || savingItemId === item.id}
+                          title="Save item"
+                        >
+                          {savingItemId === item.id ? (
+                            <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+
+                      {/* Delete Button */}
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.id!)}
+                          className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                          disabled={saving}
+                          title="Delete item"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

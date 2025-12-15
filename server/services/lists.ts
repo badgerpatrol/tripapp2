@@ -477,6 +477,66 @@ export async function deleteTemplate(actorId: string, templateId: string) {
   );
 }
 
+/**
+ * Update a single kit item in a template
+ */
+export async function updateKitItem(
+  actorId: string,
+  templateId: string,
+  itemId: string,
+  payload: import("@/types/schemas").KitItemUpdateInput
+) {
+  // Verify template exists and user has permission
+  const template = await prisma.listTemplate.findUnique({
+    where: { id: templateId },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  if (!canEditTemplate(actorId, template)) {
+    throw new Error("Forbidden: Cannot edit this template");
+  }
+
+  // Verify item exists and belongs to this template
+  const item = await prisma.kitItemTemplate.findUnique({
+    where: { id: itemId },
+  });
+
+  if (!item || item.templateId !== templateId) {
+    throw new Error("Item not found");
+  }
+
+  // Build the update data object
+  const updateData: Record<string, any> = {};
+
+  if (payload.label !== undefined) updateData.label = payload.label;
+  if (payload.notes !== undefined) updateData.notes = payload.notes || null;
+  if (payload.quantity !== undefined) updateData.quantity = payload.quantity;
+  if (payload.perPerson !== undefined) updateData.perPerson = payload.perPerson;
+  if (payload.required !== undefined) updateData.required = payload.required;
+  if (payload.weightGrams !== undefined) updateData.weightGrams = payload.weightGrams || null;
+  if (payload.category !== undefined) updateData.category = payload.category || null;
+  if (payload.cost !== undefined) updateData.cost = payload.cost ?? null;
+  if (payload.url !== undefined) updateData.url = payload.url || null;
+  if (payload.orderIndex !== undefined) updateData.orderIndex = payload.orderIndex;
+  if (payload.date !== undefined) updateData.date = payload.date;
+  if (payload.needsRepair !== undefined) updateData.needsRepair = payload.needsRepair;
+  if (payload.conditionNotes !== undefined) updateData.conditionNotes = payload.conditionNotes || null;
+  if (payload.lost !== undefined) updateData.lost = payload.lost;
+  if (payload.lastSeenText !== undefined) updateData.lastSeenText = payload.lastSeenText || null;
+  if (payload.lastSeenDate !== undefined) updateData.lastSeenDate = payload.lastSeenDate;
+
+  // Update the item
+  const updatedItem = await prisma.kitItemTemplate.update({
+    where: { id: itemId },
+    data: updateData,
+  });
+
+  return updatedItem;
+}
+
 // ============================================================================
 // Instance Management (Trip Lists)
 // ============================================================================
