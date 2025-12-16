@@ -166,7 +166,8 @@ export default function TripDetailPage() {
   const [listWorkflowDescription, setListWorkflowDescription] = useState("");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
-  const [listsCount, setListsCount] = useState<number | null>(null); // null = not yet loaded
+  const [checklistsCount, setChecklistsCount] = useState<number | null>(null); // null = not yet loaded
+  const [kitListsCount, setKitListsCount] = useState<number | null>(null); // null = not yet loaded
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -189,7 +190,8 @@ export default function TripDetailPage() {
     settlement: boolean;
     members: boolean;
     timeline: boolean;
-    lists: boolean;
+    checklists: boolean;
+    kitLists: boolean;
     transport: boolean;
   }>({
     rsvp: false,
@@ -199,7 +201,8 @@ export default function TripDetailPage() {
     settlement: false,
     members: false,
     timeline: false,
-    lists: false,
+    checklists: false,
+    kitLists: false,
     transport: false,
   });
 
@@ -225,7 +228,8 @@ export default function TripDetailPage() {
       settlement: false,
       members: false,
       timeline: false,
-      lists: false,
+      checklists: false,
+      kitLists: false,
       transport: false,
     });
   };
@@ -239,7 +243,8 @@ export default function TripDetailPage() {
       settlement: true,
       members: true,
       timeline: true,
-      lists: true,
+      checklists: true,
+      kitLists: true,
       transport: true,
     });
   };
@@ -1795,21 +1800,21 @@ export default function TripDetailPage() {
           </div>
         </div>
         
-        {/* Lists Section (for accepted members) - only show for organizers or when lists exist */}
-        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (listsCount !== null && listsCount > 0)) ? (
+        {/* Checklists Section (for accepted members) - only show for organizers or when checklists exist */}
+        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (checklistsCount !== null && checklistsCount > 0)) ? (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
             {/* Header row with title and toggle */}
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 flex-wrap flex-1">
-                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Lists</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Checklists</h2>
               </div>
               <button
-                onClick={() => toggleSection('lists')}
+                onClick={() => toggleSection('checklists')}
                 className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.lists ? "Expand section" : "Collapse section"}
+                aria-label={collapsedSections.checklists ? "Expand section" : "Collapse section"}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.lists ? (
+                  {collapsedSections.checklists ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   ) : (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
@@ -1818,18 +1823,18 @@ export default function TripDetailPage() {
               </button>
             </div>
 
-            {/* Lists content - only show when not collapsed */}
-            {!collapsedSections.lists && (
+            {/* Checklists content - only show when not collapsed */}
+            {!collapsedSections.checklists && (
               <TripListsPanel
-                key={listsRefreshKey}
+                key={`checklists-${listsRefreshKey}`}
                 tripId={trip.id}
                 isOrganizer={canInvite && !isViewer}
                 hideContainer={true}
+                listTypeFilter="TODO"
                 onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
                 onOpenCreateChoice={(choiceName) => {
                   setIsCreateChoiceDialogOpen(true);
                   if (choiceName) {
-                    // Store the choice name to pass to the dialog
                     setCreateChoiceInitialName(choiceName);
                   }
                 }}
@@ -1839,19 +1844,82 @@ export default function TripDetailPage() {
                   setListWorkflowDescription(`Complete tasks in ${listTitle}`);
                   setIsListWorkflowModalOpen(true);
                 }}
-                onListsLoaded={setListsCount}
+                onListsLoaded={setChecklistsCount}
               />
             )}
           </div>
-        ) : trip.userRsvpStatus === "ACCEPTED" && !canInvite && listsCount === null ? (
-          /* Hidden TripListsPanel to fetch list count for non-organizers */
+        ) : trip.userRsvpStatus === "ACCEPTED" && !canInvite && checklistsCount === null ? (
+          /* Hidden TripListsPanel to fetch checklist count for non-organizers */
           <div className="hidden">
             <TripListsPanel
-              key={listsRefreshKey}
+              key={`checklists-hidden-${listsRefreshKey}`}
               tripId={trip.id}
               isOrganizer={false}
               hideContainer={true}
-              onListsLoaded={setListsCount}
+              listTypeFilter="TODO"
+              onListsLoaded={setChecklistsCount}
+            />
+          </div>
+        ) : null}
+
+        {/* Kit Lists Section (for accepted members) - only show for organizers or when kit lists exist */}
+        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (kitListsCount !== null && kitListsCount > 0)) ? (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
+            {/* Header row with title and toggle */}
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2 flex-wrap flex-1">
+                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Kit Lists</h2>
+              </div>
+              <button
+                onClick={() => toggleSection('kitLists')}
+                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
+                aria-label={collapsedSections.kitLists ? "Expand section" : "Collapse section"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {collapsedSections.kitLists ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  )}
+                </svg>
+              </button>
+            </div>
+
+            {/* Kit Lists content - only show when not collapsed */}
+            {!collapsedSections.kitLists && (
+              <TripListsPanel
+                key={`kitlists-${listsRefreshKey}`}
+                tripId={trip.id}
+                isOrganizer={canInvite && !isViewer}
+                hideContainer={true}
+                listTypeFilter="KIT"
+                onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
+                onOpenCreateChoice={(choiceName) => {
+                  setIsCreateChoiceDialogOpen(true);
+                  if (choiceName) {
+                    setCreateChoiceInitialName(choiceName);
+                  }
+                }}
+                onOpenList={(listId, listTitle) => {
+                  setSelectedListId(listId);
+                  setListWorkflowTitle("Pack your kit");
+                  setListWorkflowDescription(`Pack items in ${listTitle}`);
+                  setIsListWorkflowModalOpen(true);
+                }}
+                onListsLoaded={setKitListsCount}
+              />
+            )}
+          </div>
+        ) : trip.userRsvpStatus === "ACCEPTED" && !canInvite && kitListsCount === null ? (
+          /* Hidden TripListsPanel to fetch kit list count for non-organizers */
+          <div className="hidden">
+            <TripListsPanel
+              key={`kitlists-hidden-${listsRefreshKey}`}
+              tripId={trip.id}
+              isOrganizer={false}
+              hideContainer={true}
+              listTypeFilter="KIT"
+              onListsLoaded={setKitListsCount}
             />
           </div>
         ) : null}

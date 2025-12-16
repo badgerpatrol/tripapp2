@@ -80,15 +80,17 @@ interface TripListsPanelProps {
   isOrganizer?: boolean; // If false and no lists exist, component will not render
   hideContainer?: boolean; // If true, will not render the outer container wrapper (for use when wrapped externally)
   onListsLoaded?: (count: number) => void; // Callback when lists are loaded, reports the count
+  listTypeFilter?: ListType; // If set, only show lists of this type (TODO or KIT)
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, listTypeFilter }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
+  // When listTypeFilter is set, force the type filter to that value; otherwise allow user selection
+  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">(listTypeFilter || "ALL");
   const [completionStatusFilter, setCompletionStatusFilter] = useState<"all" | "open" | "done">("all");
   const [confirmCompletionItem, setConfirmCompletionItem] = useState<{itemId: string; label: string} | null>(null);
   const [isAddListDialogOpen, setIsAddListDialogOpen] = useState(false);
@@ -477,22 +479,25 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           </div>
           {!filtersCollapsed && (
             <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="list-type-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Filter by Type
-                  </label>
-                  <select
-                    id="list-type-filter"
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-                    className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                  >
-                    <option value="ALL">All Lists</option>
-                    <option value="TODO">TODO Lists</option>
-                    <option value="KIT">Kit Lists</option>
-                  </select>
-                </div>
+              <div className={`grid grid-cols-1 ${!listTypeFilter ? 'sm:grid-cols-2' : ''} gap-4`}>
+                {/* Only show type filter when listTypeFilter is not set */}
+                {!listTypeFilter && (
+                  <div>
+                    <label htmlFor="list-type-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Filter by Type
+                    </label>
+                    <select
+                      id="list-type-filter"
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+                      className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    >
+                      <option value="ALL">All Lists</option>
+                      <option value="TODO">TODO Lists</option>
+                      <option value="KIT">Kit Lists</option>
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label htmlFor="list-completion-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                     Filter by Status
@@ -906,6 +911,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           setIsAddListDialogOpen(false);
           fetchLists(); // Refresh the lists after adding
         }}
+        listTypeFilter={listTypeFilter}
       />
 
       {/* List Report Dialog */}

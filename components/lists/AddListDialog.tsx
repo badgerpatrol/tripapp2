@@ -24,6 +24,7 @@ interface AddListDialogProps {
   onClose: () => void;
   tripId: string;
   onSuccess: () => void;
+  listTypeFilter?: ListType; // If set, only show lists of this type
 }
 
 type MergeMode = "NEW_INSTANCE" | "REPLACE" | "MERGE_ADD" | "MERGE_ADD_ALLOW_DUPES";
@@ -34,6 +35,7 @@ export function AddListDialog({
   onClose,
   tripId,
   onSuccess,
+  listTypeFilter,
 }: AddListDialogProps) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("my-templates");
@@ -46,7 +48,8 @@ export function AddListDialog({
   const [loadingMyTemplates, setLoadingMyTemplates] = useState(true);
   const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
+  // When listTypeFilter is set, force the type filter to that value
+  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">(listTypeFilter || "ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [hasConflict, setHasConflict] = useState(false);
   const [checkingConflict, setCheckingConflict] = useState(false);
@@ -227,11 +230,30 @@ export function AddListDialog({
     return type === "TODO" ? "✓" : "🎒";
   };
 
+  // Determine dialog title and tab labels based on listTypeFilter
+  const dialogTitle = listTypeFilter === "TODO"
+    ? "Add Checklist to Trip"
+    : listTypeFilter === "KIT"
+      ? "Add Kit List to Trip"
+      : "Add List to Trip";
+
+  const myTemplatesLabel = listTypeFilter === "TODO"
+    ? "My Checklists"
+    : listTypeFilter === "KIT"
+      ? "My Kit Lists"
+      : "My Lists";
+
+  const publicGalleryLabel = listTypeFilter === "TODO"
+    ? "Public Checklists"
+    : listTypeFilter === "KIT"
+      ? "Public Kit Lists"
+      : "Public Gallery";
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add List to Trip"
+      title={dialogTitle}
       size="lg"
       footer={
         <>
@@ -271,7 +293,7 @@ export function AddListDialog({
             }`}
           >
             <span className="flex items-center gap-2">
-              My Checklists
+              {myTemplatesLabel}
               {loadingMyTemplates ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
               ) : (
@@ -291,7 +313,7 @@ export function AddListDialog({
             }`}
           >
             <span className="flex items-center gap-2">
-              Public Gallery
+              {publicGalleryLabel}
               {loadingPublicTemplates ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
               ) : (
@@ -314,15 +336,18 @@ export function AddListDialog({
             />
           )}
 
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-            className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
-          >
-            <option value="ALL">All Types</option>
-            <option value="TODO">TODO Lists</option>
-            <option value="KIT">Packing Lists</option>
-          </select>
+          {/* Only show type filter when listTypeFilter is not set */}
+          {!listTypeFilter && (
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+              className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
+            >
+              <option value="ALL">All Types</option>
+              <option value="TODO">TODO Lists</option>
+              <option value="KIT">Packing Lists</option>
+            </select>
+          )}
 
           {activeTab === "public-gallery" && searchQuery && (
             <Button
