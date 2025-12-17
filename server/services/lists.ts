@@ -716,7 +716,6 @@ export async function createInstanceAdHoc(
         actionData: item.actionData,
         parameters: item.parameters,
         orderIndex: item.orderIndex ?? idx,
-        isDone: false,
       })),
     });
   } else if (type === "KIT" && kitItems) {
@@ -733,7 +732,6 @@ export async function createInstanceAdHoc(
         cost: item.cost,
         url: item.url,
         orderIndex: item.orderIndex ?? idx,
-        isPacked: false,
         // Inventory fields
         date: item.date,
         needsRepair: item.needsRepair ?? false,
@@ -854,10 +852,8 @@ export async function listTripInstances(
         return query.completionStatus === "done";
       }
 
-      // Check if all items are completed
-      const allCompleted = instance.type === "TODO"
-        ? instance.todoItems.every((item) => item.isDone)
-        : instance.kitItems.every((item) => item.isPacked);
+      // Check if all items are completed (have at least one tick)
+      const allCompleted = items.every((item) => item.ticks && item.ticks.length > 0);
 
       // Return based on filter
       if (query.completionStatus === "done") {

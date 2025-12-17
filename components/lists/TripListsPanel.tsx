@@ -23,9 +23,6 @@ interface TodoItem {
   id: string;
   label: string;
   notes: string | null;
-  isDone: boolean;
-  doneBy: string | null;
-  doneAt: string | null;
   actionType: TodoActionType | null;
   actionData: any | null;
   parameters: Record<string, any> | null;
@@ -45,9 +42,6 @@ interface KitItem {
   category: string | null;
   cost: number | null;
   url: string | null;
-  isPacked: boolean;
-  packedBy: string | null;
-  packedAt: string | null;
   orderIndex: number;
   ticks?: ItemTick[];
 }
@@ -191,8 +185,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               return {
                 ...item,
                 ticks: newTicks,
-                isDone: newTicks.length > 0,
-                doneBy: newTicks.length > 0 ? newTicks[0].userId : null,
               };
             }
             return item;
@@ -213,8 +205,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               return {
                 ...item,
                 ticks: newTicks,
-                isPacked: newTicks.length > 0,
-                packedBy: newTicks.length > 0 ? newTicks[0].userId : null,
               };
             }
             return item;
@@ -254,8 +244,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   return {
                     ...item,
                     ticks: revertedTicks,
-                    isDone: revertedTicks.length > 0,
-                    doneBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
                   };
                 }
                 return item;
@@ -272,8 +260,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   return {
                     ...item,
                     ticks: revertedTicks,
-                    isPacked: revertedTicks.length > 0,
-                    packedBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
                   };
                 }
                 return item;

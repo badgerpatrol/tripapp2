@@ -27,7 +27,6 @@ export const todoHandler: ListTypeHandler = {
         parameters: item.parameters as any,
         orderIndex: item.orderIndex,
         perPerson: item.perPerson,
-        isDone: false,
       })),
     });
   },
@@ -69,7 +68,6 @@ export const todoHandler: ListTypeHandler = {
             parameters: templateItem.parameters as any,
             orderIndex: templateItem.orderIndex,
             perPerson: templateItem.perPerson,
-            isDone: false,
           },
         });
         added++;
@@ -86,7 +84,6 @@ export const todoHandler: ListTypeHandler = {
               parameters: templateItem.parameters as any,
               orderIndex: templateItem.orderIndex,
               perPerson: templateItem.perPerson,
-              isDone: false,
             },
           });
           added++;
@@ -133,16 +130,6 @@ export const todoHandler: ListTypeHandler = {
           createdAt: new Date(),
         },
       });
-
-      // Update the legacy isDone field for backward compatibility
-      await prisma.todoItemInstance.update({
-        where: { id: itemId },
-        data: {
-          isDone: true,
-          doneBy: actorId,
-          doneAt: new Date(),
-        },
-      });
     } else {
       // Unticking the item - delete the ItemTick for this user
       await prisma.itemTick.deleteMany({
@@ -151,34 +138,6 @@ export const todoHandler: ListTypeHandler = {
           userId: actorId,
         },
       });
-
-      // Check if any other ticks remain
-      const remainingTicks = await prisma.itemTick.findFirst({
-        where: { todoItemId: itemId },
-        orderBy: { createdAt: "desc" },
-      });
-
-      if (remainingTicks) {
-        // Other ticks remain, update to the most recent ticker
-        await prisma.todoItemInstance.update({
-          where: { id: itemId },
-          data: {
-            isDone: true,
-            doneBy: remainingTicks.userId,
-            doneAt: remainingTicks.createdAt,
-          },
-        });
-      } else {
-        // No ticks remain, mark as not done
-        await prisma.todoItemInstance.update({
-          where: { id: itemId },
-          data: {
-            isDone: false,
-            doneBy: null,
-            doneAt: null,
-          },
-        });
-      }
     }
   },
 

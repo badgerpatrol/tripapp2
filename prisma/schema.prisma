@@ -893,9 +893,6 @@ model TodoItemInstance {
   listId     String
   label      String
   notes      String?
-  isDone     Boolean         @default(false)
-  doneBy     String?
-  doneAt     DateTime?
   actionType TodoActionType?
   actionData Json?
   parameters Json?
@@ -949,9 +946,6 @@ model KitItemInstance {
   category    String?
   cost        Decimal?  @db.Decimal(10, 2)
   url         String?
-  isPacked    Boolean   @default(false)
-  packedBy    String?
-  packedAt    DateTime?
   orderIndex  Int       @default(0)
   // Inventory-specific fields
   date             DateTime?

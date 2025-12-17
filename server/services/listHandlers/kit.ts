@@ -28,7 +28,6 @@ export const kitHandler: ListTypeHandler = {
         cost: item.cost,
         url: item.url,
         orderIndex: item.orderIndex,
-        isPacked: false,
         // Inventory fields
         date: item.date,
         needsRepair: item.needsRepair,
@@ -80,7 +79,6 @@ export const kitHandler: ListTypeHandler = {
             cost: templateItem.cost,
             url: templateItem.url,
             orderIndex: templateItem.orderIndex,
-            isPacked: false,
             // Inventory fields
             date: templateItem.date,
             needsRepair: templateItem.needsRepair,
@@ -107,7 +105,6 @@ export const kitHandler: ListTypeHandler = {
               cost: templateItem.cost,
               url: templateItem.url,
               orderIndex: templateItem.orderIndex,
-              isPacked: false,
               // Inventory fields
               date: templateItem.date,
               needsRepair: templateItem.needsRepair,
@@ -161,18 +158,6 @@ export const kitHandler: ListTypeHandler = {
           createdAt: new Date(),
         },
       });
-
-      // Update the legacy isPacked field for backward compatibility
-      // For shared items, mark as packed when first user ticks
-      // For per-person items, mark as packed when current user ticks
-      await prisma.kitItemInstance.update({
-        where: { id: itemId },
-        data: {
-          isPacked: true,
-          packedBy: actorId,
-          packedAt: new Date(),
-        },
-      });
     } else {
       // Unticking the item - delete the ItemTick for this user
       await prisma.itemTick.deleteMany({
@@ -181,34 +166,6 @@ export const kitHandler: ListTypeHandler = {
           userId: actorId,
         },
       });
-
-      // Check if any other ticks remain
-      const remainingTicks = await prisma.itemTick.findFirst({
-        where: { kitItemId: itemId },
-        orderBy: { createdAt: "desc" },
-      });
-
-      if (remainingTicks) {
-        // Other ticks remain, update to the most recent ticker
-        await prisma.kitItemInstance.update({
-          where: { id: itemId },
-          data: {
-            isPacked: true,
-            packedBy: remainingTicks.userId,
-            packedAt: remainingTicks.createdAt,
-          },
-        });
-      } else {
-        // No ticks remain, mark as unpacked
-        await prisma.kitItemInstance.update({
-          where: { id: itemId },
-          data: {
-            isPacked: false,
-            packedBy: null,
-            packedAt: null,
-          },
-        });
-      }
     }
   },
 
