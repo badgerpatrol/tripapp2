@@ -89,11 +89,15 @@ export async function createTemplate(
 }
 
 /**
- * List my templates (private + my public), excluding inventory lists
+ * List my templates (private + my public), excluding inventory lists and trip copies
  */
 export async function listMyTemplates(ownerId: string) {
   const templates = await prisma.listTemplate.findMany({
-    where: { ownerId, inventory: false },
+    where: {
+      ownerId,
+      inventory: false,
+      tripId: null, // Exclude trip-specific copies
+    },
     include: {
       todoItems: true,
       kitItems: true,
@@ -116,6 +120,9 @@ export async function listMyTemplates(ownerId: string) {
  */
 export async function getAllTemplates() {
   const templates = await prisma.listTemplate.findMany({
+    where: {
+      tripId: null, // Exclude trip-specific copies
+    },
     include: {
       todoItems: true,
       kitItems: true,
@@ -133,12 +140,13 @@ export async function getAllTemplates() {
 }
 
 /**
- * Browse public templates (gallery), excluding inventory lists
+ * Browse public templates (gallery), excluding inventory lists and trip copies
  */
 export async function browsePublicTemplates(query: BrowsePublicTemplatesQuery) {
   const where: any = {
     visibility: "PUBLIC",
     inventory: false,
+    tripId: null, // Exclude trip-specific copies
   };
 
   if (query.type) {
@@ -184,6 +192,7 @@ export async function browseTripTemplates() {
       tags: {
         has: "Tripplan",
       },
+      tripId: null, // Exclude trip-specific copies
     },
     include: {
       todoItems: {
@@ -538,11 +547,12 @@ export async function updateKitItem(
 }
 
 // ============================================================================
-// Instance Management (Trip Lists)
+// Trip List Management (Lists added to trips)
 // ============================================================================
 
 /**
  * Copy a template to a trip
+ * Creates a new ListTemplate with tripId set, copying all items
  * Handles REPLACE, MERGE, and NEW_INSTANCE modes
  */
 export async function copyTemplateToTrip(
@@ -558,8 +568,8 @@ export async function copyTemplateToTrip(
   // Get the template
   const template = await getTemplate(actorId, templateId);
 
-  // Check if an instance with the same title and type exists
-  const existingInstance = await prisma.listInstance.findFirst({
+  // Check if a list with the same title and type exists in this trip
+  const existingTripList = await prisma.listTemplate.findFirst({
     where: {
       tripId,
       type: template.type,
@@ -567,59 +577,59 @@ export async function copyTemplateToTrip(
     },
   });
 
-  let instance: any;
+  let tripList: any;
 
-  if (existingInstance && mode === "REPLACE") {
-    // Delete the existing instance
-    await prisma.listInstance.delete({
-      where: { id: existingInstance.id },
+  if (existingTripList && mode === "REPLACE") {
+    // Delete the existing trip list
+    await prisma.listTemplate.delete({
+      where: { id: existingTripList.id },
     });
 
     await logEvent(
-      "ListInstance",
-      existingInstance.id,
+      "ListTemplate",
+      existingTripList.id,
       EventType.LIST_INSTANCE_REPLACED,
       actorId,
       { templateId }
     );
 
-    // Create a fresh instance
-    instance = await createInstanceFromTemplate(
+    // Create a fresh trip list
+    tripList = await createTripListFromTemplate(
       actorId,
       tripId,
       templateId,
       template
     );
   } else if (
-    existingInstance &&
+    existingTripList &&
     (mode === "MERGE_ADD" || mode === "MERGE_ADD_ALLOW_DUPES")
   ) {
-    // Merge into existing instance
+    // Merge into existing trip list
     const handler = getHandler(template.type);
-    const result = await handler.mergeIntoInstance({
+    const result = await handler.mergeTemplateItems({
       prisma,
-      templateId,
-      instanceId: existingInstance.id,
+      sourceTemplateId: templateId,
+      targetTemplateId: existingTripList.id,
       mode,
     });
 
     await logEvent(
-      "ListInstance",
-      existingInstance.id,
+      "ListTemplate",
+      existingTripList.id,
       EventType.LIST_INSTANCE_MERGED,
       actorId,
       { templateId, added: result.added, skipped: result.skipped }
     );
 
-    instance = existingInstance;
+    tripList = existingTripList;
   } else {
-    // Create new instance (possibly with suffix if title collision)
+    // Create new trip list (possibly with suffix if title collision)
     let title = template.title;
-    if (existingInstance && mode === "NEW_INSTANCE") {
+    if (existingTripList && mode === "NEW_INSTANCE") {
       // Find a unique title by adding (2), (3), etc.
       let counter = 2;
       while (
-        await prisma.listInstance.findFirst({
+        await prisma.listTemplate.findFirst({
           where: { tripId, type: template.type, title },
         })
       ) {
@@ -628,7 +638,7 @@ export async function copyTemplateToTrip(
       }
     }
 
-    instance = await createInstanceFromTemplate(
+    tripList = await createTripListFromTemplate(
       actorId,
       tripId,
       templateId,
@@ -637,54 +647,57 @@ export async function copyTemplateToTrip(
     );
   }
 
-  return instance;
+  return tripList;
 }
 
 /**
- * Helper: Create a new list instance from a template
+ * Helper: Create a new trip list from a template
  */
-async function createInstanceFromTemplate(
+async function createTripListFromTemplate(
   actorId: string,
   tripId: string,
-  templateId: string,
+  sourceTemplateId: string,
   template: any,
   title?: string
 ) {
-  const instance = await prisma.listInstance.create({
+  // Create the trip-specific list (a ListTemplate with tripId set)
+  const tripList = await prisma.listTemplate.create({
     data: {
+      ownerId: template.ownerId, // Keep original owner
       tripId,
       type: template.type,
-      sourceTemplateId: templateId,
-      sourceTemplateUpdatedAt: template.updatedAt, // Track when template was last updated at copy time
+      sourceTemplateId,
+      sourceTemplateUpdatedAt: template.updatedAt,
       title: title ?? template.title,
       description: template.description,
+      visibility: "PRIVATE", // Trip lists are always private
       createdBy: actorId,
     },
   });
 
   // Use handler to copy items
   const handler = getHandler(template.type);
-  await handler.copyTemplateItemsToInstance({
+  await handler.copyTemplateItems({
     prisma,
-    templateId,
-    instanceId: instance.id,
+    sourceTemplateId,
+    targetTemplateId: tripList.id,
   });
 
   await logEvent(
-    "ListInstance",
-    instance.id,
+    "ListTemplate",
+    tripList.id,
     EventType.LIST_INSTANCE_CREATED,
     actorId,
-    { tripId, type: template.type, sourceTemplateId: templateId }
+    { tripId, type: template.type, sourceTemplateId }
   );
 
-  return instance;
+  return tripList;
 }
 
 /**
- * Create an ad-hoc list instance (without a template)
+ * Create an ad-hoc list in a trip (without a source template)
  */
-export async function createInstanceAdHoc(
+export async function createTripListAdHoc(
   actorId: string,
   payload: CreateAdHocListInput
 ) {
@@ -693,22 +706,24 @@ export async function createInstanceAdHoc(
   // Verify trip membership
   await requireTripMember(actorId, tripId);
 
-  const instance = await prisma.listInstance.create({
+  const tripList = await prisma.listTemplate.create({
     data: {
+      ownerId: actorId,
       tripId,
       type,
       title,
       description,
       inventory: inventory ?? false,
+      visibility: "PRIVATE",
       createdBy: actorId,
     },
   });
 
   // Add items based on type
   if (type === "TODO" && todoItems) {
-    await prisma.todoItemInstance.createMany({
+    await prisma.todoItemTemplate.createMany({
       data: todoItems.map((item, idx) => ({
-        listId: instance.id,
+        templateId: tripList.id,
         label: item.label,
         notes: item.notes,
         perPerson: item.perPerson ?? false,
@@ -719,9 +734,9 @@ export async function createInstanceAdHoc(
       })),
     });
   } else if (type === "KIT" && kitItems) {
-    await prisma.kitItemInstance.createMany({
+    await prisma.kitItemTemplate.createMany({
       data: kitItems.map((item, idx) => ({
-        listId: instance.id,
+        templateId: tripList.id,
         label: item.label,
         notes: item.notes,
         quantity: item.quantity ?? 1,
@@ -744,20 +759,20 @@ export async function createInstanceAdHoc(
   }
 
   await logEvent(
-    "ListInstance",
-    instance.id,
+    "ListTemplate",
+    tripList.id,
     EventType.LIST_INSTANCE_CREATED,
     actorId,
     { tripId, type, adHoc: true }
   );
 
-  return instance;
+  return tripList;
 }
 
 /**
- * List all instances for a trip
+ * List all lists for a trip (ListTemplates with tripId set)
  */
-export async function listTripInstances(
+export async function listTripLists(
   actorId: string,
   tripId: string,
   query: ListTripInstancesQuery
@@ -771,7 +786,7 @@ export async function listTripInstances(
     where.type = query.type;
   }
 
-  const instances = await prisma.listInstance.findMany({
+  const tripLists = await prisma.listTemplate.findMany({
     where,
     include: {
       todoItems: {
@@ -810,9 +825,9 @@ export async function listTripInstances(
     orderBy: { createdAt: "desc" },
   });
 
-  // Fetch source templates for instances that have one
-  const templateIds = instances
-    .map((i) => i.sourceTemplateId)
+  // Fetch source templates for trip lists that have one
+  const templateIds = tripLists
+    .map((l) => l.sourceTemplateId)
     .filter((id): id is string => id !== null);
 
   const templates = templateIds.length > 0
@@ -824,28 +839,28 @@ export async function listTripInstances(
 
   const templateMap = new Map(templates.map((t) => [t.id, t]));
 
-  // Add hasTemplateUpdated flag to each instance
-  const instancesWithUpdateFlag = instances.map((instance) => {
+  // Add hasTemplateUpdated flag to each trip list
+  const listsWithUpdateFlag = tripLists.map((list) => {
     let hasTemplateUpdated = false;
 
-    if (instance.sourceTemplateId && instance.sourceTemplateUpdatedAt) {
-      const template = templateMap.get(instance.sourceTemplateId);
-      if (template) {
+    if (list.sourceTemplateId && list.sourceTemplateUpdatedAt) {
+      const sourceTemplate = templateMap.get(list.sourceTemplateId);
+      if (sourceTemplate) {
         // Compare timestamps - template has been updated if its updatedAt is newer
-        hasTemplateUpdated = template.updatedAt > instance.sourceTemplateUpdatedAt;
+        hasTemplateUpdated = sourceTemplate.updatedAt > list.sourceTemplateUpdatedAt;
       }
     }
 
     return {
-      ...instance,
+      ...list,
       hasTemplateUpdated,
     };
   });
 
   // Filter by completion status if specified
   if (query.completionStatus && query.completionStatus !== "all") {
-    return instancesWithUpdateFlag.filter((instance) => {
-      const items = instance.type === "TODO" ? instance.todoItems : instance.kitItems;
+    return listsWithUpdateFlag.filter((list) => {
+      const items = list.type === "TODO" ? list.todoItems : list.kitItems;
 
       // If no items, consider it as "done"
       if (items.length === 0) {
@@ -864,15 +879,15 @@ export async function listTripInstances(
     });
   }
 
-  return instancesWithUpdateFlag;
+  return listsWithUpdateFlag;
 }
 
 /**
- * Get a single instance by ID
+ * Get a single trip list by ID
  */
-export async function getInstance(actorId: string, instanceId: string) {
-  const instance = await prisma.listInstance.findUnique({
-    where: { id: instanceId },
+export async function getTripList(actorId: string, listId: string) {
+  const tripList = await prisma.listTemplate.findUnique({
+    where: { id: listId },
     include: {
       todoItems: {
         orderBy: { orderIndex: "asc" },
@@ -883,41 +898,51 @@ export async function getInstance(actorId: string, instanceId: string) {
     },
   });
 
-  if (!instance) {
-    throw new Error("List instance not found");
+  if (!tripList) {
+    throw new Error("List not found");
+  }
+
+  // Only trip lists have tripId set
+  if (!tripList.tripId) {
+    throw new Error("This is not a trip list");
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, instance.tripId);
+  await requireTripMember(actorId, tripList.tripId);
 
-  return instance;
+  return tripList;
 }
 
 /**
- * Delete a list instance
+ * Delete a trip list
  */
-export async function deleteInstance(actorId: string, instanceId: string) {
-  const instance = await prisma.listInstance.findUnique({
-    where: { id: instanceId },
+export async function deleteTripList(actorId: string, listId: string) {
+  const tripList = await prisma.listTemplate.findUnique({
+    where: { id: listId },
   });
 
-  if (!instance) {
-    throw new Error("List instance not found");
+  if (!tripList) {
+    throw new Error("List not found");
+  }
+
+  // Only trip lists have tripId set
+  if (!tripList.tripId) {
+    throw new Error("This is not a trip list");
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, instance.tripId);
+  await requireTripMember(actorId, tripList.tripId);
 
-  await prisma.listInstance.delete({
-    where: { id: instanceId },
+  await prisma.listTemplate.delete({
+    where: { id: listId },
   });
 
   await logEvent(
-    "ListInstance",
-    instanceId,
+    "ListTemplate",
+    listId,
     EventType.LIST_INSTANCE_DELETED,
     actorId,
-    { tripId: instance.tripId }
+    { tripId: tripList.tripId }
   );
 }
 
@@ -934,31 +959,36 @@ export async function toggleItemState(
   itemId: string,
   state: boolean
 ) {
-  // Get the instance to verify trip membership
-  let instance: any;
+  // Get the template to verify trip membership
+  let template: any;
 
   if (type === "TODO") {
-    const item = await prisma.todoItemInstance.findUnique({
+    const item = await prisma.todoItemTemplate.findUnique({
       where: { id: itemId },
-      include: { list: true },
+      include: { template: true },
     });
     if (!item) throw new Error("Item not found");
-    instance = item.list;
+    template = item.template;
   } else if (type === "KIT") {
-    const item = await prisma.kitItemInstance.findUnique({
+    const item = await prisma.kitItemTemplate.findUnique({
       where: { id: itemId },
-      include: { list: true },
+      include: { template: true },
     });
     if (!item) throw new Error("Item not found");
-    instance = item.list;
+    template = item.template;
   }
 
-  if (!instance) {
+  if (!template) {
     throw new Error("Item not found");
   }
 
+  // Only allow toggling on trip lists
+  if (!template.tripId) {
+    throw new Error("Can only toggle items on trip lists");
+  }
+
   // Verify trip membership
-  await requireTripMember(actorId, instance.tripId);
+  await requireTripMember(actorId, template.tripId);
 
   // Use handler to toggle
   const handler = getHandler(type);
@@ -974,7 +1004,7 @@ export async function toggleItemState(
     itemId,
     EventType.LIST_ITEM_TOGGLED,
     actorId,
-    { listInstanceId: instance.id, type, state }
+    { listId: template.id, type, state }
   );
 }
 
@@ -983,19 +1013,24 @@ export async function toggleItemState(
  */
 export async function launchItemAction(
   actorId: string,
-  itemInstanceId: string
+  itemId: string
 ) {
-  const item = await prisma.todoItemInstance.findUnique({
-    where: { id: itemInstanceId },
-    include: { list: true },
+  const item = await prisma.todoItemTemplate.findUnique({
+    where: { id: itemId },
+    include: { template: true },
   });
 
   if (!item) {
     throw new Error("Item not found");
   }
 
+  // Only allow launching on trip lists
+  if (!item.template.tripId) {
+    throw new Error("Can only launch actions on trip lists");
+  }
+
   // Verify trip membership
-  await requireTripMember(actorId, item.list.tripId);
+  await requireTripMember(actorId, item.template.tripId);
 
   const handler = getHandler("TODO");
   if (!handler.launchItemAction) {
@@ -1004,17 +1039,75 @@ export async function launchItemAction(
 
   const deepLink = await handler.launchItemAction({
     prisma,
-    itemInstanceId,
-    tripId: item.list.tripId,
+    itemId,
+    tripId: item.template.tripId,
   });
 
   await logEvent(
     "ListItem",
-    itemInstanceId,
+    itemId,
     EventType.LIST_ITEM_ACTION_LAUNCHED,
     actorId,
-    { tripId: item.list.tripId, deepLink }
+    { tripId: item.template.tripId, deepLink }
   );
 
   return deepLink;
+}
+
+/**
+ * Delete a kit item from a trip list
+ * For per-person items: Only deletes the current user's tick
+ * For shared items: Only works if no one has ticked it
+ */
+export async function deleteKitItem(actorId: string, itemId: string) {
+  const item = await prisma.kitItemTemplate.findUnique({
+    where: { id: itemId },
+    include: {
+      template: true,
+      ticks: true,
+    },
+  });
+
+  if (!item) {
+    throw new Error("Item not found");
+  }
+
+  // Only allow deleting items on trip lists
+  if (!item.template.tripId) {
+    throw new Error("Forbidden: Can only delete items from trip lists");
+  }
+
+  // Verify trip membership
+  await requireTripMember(actorId, item.template.tripId);
+
+  if (item.perPerson) {
+    // For per-person items, just delete the user's tick
+    await prisma.itemTick.deleteMany({
+      where: {
+        kitItemId: itemId,
+        userId: actorId,
+      },
+    });
+
+    return { deleted: "tick" };
+  } else {
+    // For shared items, can only delete if no one has ticked it
+    if (item.ticks && item.ticks.length > 0) {
+      throw new Error("Cannot delete shared item that has been ticked");
+    }
+
+    await prisma.kitItemTemplate.delete({
+      where: { id: itemId },
+    });
+
+    await logEvent(
+      "ListItem",
+      itemId,
+      EventType.LIST_ITEM_REMOVED,
+      actorId,
+      { listId: item.template.id, type: "KIT" }
+    );
+
+    return { deleted: "item" };
+  }
 }

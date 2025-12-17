@@ -5,19 +5,19 @@ import type { ListTypeHandler } from "./base";
  * Manages packing kit items with quantity, weight, and category tracking
  */
 export const kitHandler: ListTypeHandler = {
-  async copyTemplateItemsToInstance(ctx) {
-    const { prisma, templateId, instanceId } = ctx;
+  async copyTemplateItems(ctx) {
+    const { prisma, sourceTemplateId, targetTemplateId } = ctx;
 
-    // Fetch template items
-    const templateItems = await prisma.kitItemTemplate.findMany({
-      where: { templateId },
+    // Fetch source template items
+    const sourceItems = await prisma.kitItemTemplate.findMany({
+      where: { templateId: sourceTemplateId },
       orderBy: { orderIndex: "asc" },
     });
 
-    // Copy to instance
-    await prisma.kitItemInstance.createMany({
-      data: templateItems.map((item) => ({
-        listId: instanceId,
+    // Copy to target template
+    await prisma.kitItemTemplate.createMany({
+      data: sourceItems.map((item) => ({
+        templateId: targetTemplateId,
         label: item.label,
         notes: item.notes,
         quantity: item.quantity,
@@ -39,18 +39,18 @@ export const kitHandler: ListTypeHandler = {
     });
   },
 
-  async mergeIntoInstance(ctx) {
-    const { prisma, templateId, instanceId, mode } = ctx;
+  async mergeTemplateItems(ctx) {
+    const { prisma, sourceTemplateId, targetTemplateId, mode } = ctx;
 
-    // Fetch template items
-    const templateItems = await prisma.kitItemTemplate.findMany({
-      where: { templateId },
+    // Fetch source template items
+    const sourceItems = await prisma.kitItemTemplate.findMany({
+      where: { templateId: sourceTemplateId },
       orderBy: { orderIndex: "asc" },
     });
 
-    // Fetch existing instance items
-    const existingItems = await prisma.kitItemInstance.findMany({
-      where: { listId: instanceId },
+    // Fetch existing target template items
+    const existingItems = await prisma.kitItemTemplate.findMany({
+      where: { templateId: targetTemplateId },
     });
 
     // Build a set of existing labels (case-insensitive)
@@ -61,57 +61,57 @@ export const kitHandler: ListTypeHandler = {
     let added = 0;
     let skipped = 0;
 
-    for (const templateItem of templateItems) {
-      const labelLower = templateItem.label.toLowerCase();
+    for (const sourceItem of sourceItems) {
+      const labelLower = sourceItem.label.toLowerCase();
 
       if (mode === "MERGE_ADD_ALLOW_DUPES") {
         // Always add
-        await prisma.kitItemInstance.create({
+        await prisma.kitItemTemplate.create({
           data: {
-            listId: instanceId,
-            label: templateItem.label,
-            notes: templateItem.notes,
-            quantity: templateItem.quantity,
-            perPerson: templateItem.perPerson,
-            required: templateItem.required,
-            weightGrams: templateItem.weightGrams,
-            category: templateItem.category,
-            cost: templateItem.cost,
-            url: templateItem.url,
-            orderIndex: templateItem.orderIndex,
+            templateId: targetTemplateId,
+            label: sourceItem.label,
+            notes: sourceItem.notes,
+            quantity: sourceItem.quantity,
+            perPerson: sourceItem.perPerson,
+            required: sourceItem.required,
+            weightGrams: sourceItem.weightGrams,
+            category: sourceItem.category,
+            cost: sourceItem.cost,
+            url: sourceItem.url,
+            orderIndex: sourceItem.orderIndex,
             // Inventory fields
-            date: templateItem.date,
-            needsRepair: templateItem.needsRepair,
-            conditionNotes: templateItem.conditionNotes,
-            lost: templateItem.lost,
-            lastSeenText: templateItem.lastSeenText,
-            lastSeenDate: templateItem.lastSeenDate,
+            date: sourceItem.date,
+            needsRepair: sourceItem.needsRepair,
+            conditionNotes: sourceItem.conditionNotes,
+            lost: sourceItem.lost,
+            lastSeenText: sourceItem.lastSeenText,
+            lastSeenDate: sourceItem.lastSeenDate,
           },
         });
         added++;
       } else if (mode === "MERGE_ADD") {
         // Only add if label doesn't exist (case-insensitive)
         if (!existingLabels.has(labelLower)) {
-          await prisma.kitItemInstance.create({
+          await prisma.kitItemTemplate.create({
             data: {
-              listId: instanceId,
-              label: templateItem.label,
-              notes: templateItem.notes,
-              quantity: templateItem.quantity,
-              perPerson: templateItem.perPerson,
-              required: templateItem.required,
-              weightGrams: templateItem.weightGrams,
-              category: templateItem.category,
-              cost: templateItem.cost,
-              url: templateItem.url,
-              orderIndex: templateItem.orderIndex,
+              templateId: targetTemplateId,
+              label: sourceItem.label,
+              notes: sourceItem.notes,
+              quantity: sourceItem.quantity,
+              perPerson: sourceItem.perPerson,
+              required: sourceItem.required,
+              weightGrams: sourceItem.weightGrams,
+              category: sourceItem.category,
+              cost: sourceItem.cost,
+              url: sourceItem.url,
+              orderIndex: sourceItem.orderIndex,
               // Inventory fields
-              date: templateItem.date,
-              needsRepair: templateItem.needsRepair,
-              conditionNotes: templateItem.conditionNotes,
-              lost: templateItem.lost,
-              lastSeenText: templateItem.lastSeenText,
-              lastSeenDate: templateItem.lastSeenDate,
+              date: sourceItem.date,
+              needsRepair: sourceItem.needsRepair,
+              conditionNotes: sourceItem.conditionNotes,
+              lost: sourceItem.lost,
+              lastSeenText: sourceItem.lastSeenText,
+              lastSeenDate: sourceItem.lastSeenDate,
             },
           });
           added++;
@@ -128,7 +128,7 @@ export const kitHandler: ListTypeHandler = {
     const { prisma, itemId, state, actorId } = ctx;
 
     // Get the item to check if it's perPerson
-    const item = await prisma.kitItemInstance.findUnique({
+    const item = await prisma.kitItemTemplate.findUnique({
       where: { id: itemId },
     });
 

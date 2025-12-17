@@ -7,22 +7,22 @@ import type { DeepLink } from "@/types/schemas";
  */
 export interface ListTypeHandler {
   /**
-   * Copy all items from a template to a new instance
+   * Copy all items from a source template to a target template
    */
-  copyTemplateItemsToInstance(ctx: {
+  copyTemplateItems(ctx: {
     prisma: PrismaClient;
-    templateId: string;
-    instanceId: string;
+    sourceTemplateId: string;
+    targetTemplateId: string;
   }): Promise<void>;
 
   /**
-   * Merge template items into an existing instance
+   * Merge items from a source template into a target template
    * @param mode - How to handle duplicates
    */
-  mergeIntoInstance(ctx: {
+  mergeTemplateItems(ctx: {
     prisma: PrismaClient;
-    templateId: string;
-    instanceId: string;
+    sourceTemplateId: string;
+    targetTemplateId: string;
     mode: "MERGE_ADD" | "MERGE_ADD_ALLOW_DUPES";
   }): Promise<{ added: number; skipped: number }>;
 
@@ -42,7 +42,7 @@ export interface ListTypeHandler {
    */
   launchItemAction?(ctx: {
     prisma: PrismaClient;
-    itemInstanceId: string;
+    itemId: string;
     tripId: string;
   }): Promise<DeepLink>;
 }

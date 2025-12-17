@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
-import { createInstanceAdHoc } from "@/server/services/lists";
+import { createTripListAdHoc } from "@/server/services/lists";
 import { CreateAdHocListSchema } from "@/types/schemas";
 
 /**
  * POST /api/lists/instances
- * Create an ad-hoc list instance (without a template)
+ * Create an ad-hoc list in a trip (without a source template)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -32,24 +32,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const instance = await createInstanceAdHoc(auth.uid, validation.data);
+    const list = await createTripListAdHoc(auth.uid, validation.data);
 
     return NextResponse.json(
       {
         instance: {
-          ...instance,
-          listType: instance.type,
+          ...list,
+          listType: list.type,
         },
       },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Error creating list instance:", error);
+    console.error("Error creating trip list:", error);
     if (error.message.includes("Forbidden")) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     return NextResponse.json(
-      { error: "Failed to create list instance" },
+      { error: "Failed to create trip list" },
       { status: 500 }
     );
   }

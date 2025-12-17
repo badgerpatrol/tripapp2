@@ -26,8 +26,8 @@ async function main() {
     console.log(`✓ Found trip: ${trip.name} (${trip.id})`);
     console.log(`✓ Members: ${trip.members.length}`);
 
-    // Check for list instances
-    const instances = await prisma.listInstance.findMany({
+    // Check for trip lists (ListTemplates with tripId set)
+    const tripLists = await prisma.listTemplate.findMany({
       where: { tripId: trip.id },
       include: {
         todoItems: true,
@@ -35,15 +35,15 @@ async function main() {
       },
     });
 
-    console.log(`\n✓ Found ${instances.length} list instance(s) for this trip`);
+    console.log(`\n✓ Found ${tripLists.length} trip list(s) for this trip`);
 
-    if (instances.length === 0) {
-      console.log('\n📝 No list instances exist yet. This is expected if you haven\'t copied any templates.');
+    if (tripLists.length === 0) {
+      console.log('\n📝 No trip lists exist yet. This is expected if you haven\'t copied any templates.');
       console.log('   The API should return an empty array, which the UI should handle gracefully.');
     } else {
-      instances.forEach((inst) => {
-        const itemCount = inst.type === 'TODO' ? inst.todoItems.length : inst.kitItems.length;
-        console.log(`   - ${inst.title} (${inst.type}): ${itemCount} items`);
+      tripLists.forEach((list) => {
+        const itemCount = list.type === 'TODO' ? list.todoItems.length : list.kitItems.length;
+        console.log(`   - ${list.title} (${list.type}): ${itemCount} items`);
       });
     }
 

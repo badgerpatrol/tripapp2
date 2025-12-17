@@ -835,6 +835,12 @@ model ListTemplate {
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
+  // Trip-specific fields (when this template is used in a trip)
+  tripId                  String?   // If set, this is a trip-specific copy
+  sourceTemplateId        String?   // The original template this was copied from
+  sourceTemplateUpdatedAt DateTime? // When the source template was last updated at copy time
+  createdBy               String?   // User who created this (for trip copies)
+
   // Relations
   owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   todoItems TodoItemTemplate[]
@@ -845,29 +851,8 @@ model ListTemplate {
   @@index([forkedFromTemplateId])
   @@index([isTripTemplate])
   @@index([inventory])
-  @@map("list_templates")
-}
-
-model ListInstance {
-  id                      String    @id @default(cuid())
-  tripId                  String
-  type                    ListType
-  sourceTemplateId        String?
-  sourceTemplateUpdatedAt DateTime? // Template's updatedAt when this instance was created
-  title                   String
-  description             String?
-  inventory               Boolean   @default(false) // If true, shows in inventory section
-  createdBy               String
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-
-  // Per-type item relations
-  todoItems TodoItemInstance[]
-  kitItems  KitItemInstance[]
-
   @@index([tripId, type, title])
-  @@index([inventory])
-  @@map("list_instances")
+  @@map("list_templates")
 }
 
 /********** TODO type items **********/
@@ -883,27 +868,10 @@ model TodoItemTemplate {
   perPerson  Boolean         @default(false) // Whether this is a per-person item
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ticks    ItemTick[]   @relation("TodoItemTicks")
 
   @@index([templateId])
   @@map("todo_item_templates")
-}
-
-model TodoItemInstance {
-  id         String          @id @default(cuid())
-  listId     String
-  label      String
-  notes      String?
-  actionType TodoActionType?
-  actionData Json?
-  parameters Json?
-  orderIndex Int             @default(0)
-  perPerson  Boolean         @default(false) // Whether this is a per-person item
-
-  list  ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
-  ticks ItemTick[]   @relation("TodoItemTicks")
-
-  @@index([listId])
-  @@map("todo_item_instances")
 }
 
 /********** KIT type items **********/
@@ -929,37 +897,10 @@ model KitItemTemplate {
   lastSeenDate     DateTime?
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ticks    ItemTick[]   @relation("KitItemTicks")
 
   @@index([templateId])
   @@map("kit_item_templates")
-}
-
-model KitItemInstance {
-  id          String    @id @default(cuid())
-  listId      String
-  label       String
-  notes       String?
-  quantity    Float     @default(1)
-  perPerson   Boolean   @default(false)
-  required    Boolean   @default(true)
-  weightGrams Int?
-  category    String?
-  cost        Decimal?  @db.Decimal(10, 2)
-  url         String?
-  orderIndex  Int       @default(0)
-  // Inventory-specific fields
-  date             DateTime?
-  needsRepair      Boolean   @default(false)
-  conditionNotes   String?
-  lost             Boolean   @default(false)
-  lastSeenText     String?
-  lastSeenDate     DateTime?
-
-  list  ListInstance @relation(fields: [listId], references: [id], onDelete: Cascade)
-  ticks ItemTick[]   @relation("KitItemTicks")
-
-  @@index([listId])
-  @@map("kit_item_instances")
 }
 
 // ============================================================================
@@ -978,8 +919,8 @@ model ItemTick {
   kitItemId  String?
 
   user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  todoItem TodoItemInstance? @relation("TodoItemTicks", fields: [todoItemId], references: [id], onDelete: Cascade)
-  kitItem  KitItemInstance?  @relation("KitItemTicks", fields: [kitItemId], references: [id], onDelete: Cascade)
+  todoItem TodoItemTemplate? @relation("TodoItemTicks", fields: [todoItemId], references: [id], onDelete: Cascade)
+  kitItem  KitItemTemplate?  @relation("KitItemTicks", fields: [kitItemId], references: [id], onDelete: Cascade)
 
   // Ensure a user can only tick an item once
   @@unique([todoItemId, userId])

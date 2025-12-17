@@ -47,7 +47,7 @@ export async function GET(
     const { title, type } = queryValidation.data;
 
     // Check if a list with this title and type exists on the trip
-    const existingInstance = await prisma.listInstance.findFirst({
+    const existingList = await prisma.listTemplate.findFirst({
       where: {
         tripId,
         title,
@@ -60,7 +60,7 @@ export async function GET(
 
     return NextResponse.json(
       {
-        exists: !!existingInstance,
+        exists: !!existingList,
       },
       { status: 200 }
     );

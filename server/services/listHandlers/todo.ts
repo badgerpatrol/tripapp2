@@ -7,19 +7,19 @@ import { actionToDeepLink } from "@/lib/deeplinks";
  * Manages TODO list items with completion tracking and action launching
  */
 export const todoHandler: ListTypeHandler = {
-  async copyTemplateItemsToInstance(ctx) {
-    const { prisma, templateId, instanceId } = ctx;
+  async copyTemplateItems(ctx) {
+    const { prisma, sourceTemplateId, targetTemplateId } = ctx;
 
-    // Fetch template items
-    const templateItems = await prisma.todoItemTemplate.findMany({
-      where: { templateId },
+    // Fetch source template items
+    const sourceItems = await prisma.todoItemTemplate.findMany({
+      where: { templateId: sourceTemplateId },
       orderBy: { orderIndex: "asc" },
     });
 
-    // Copy to instance
-    await prisma.todoItemInstance.createMany({
-      data: templateItems.map((item) => ({
-        listId: instanceId,
+    // Copy to target template
+    await prisma.todoItemTemplate.createMany({
+      data: sourceItems.map((item) => ({
+        templateId: targetTemplateId,
         label: item.label,
         notes: item.notes,
         actionType: item.actionType,
@@ -31,18 +31,18 @@ export const todoHandler: ListTypeHandler = {
     });
   },
 
-  async mergeIntoInstance(ctx) {
-    const { prisma, templateId, instanceId, mode } = ctx;
+  async mergeTemplateItems(ctx) {
+    const { prisma, sourceTemplateId, targetTemplateId, mode } = ctx;
 
-    // Fetch template items
-    const templateItems = await prisma.todoItemTemplate.findMany({
-      where: { templateId },
+    // Fetch source template items
+    const sourceItems = await prisma.todoItemTemplate.findMany({
+      where: { templateId: sourceTemplateId },
       orderBy: { orderIndex: "asc" },
     });
 
-    // Fetch existing instance items
-    const existingItems = await prisma.todoItemInstance.findMany({
-      where: { listId: instanceId },
+    // Fetch existing target template items
+    const existingItems = await prisma.todoItemTemplate.findMany({
+      where: { templateId: targetTemplateId },
     });
 
     // Build a set of existing labels (case-insensitive)
@@ -53,37 +53,37 @@ export const todoHandler: ListTypeHandler = {
     let added = 0;
     let skipped = 0;
 
-    for (const templateItem of templateItems) {
-      const labelLower = templateItem.label.toLowerCase();
+    for (const sourceItem of sourceItems) {
+      const labelLower = sourceItem.label.toLowerCase();
 
       if (mode === "MERGE_ADD_ALLOW_DUPES") {
         // Always add
-        await prisma.todoItemInstance.create({
+        await prisma.todoItemTemplate.create({
           data: {
-            listId: instanceId,
-            label: templateItem.label,
-            notes: templateItem.notes,
-            actionType: templateItem.actionType,
-            actionData: templateItem.actionData as any,
-            parameters: templateItem.parameters as any,
-            orderIndex: templateItem.orderIndex,
-            perPerson: templateItem.perPerson,
+            templateId: targetTemplateId,
+            label: sourceItem.label,
+            notes: sourceItem.notes,
+            actionType: sourceItem.actionType,
+            actionData: sourceItem.actionData as any,
+            parameters: sourceItem.parameters as any,
+            orderIndex: sourceItem.orderIndex,
+            perPerson: sourceItem.perPerson,
           },
         });
         added++;
       } else if (mode === "MERGE_ADD") {
         // Only add if label doesn't exist (case-insensitive)
         if (!existingLabels.has(labelLower)) {
-          await prisma.todoItemInstance.create({
+          await prisma.todoItemTemplate.create({
             data: {
-              listId: instanceId,
-              label: templateItem.label,
-              notes: templateItem.notes,
-              actionType: templateItem.actionType,
-              actionData: templateItem.actionData as any,
-              parameters: templateItem.parameters as any,
-              orderIndex: templateItem.orderIndex,
-              perPerson: templateItem.perPerson,
+              templateId: targetTemplateId,
+              label: sourceItem.label,
+              notes: sourceItem.notes,
+              actionType: sourceItem.actionType,
+              actionData: sourceItem.actionData as any,
+              parameters: sourceItem.parameters as any,
+              orderIndex: sourceItem.orderIndex,
+              perPerson: sourceItem.perPerson,
             },
           });
           added++;
@@ -100,7 +100,7 @@ export const todoHandler: ListTypeHandler = {
     const { prisma, itemId, state, actorId } = ctx;
 
     // Get the item to check if it's perPerson
-    const item = await prisma.todoItemInstance.findUnique({
+    const item = await prisma.todoItemTemplate.findUnique({
       where: { id: itemId },
     });
 
@@ -142,10 +142,10 @@ export const todoHandler: ListTypeHandler = {
   },
 
   async launchItemAction(ctx) {
-    const { prisma, itemInstanceId, tripId } = ctx;
+    const { prisma, itemId, tripId } = ctx;
 
-    const item = await prisma.todoItemInstance.findUnique({
-      where: { id: itemInstanceId },
+    const item = await prisma.todoItemTemplate.findUnique({
+      where: { id: itemId },
     });
 
     if (!item || !item.actionType) {

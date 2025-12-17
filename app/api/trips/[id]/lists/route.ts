@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
-import { listTripInstances } from "@/server/services/lists";
+import { listTripLists } from "@/server/services/lists";
 import { ListTripInstancesQuerySchema } from "@/types/schemas";
 
 /**
  * GET /api/trips/:id/lists
- * Get all list instances for a trip
+ * Get all lists for a trip
  */
 export async function GET(
   request: NextRequest,
@@ -38,13 +38,13 @@ export async function GET(
       );
     }
 
-    const instances = await listTripInstances(auth.uid, (await params).id, queryValidation.data);
+    const lists = await listTripLists(auth.uid, (await params).id, queryValidation.data);
 
     return NextResponse.json(
       {
-        instances: instances.map((i) => ({
-          ...i,
-          listType: i.type,
+        instances: lists.map((l) => ({
+          ...l,
+          listType: l.type,
         })),
       },
       { status: 200 }

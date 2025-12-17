@@ -472,14 +472,14 @@ export async function removeTripMember(
       OR: [
         {
           todoItem: {
-            list: {
+            template: {
               tripId,
             },
           },
         },
         {
           kitItem: {
-            list: {
+            template: {
               tripId,
             },
           },

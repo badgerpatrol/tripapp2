@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check list instances
-    const instances = await prisma.listInstance.findMany({
+    // Check trip lists (ListTemplates with tripId set)
+    const tripLists = await prisma.listTemplate.findMany({
       where: { tripId },
       include: {
         todoItems: { orderBy: { orderIndex: "asc" } },
@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Check templates
+    // Check public templates
     const templates = await prisma.listTemplate.findMany({
-      where: { visibility: "PUBLIC" },
+      where: { visibility: "PUBLIC", tripId: null },
       take: 5,
     });
 
@@ -53,13 +53,13 @@ export async function GET(request: NextRequest) {
         name: trip.name,
         memberCount: trip.members.length,
       },
-      listInstances: {
-        count: instances.length,
-        instances: instances.map((i) => ({
-          id: i.id,
-          title: i.title,
-          type: i.type,
-          itemCount: i.type === "TODO" ? i.todoItems.length : i.kitItems.length,
+      tripLists: {
+        count: tripLists.length,
+        lists: tripLists.map((l) => ({
+          id: l.id,
+          title: l.title,
+          type: l.type,
+          itemCount: l.type === "TODO" ? l.todoItems.length : l.kitItems.length,
         })),
       },
       publicTemplates: {
