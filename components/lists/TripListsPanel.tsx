@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
 import { ListReportDialog } from "./ListReportDialog";
+import { EditTodoListForm } from "./EditTodoListForm";
+import { EditKitListForm } from "./EditKitListForm";
 
 interface ItemTick {
   id: string;
@@ -92,6 +94,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [deleting, setDeleting] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [reportListId, setReportListId] = useState<string | null>(null);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [editingListType, setEditingListType] = useState<ListType | null>(null);
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -669,6 +673,34 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     </svg>
                   </button>
                 )}
+
+                {/* Edit Button - styled as a visible button */}
+                {isOrganizer && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingListId(list.id);
+                      setEditingListType(list.type);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+                    title="Edit list"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Edit
+                  </button>
+                )}
               </div>
 
                 {/* Expanded Items - only in workflow mode */}
@@ -822,6 +854,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         })}
                       </div>
                     )}
+
                   </div>
                 )}
               </div>
@@ -916,6 +949,43 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           />
         );
       })()}
+
+      {/* Edit List Dialog */}
+      {editingListId && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto p-6">
+            {editingListType === "TODO" ? (
+              <EditTodoListForm
+                listId={editingListId}
+                onClose={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                }}
+                onSaved={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                  fetchLists(); // Refresh the lists after editing
+                }}
+                isTripList={true}
+              />
+            ) : (
+              <EditKitListForm
+                listId={editingListId}
+                onClose={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                }}
+                onSaved={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                  fetchLists(); // Refresh the lists after editing
+                }}
+                isTripList={true}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 
