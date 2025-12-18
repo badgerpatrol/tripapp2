@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
 import { ListReportDialog } from "./ListReportDialog";
+import { EditTodoListForm } from "./EditTodoListForm";
+import { EditKitListForm } from "./EditKitListForm";
 
 interface ItemTick {
   id: string;
@@ -23,9 +25,6 @@ interface TodoItem {
   id: string;
   label: string;
   notes: string | null;
-  isDone: boolean;
-  doneBy: string | null;
-  doneAt: string | null;
   actionType: TodoActionType | null;
   actionData: any | null;
   parameters: Record<string, any> | null;
@@ -45,9 +44,6 @@ interface KitItem {
   category: string | null;
   cost: number | null;
   url: string | null;
-  isPacked: boolean;
-  packedBy: string | null;
-  packedAt: string | null;
   orderIndex: number;
   ticks?: ItemTick[];
 }
@@ -80,15 +76,17 @@ interface TripListsPanelProps {
   isOrganizer?: boolean; // If false and no lists exist, component will not render
   hideContainer?: boolean; // If true, will not render the outer container wrapper (for use when wrapped externally)
   onListsLoaded?: (count: number) => void; // Callback when lists are loaded, reports the count
+  listTypeFilter?: ListType; // If set, only show lists of this type (TODO or KIT)
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, listTypeFilter }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
+  // When listTypeFilter is set, force the type filter to that value; otherwise allow user selection
+  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">(listTypeFilter || "ALL");
   const [completionStatusFilter, setCompletionStatusFilter] = useState<"all" | "open" | "done">("all");
   const [confirmCompletionItem, setConfirmCompletionItem] = useState<{itemId: string; label: string} | null>(null);
   const [isAddListDialogOpen, setIsAddListDialogOpen] = useState(false);
@@ -96,6 +94,10 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [deleting, setDeleting] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [reportListId, setReportListId] = useState<string | null>(null);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [editingListType, setEditingListType] = useState<ListType | null>(null);
+  const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
+  const [quickAddValue, setQuickAddValue] = useState("");
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -189,8 +191,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               return {
                 ...item,
                 ticks: newTicks,
-                isDone: newTicks.length > 0,
-                doneBy: newTicks.length > 0 ? newTicks[0].userId : null,
               };
             }
             return item;
@@ -211,8 +211,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               return {
                 ...item,
                 ticks: newTicks,
-                isPacked: newTicks.length > 0,
-                packedBy: newTicks.length > 0 ? newTicks[0].userId : null,
               };
             }
             return item;
@@ -252,8 +250,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   return {
                     ...item,
                     ticks: revertedTicks,
-                    isDone: revertedTicks.length > 0,
-                    doneBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
                   };
                 }
                 return item;
@@ -270,8 +266,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   return {
                     ...item,
                     ticks: revertedTicks,
-                    isPacked: revertedTicks.length > 0,
-                    packedBy: revertedTicks.length > 0 ? revertedTicks[0].userId : null,
                   };
                 }
                 return item;
@@ -387,6 +381,162 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     }
   };
 
+  const handleQuickAddItem = async (listId: string, listType: ListType) => {
+    if (!user || !quickAddValue.trim()) return;
+
+    const label = quickAddValue.trim();
+    const tempId = `temp-${Date.now()}`;
+
+    // Optimistically update the UI immediately
+    setLists(prevLists => prevLists.map(list => {
+      if (list.id !== listId) return list;
+
+      if (listType === "TODO") {
+        const newItem: TodoItem = {
+          id: tempId,
+          label,
+          notes: null,
+          actionType: null,
+          actionData: null,
+          parameters: null,
+          orderIndex: 0,
+          perPerson: false,
+          ticks: [],
+        };
+        // Shift existing items and add new one at top
+        const updatedItems = (list.todoItems || []).map(item => ({
+          ...item,
+          orderIndex: item.orderIndex + 1,
+        }));
+        return {
+          ...list,
+          todoItems: [newItem, ...updatedItems],
+        };
+      } else {
+        const newItem: KitItem = {
+          id: tempId,
+          label,
+          notes: null,
+          quantity: 1,
+          perPerson: false,
+          required: true,
+          weightGrams: null,
+          category: null,
+          cost: null,
+          url: null,
+          orderIndex: 0,
+          ticks: [],
+        };
+        // Shift existing items and add new one at top
+        const updatedItems = (list.kitItems || []).map(item => ({
+          ...item,
+          orderIndex: item.orderIndex + 1,
+        }));
+        return {
+          ...list,
+          kitItems: [newItem, ...updatedItems],
+        };
+      }
+    }));
+
+    // Clear input and close quick add immediately
+    setQuickAddValue("");
+    setQuickAddListId(null);
+
+    // Send API request in background
+    try {
+      const token = await user.getIdToken();
+
+      const endpoint = listType === "TODO"
+        ? `/api/lists/templates/${listId}/todo-items`
+        : `/api/lists/templates/${listId}/kit-items`;
+
+      const body = listType === "TODO"
+        ? { label, orderIndex: 0 }
+        : { label, quantity: 1, orderIndex: 0 };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        // Revert on error
+        console.error("Failed to add item, reverting...");
+        setLists(prevLists => prevLists.map(list => {
+          if (list.id !== listId) return list;
+          if (listType === "TODO") {
+            return {
+              ...list,
+              todoItems: (list.todoItems || []).filter(item => item.id !== tempId).map(item => ({
+                ...item,
+                orderIndex: item.orderIndex - 1,
+              })),
+            };
+          } else {
+            return {
+              ...list,
+              kitItems: (list.kitItems || []).filter(item => item.id !== tempId).map(item => ({
+                ...item,
+                orderIndex: item.orderIndex - 1,
+              })),
+            };
+          }
+        }));
+      } else {
+        // Update the temp ID with the real ID from the server
+        const data = await response.json();
+        if (data.item?.id) {
+          setLists(prevLists => prevLists.map(list => {
+            if (list.id !== listId) return list;
+            if (listType === "TODO") {
+              return {
+                ...list,
+                todoItems: (list.todoItems || []).map(item =>
+                  item.id === tempId ? { ...item, id: data.item.id } : item
+                ),
+              };
+            } else {
+              return {
+                ...list,
+                kitItems: (list.kitItems || []).map(item =>
+                  item.id === tempId ? { ...item, id: data.item.id } : item
+                ),
+              };
+            }
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Error adding item:", err);
+      // Revert on error
+      setLists(prevLists => prevLists.map(list => {
+        if (list.id !== listId) return list;
+        if (listType === "TODO") {
+          return {
+            ...list,
+            todoItems: (list.todoItems || []).filter(item => item.id !== tempId).map(item => ({
+              ...item,
+              orderIndex: item.orderIndex - 1,
+            })),
+          };
+        } else {
+          return {
+            ...list,
+            kitItems: (list.kitItems || []).filter(item => item.id !== tempId).map(item => ({
+              ...item,
+              orderIndex: item.orderIndex - 1,
+            })),
+          };
+        }
+      }));
+    }
+  };
+
   const getActionButtonText = (actionType: TodoActionType): string => {
     switch (actionType) {
       case "INVITE_USERS":
@@ -477,22 +627,25 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           </div>
           {!filtersCollapsed && (
             <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="list-type-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Filter by Type
-                  </label>
-                  <select
-                    id="list-type-filter"
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-                    className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                  >
-                    <option value="ALL">All Lists</option>
-                    <option value="TODO">TODO Lists</option>
-                    <option value="KIT">Kit Lists</option>
-                  </select>
-                </div>
+              <div className={`grid grid-cols-1 ${!listTypeFilter ? 'sm:grid-cols-2' : ''} gap-4`}>
+                {/* Only show type filter when listTypeFilter is not set */}
+                {!listTypeFilter && (
+                  <div>
+                    <label htmlFor="list-type-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Filter by Type
+                    </label>
+                    <select
+                      id="list-type-filter"
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+                      className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    >
+                      <option value="ALL">All Lists</option>
+                      <option value="TODO">TODO Lists</option>
+                      <option value="KIT">Kit Lists</option>
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label htmlFor="list-completion-filter" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                     Filter by Status
@@ -678,11 +831,91 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     </svg>
                   </button>
                 )}
+
+                {/* Edit Button - styled as a visible button */}
+                {isOrganizer && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingListId(list.id);
+                      setEditingListType(list.type);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+                    title="Edit list"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Edit
+                  </button>
+                )}
               </div>
 
                 {/* Expanded Items - only in workflow mode */}
                 {isExpanded && shouldExpandInline && (
                   <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50">
+                    {/* Quick Add Item */}
+                    {isOrganizer && (
+                      <div className="mb-4">
+                        {quickAddListId === list.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={quickAddValue}
+                              onChange={(e) => setQuickAddValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && quickAddValue.trim()) {
+                                  handleQuickAddItem(list.id, list.type);
+                                } else if (e.key === "Escape") {
+                                  setQuickAddListId(null);
+                                  setQuickAddValue("");
+                                }
+                              }}
+                              placeholder={list.type === "TODO" ? "New task..." : "New item..."}
+                              className="flex-1 px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleQuickAddItem(list.id, list.type)}
+                              disabled={!quickAddValue.trim()}
+                              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                            >
+                              Add
+                            </button>
+                            <button
+                              onClick={() => {
+                                setQuickAddListId(null);
+                                setQuickAddValue("");
+                              }}
+                              className="px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setQuickAddListId(list.id)}
+                            className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add {list.type === "TODO" ? "task" : "item"}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {list.type === "TODO" ? (
                       <div className="space-y-2">
                         {(list.todoItems || []).map((item) => {
@@ -831,6 +1064,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         })}
                       </div>
                     )}
+
                   </div>
                 )}
               </div>
@@ -906,6 +1140,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           setIsAddListDialogOpen(false);
           fetchLists(); // Refresh the lists after adding
         }}
+        listTypeFilter={listTypeFilter}
       />
 
       {/* List Report Dialog */}
@@ -924,6 +1159,43 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           />
         );
       })()}
+
+      {/* Edit List Dialog */}
+      {editingListId && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto p-6">
+            {editingListType === "TODO" ? (
+              <EditTodoListForm
+                listId={editingListId}
+                onClose={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                }}
+                onSaved={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                  fetchLists(); // Refresh the lists after editing
+                }}
+                isTripList={true}
+              />
+            ) : (
+              <EditKitListForm
+                listId={editingListId}
+                onClose={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                }}
+                onSaved={() => {
+                  setEditingListId(null);
+                  setEditingListType(null);
+                  fetchLists(); // Refresh the lists after editing
+                }}
+                isTripList={true}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 

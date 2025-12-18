@@ -24,19 +24,21 @@ interface AddListDialogProps {
   onClose: () => void;
   tripId: string;
   onSuccess: () => void;
+  listTypeFilter?: ListType; // If set, only show lists of this type
 }
 
 type MergeMode = "NEW_INSTANCE" | "REPLACE" | "MERGE_ADD" | "MERGE_ADD_ALLOW_DUPES";
-type Tab = "my-templates" | "public-gallery";
+type Tab = "create-new" | "my-templates" | "public-gallery";
 
 export function AddListDialog({
   isOpen,
   onClose,
   tripId,
   onSuccess,
+  listTypeFilter,
 }: AddListDialogProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("my-templates");
+  const [activeTab, setActiveTab] = useState<Tab>("create-new");
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
   const [publicTemplates, setPublicTemplates] = useState<ListTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
@@ -46,10 +48,16 @@ export function AddListDialog({
   const [loadingMyTemplates, setLoadingMyTemplates] = useState(true);
   const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">("ALL");
+  // When listTypeFilter is set, force the type filter to that value
+  const [typeFilter, setTypeFilter] = useState<ListType | "ALL">(listTypeFilter || "ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [hasConflict, setHasConflict] = useState(false);
   const [checkingConflict, setCheckingConflict] = useState(false);
+
+  // Create new list form state
+  const [newListTitle, setNewListTitle] = useState("");
+  const [newListDescription, setNewListDescription] = useState("");
+  const [newListType, setNewListType] = useState<ListType>(listTypeFilter || "TODO");
 
   useEffect(() => {
     if (isOpen && user) {
@@ -217,6 +225,49 @@ export function AddListDialog({
     }
   };
 
+  const handleCreateNewList = async () => {
+    if (!user || !newListTitle.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch("/api/lists/instances", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tripId,
+          type: newListType,
+          title: newListTitle.trim(),
+          description: newListDescription.trim() || undefined,
+          ...(newListType === "TODO" ? { todoItems: [] } : { kitItems: [] }),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to create list");
+      }
+
+      onSuccess();
+      onClose();
+
+      // Reset form
+      setNewListTitle("");
+      setNewListDescription("");
+      setNewListType(listTypeFilter || "TODO");
+    } catch (err: any) {
+      console.error("Error creating list:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredMyTemplates = myTemplates.filter((t) =>
     typeFilter === "ALL" ? true : t.type === typeFilter
   );
@@ -227,11 +278,33 @@ export function AddListDialog({
     return type === "TODO" ? "✓" : "🎒";
   };
 
+  // Determine dialog title and tab labels based on listTypeFilter
+  const dialogTitle = listTypeFilter === "TODO"
+    ? "Add Checklist to Trip"
+    : listTypeFilter === "KIT"
+      ? "Add Kit List to Trip"
+      : "Add List to Trip";
+
+  const myTemplatesLabel = listTypeFilter === "TODO"
+    ? "My Checklists"
+    : listTypeFilter === "KIT"
+      ? "My Kit Lists"
+      : "My Lists";
+
+  const publicGalleryLabel = listTypeFilter === "TODO"
+    ? "Public Checklists"
+    : listTypeFilter === "KIT"
+      ? "Public Kit Lists"
+      : "Public Gallery";
+
+  const isCreateNewTab = activeTab === "create-new";
+  const canSubmit = isCreateNewTab ? newListTitle.trim().length > 0 : !!selectedTemplateId;
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Add List to Trip"
+      title={dialogTitle}
       size="lg"
       footer={
         <>
@@ -243,55 +316,64 @@ export function AddListDialog({
             Cancel
           </Button>
           <Button
-            onClick={handleAddList}
+            onClick={isCreateNewTab ? handleCreateNewList : handleAddList}
             className="bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={loading || !selectedTemplateId}
+            disabled={loading || !canSubmit}
           >
-            {loading ? "Adding..." : "Add List"}
+            {loading ? (isCreateNewTab ? "Creating..." : "Adding...") : (isCreateNewTab ? "Create List" : "Add List")}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
-        <p className="text-zinc-600 dark:text-zinc-400">
-          Create a copy of a list in your trip. Note: Changes to the original will not change the one in the trip.
-        </p>
-
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-zinc-200 dark:border-zinc-700">
+        <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-700 overflow-x-auto">
+          <button
+            onClick={() => {
+              setActiveTab("create-new");
+              setSelectedTemplateId("");
+            }}
+            className={`px-3 py-2 font-medium border-b-2 transition-colors whitespace-nowrap text-sm ${
+              activeTab === "create-new"
+                ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
+            }`}
+          >
+            Create New
+          </button>
           <button
             onClick={() => {
               setActiveTab("my-templates");
-              setSelectedTemplateId(""); // Clear selection when switching tabs
+              setSelectedTemplateId("");
             }}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 font-medium border-b-2 transition-colors whitespace-nowrap text-sm ${
               activeTab === "my-templates"
                 ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
             <span className="flex items-center gap-2">
-              My Checklists
+              {myTemplatesLabel}
               {loadingMyTemplates ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
               ) : (
-                <span>({myTemplates.length})</span>
+                <span>({filteredMyTemplates.length})</span>
               )}
             </span>
           </button>
           <button
             onClick={() => {
               setActiveTab("public-gallery");
-              setSelectedTemplateId(""); // Clear selection when switching tabs
+              setSelectedTemplateId("");
             }}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+            className={`px-3 py-2 font-medium border-b-2 transition-colors whitespace-nowrap text-sm ${
               activeTab === "public-gallery"
                 ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
                 : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
             }`}
           >
             <span className="flex items-center gap-2">
-              Public Gallery
+              {publicGalleryLabel}
               {loadingPublicTemplates ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
               ) : (
@@ -301,40 +383,121 @@ export function AddListDialog({
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3">
-          {activeTab === "public-gallery" && (
-            <input
-              type="text"
-              placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
-              className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
-            />
-          )}
+        {/* Create New Tab Content */}
+        {activeTab === "create-new" && (
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Create an empty list directly in this trip. You can add items after creating it.
+            </p>
 
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
-            className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
-          >
-            <option value="ALL">All Types</option>
-            <option value="TODO">TODO Lists</option>
-            <option value="KIT">Packing Lists</option>
-          </select>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                List Title *
+              </label>
+              <input
+                type="text"
+                value={newListTitle}
+                onChange={(e) => setNewListTitle(e.target.value)}
+                placeholder="e.g., Packing List, Pre-Trip Tasks"
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+              />
+            </div>
 
-          {activeTab === "public-gallery" && searchQuery && (
-            <Button
-              onClick={fetchPublicTemplates}
-              className="text-sm bg-zinc-800 hover:bg-zinc-900 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 px-4 py-2"
-            >
-              Search
-            </Button>
-          )}
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Description (optional)
+              </label>
+              <textarea
+                value={newListDescription}
+                onChange={(e) => setNewListDescription(e.target.value)}
+                placeholder="Brief description of this list"
+                rows={2}
+                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+              />
+            </div>
 
-        {/* Template Selection */}
+            {/* Only show type selector when listTypeFilter is not set */}
+            {!listTypeFilter && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  List Type
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="newListType"
+                      value="TODO"
+                      checked={newListType === "TODO"}
+                      onChange={() => setNewListType("TODO")}
+                      className="w-4 h-4 text-blue-600"
+                      disabled={loading}
+                    />
+                    <span className="text-sm text-zinc-700 dark:text-zinc-300">✓ Checklist (TODO)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="newListType"
+                      value="KIT"
+                      checked={newListType === "KIT"}
+                      onChange={() => setNewListType("KIT")}
+                      className="w-4 h-4 text-green-600"
+                      disabled={loading}
+                    />
+                    <span className="text-sm text-zinc-700 dark:text-zinc-300">🎒 Kit List</span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Filters and Template Selection - only show for template tabs */}
+        {activeTab !== "create-new" && (
+          <>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm">
+              Copy a list from your templates or the public gallery into this trip.
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              {activeTab === "public-gallery" && (
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
+                  className="flex-1 min-w-[200px] px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
+                />
+              )}
+
+              {/* Only show type filter when listTypeFilter is not set */}
+              {!listTypeFilter && (
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as ListType | "ALL")}
+                  className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-zinc-500"
+                >
+                  <option value="ALL">All Types</option>
+                  <option value="TODO">TODO Lists</option>
+                  <option value="KIT">Packing Lists</option>
+                </select>
+              )}
+
+              {activeTab === "public-gallery" && searchQuery && (
+                <Button
+                  onClick={fetchPublicTemplates}
+                  className="text-sm bg-zinc-800 hover:bg-zinc-900 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900 px-4 py-2"
+                >
+                  Search
+                </Button>
+              )}
+            </div>
+
+            {/* Template Selection */}
         <div>
           {loadingTemplates ? (
             <div className="flex items-center justify-center py-8">
@@ -420,101 +583,103 @@ export function AddListDialog({
               ))}
             </div>
           )}
-        </div>
-
-        {/* Merge Mode - only show when template is selected AND there's a conflict */}
-        {selectedTemplateId && checkingConflict && (
-          <div className="flex items-center justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-zinc-600 dark:border-zinc-400"></div>
-            <span className="ml-2 text-sm text-zinc-600 dark:text-zinc-400">
-              Checking for conflicts...
-            </span>
-          </div>
-        )}
-
-        {selectedTemplateId && !checkingConflict && hasConflict && (
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-              There's already a list with this name. How do you want to handle it?
-            </label>
-            <div className="space-y-2">
-              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mergeMode"
-                  value="NEW_INSTANCE"
-                  checked={mergeMode === "NEW_INSTANCE"}
-                  onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                  className="mt-1 mr-3"
-                />
-                <div>
-                  <div className="font-medium text-zinc-900 dark:text-white">
-                    Create New List
-                  </div>
-                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Add a new list (will add suffix if name exists)
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mergeMode"
-                  value="MERGE_ADD"
-                  checked={mergeMode === "MERGE_ADD"}
-                  onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                  className="mt-1 mr-3"
-                />
-                <div>
-                  <div className="font-medium text-zinc-900 dark:text-white">
-                    Merge (Skip Duplicates)
-                  </div>
-                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Add new items, skip items with matching names
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mergeMode"
-                  value="MERGE_ADD_ALLOW_DUPES"
-                  checked={mergeMode === "MERGE_ADD_ALLOW_DUPES"}
-                  onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                  className="mt-1 mr-3"
-                />
-                <div>
-                  <div className="font-medium text-zinc-900 dark:text-white">
-                    Merge (Allow Duplicates)
-                  </div>
-                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Add all items, even if some have matching names
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mergeMode"
-                  value="REPLACE"
-                  checked={mergeMode === "REPLACE"}
-                  onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                  className="mt-1 mr-3"
-                />
-                <div>
-                  <div className="font-medium text-red-600 dark:text-red-400">
-                    Replace Existing List
-                  </div>
-                  <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Delete the existing list and create a fresh copy
-                  </div>
-                </div>
-              </label>
             </div>
-          </div>
+
+            {/* Merge Mode - only show when template is selected AND there's a conflict */}
+            {selectedTemplateId && checkingConflict && (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-zinc-600 dark:border-zinc-400"></div>
+                <span className="ml-2 text-sm text-zinc-600 dark:text-zinc-400">
+                  Checking for conflicts...
+                </span>
+              </div>
+            )}
+
+            {selectedTemplateId && !checkingConflict && hasConflict && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                  There's already a list with this name. How do you want to handle it?
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mergeMode"
+                      value="NEW_INSTANCE"
+                      checked={mergeMode === "NEW_INSTANCE"}
+                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
+                      className="mt-1 mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-zinc-900 dark:text-white">
+                        Create New List
+                      </div>
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Add a new list (will add suffix if name exists)
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mergeMode"
+                      value="MERGE_ADD"
+                      checked={mergeMode === "MERGE_ADD"}
+                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
+                      className="mt-1 mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-zinc-900 dark:text-white">
+                        Merge (Skip Duplicates)
+                      </div>
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Add new items, skip items with matching names
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mergeMode"
+                      value="MERGE_ADD_ALLOW_DUPES"
+                      checked={mergeMode === "MERGE_ADD_ALLOW_DUPES"}
+                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
+                      className="mt-1 mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-zinc-900 dark:text-white">
+                        Merge (Allow Duplicates)
+                      </div>
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Add all items, even if some have matching names
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mergeMode"
+                      value="REPLACE"
+                      checked={mergeMode === "REPLACE"}
+                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
+                      className="mt-1 mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-red-600 dark:text-red-400">
+                        Replace Existing List
+                      </div>
+                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Delete the existing list and create a fresh copy
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {error && (

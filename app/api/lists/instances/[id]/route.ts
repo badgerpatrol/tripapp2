@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
-import { deleteInstance } from "@/server/services/lists";
+import { deleteTripList } from "@/server/services/lists";
 
 /**
  * DELETE /api/lists/instances/:id
- * Delete a list instance
+ * Delete a trip list
  */
 export async function DELETE(
   request: NextRequest,
@@ -24,19 +24,19 @@ export async function DELETE(
     await requireAuth(auth.uid);
 
     const { id } = await params;
-    await deleteInstance(auth.uid, id);
+    await deleteTripList(auth.uid, id);
 
     return NextResponse.json(
       { success: true, message: "List deleted successfully" },
       { status: 200 }
     );
   } catch (error: any) {
-    console.error("Error deleting list instance:", error);
+    console.error("Error deleting trip list:", error);
     if (error.message.includes("Forbidden") || error.message.includes("not found")) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
     return NextResponse.json(
-      { error: error.message || "Failed to delete list instance" },
+      { error: error.message || "Failed to delete trip list" },
       { status: 500 }
     );
   }
