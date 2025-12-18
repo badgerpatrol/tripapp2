@@ -1055,6 +1055,129 @@ export async function launchItemAction(
 }
 
 /**
+ * Add a single todo item to a template/trip list
+ */
+export async function addTodoItem(
+  actorId: string,
+  templateId: string,
+  payload: { label: string; notes?: string; orderIndex?: number; perPerson?: boolean }
+) {
+  const template = await prisma.listTemplate.findUnique({
+    where: { id: templateId },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  // For trip lists, verify trip membership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else {
+    // For regular templates, verify ownership
+    if (!canEditTemplate(actorId, template)) {
+      throw new Error("Forbidden: Cannot edit this template");
+    }
+  }
+
+  // Determine orderIndex
+  let orderIndex = payload.orderIndex;
+  if (orderIndex === undefined) {
+    // Add to end if not specified
+    const maxItem = await prisma.todoItemTemplate.findFirst({
+      where: { templateId },
+      orderBy: { orderIndex: "desc" },
+    });
+    orderIndex = maxItem ? maxItem.orderIndex + 1 : 0;
+  } else {
+    // Shift existing items down to make room at the specified position
+    await prisma.todoItemTemplate.updateMany({
+      where: {
+        templateId,
+        orderIndex: { gte: orderIndex },
+      },
+      data: {
+        orderIndex: { increment: 1 },
+      },
+    });
+  }
+
+  const item = await prisma.todoItemTemplate.create({
+    data: {
+      templateId,
+      label: payload.label,
+      notes: payload.notes || null,
+      orderIndex,
+      perPerson: payload.perPerson ?? false,
+    },
+  });
+
+  return item;
+}
+
+/**
+ * Add a single kit item to a template/trip list
+ */
+export async function addKitItem(
+  actorId: string,
+  templateId: string,
+  payload: { label: string; notes?: string; quantity?: number; orderIndex?: number; perPerson?: boolean }
+) {
+  const template = await prisma.listTemplate.findUnique({
+    where: { id: templateId },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  // For trip lists, verify trip membership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else {
+    // For regular templates, verify ownership
+    if (!canEditTemplate(actorId, template)) {
+      throw new Error("Forbidden: Cannot edit this template");
+    }
+  }
+
+  // Determine orderIndex
+  let orderIndex = payload.orderIndex;
+  if (orderIndex === undefined) {
+    // Add to end if not specified
+    const maxItem = await prisma.kitItemTemplate.findFirst({
+      where: { templateId },
+      orderBy: { orderIndex: "desc" },
+    });
+    orderIndex = maxItem ? maxItem.orderIndex + 1 : 0;
+  } else {
+    // Shift existing items down to make room at the specified position
+    await prisma.kitItemTemplate.updateMany({
+      where: {
+        templateId,
+        orderIndex: { gte: orderIndex },
+      },
+      data: {
+        orderIndex: { increment: 1 },
+      },
+    });
+  }
+
+  const item = await prisma.kitItemTemplate.create({
+    data: {
+      templateId,
+      label: payload.label,
+      notes: payload.notes || null,
+      quantity: payload.quantity ?? 1,
+      orderIndex,
+      perPerson: payload.perPerson ?? false,
+    },
+  });
+
+  return item;
+}
+
+/**
  * Delete a kit item from a trip list
  * For per-person items: Only deletes the current user's tick
  * For shared items: Only works if no one has ticked it

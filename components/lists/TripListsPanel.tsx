@@ -96,6 +96,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [reportListId, setReportListId] = useState<string | null>(null);
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [editingListType, setEditingListType] = useState<ListType | null>(null);
+  const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
+  const [quickAddValue, setQuickAddValue] = useState("");
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -376,6 +378,162 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       alert("Failed to delete list. Please try again.");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleQuickAddItem = async (listId: string, listType: ListType) => {
+    if (!user || !quickAddValue.trim()) return;
+
+    const label = quickAddValue.trim();
+    const tempId = `temp-${Date.now()}`;
+
+    // Optimistically update the UI immediately
+    setLists(prevLists => prevLists.map(list => {
+      if (list.id !== listId) return list;
+
+      if (listType === "TODO") {
+        const newItem: TodoItem = {
+          id: tempId,
+          label,
+          notes: null,
+          actionType: null,
+          actionData: null,
+          parameters: null,
+          orderIndex: 0,
+          perPerson: false,
+          ticks: [],
+        };
+        // Shift existing items and add new one at top
+        const updatedItems = (list.todoItems || []).map(item => ({
+          ...item,
+          orderIndex: item.orderIndex + 1,
+        }));
+        return {
+          ...list,
+          todoItems: [newItem, ...updatedItems],
+        };
+      } else {
+        const newItem: KitItem = {
+          id: tempId,
+          label,
+          notes: null,
+          quantity: 1,
+          perPerson: false,
+          required: true,
+          weightGrams: null,
+          category: null,
+          cost: null,
+          url: null,
+          orderIndex: 0,
+          ticks: [],
+        };
+        // Shift existing items and add new one at top
+        const updatedItems = (list.kitItems || []).map(item => ({
+          ...item,
+          orderIndex: item.orderIndex + 1,
+        }));
+        return {
+          ...list,
+          kitItems: [newItem, ...updatedItems],
+        };
+      }
+    }));
+
+    // Clear input and close quick add immediately
+    setQuickAddValue("");
+    setQuickAddListId(null);
+
+    // Send API request in background
+    try {
+      const token = await user.getIdToken();
+
+      const endpoint = listType === "TODO"
+        ? `/api/lists/templates/${listId}/todo-items`
+        : `/api/lists/templates/${listId}/kit-items`;
+
+      const body = listType === "TODO"
+        ? { label, orderIndex: 0 }
+        : { label, quantity: 1, orderIndex: 0 };
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        // Revert on error
+        console.error("Failed to add item, reverting...");
+        setLists(prevLists => prevLists.map(list => {
+          if (list.id !== listId) return list;
+          if (listType === "TODO") {
+            return {
+              ...list,
+              todoItems: (list.todoItems || []).filter(item => item.id !== tempId).map(item => ({
+                ...item,
+                orderIndex: item.orderIndex - 1,
+              })),
+            };
+          } else {
+            return {
+              ...list,
+              kitItems: (list.kitItems || []).filter(item => item.id !== tempId).map(item => ({
+                ...item,
+                orderIndex: item.orderIndex - 1,
+              })),
+            };
+          }
+        }));
+      } else {
+        // Update the temp ID with the real ID from the server
+        const data = await response.json();
+        if (data.item?.id) {
+          setLists(prevLists => prevLists.map(list => {
+            if (list.id !== listId) return list;
+            if (listType === "TODO") {
+              return {
+                ...list,
+                todoItems: (list.todoItems || []).map(item =>
+                  item.id === tempId ? { ...item, id: data.item.id } : item
+                ),
+              };
+            } else {
+              return {
+                ...list,
+                kitItems: (list.kitItems || []).map(item =>
+                  item.id === tempId ? { ...item, id: data.item.id } : item
+                ),
+              };
+            }
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Error adding item:", err);
+      // Revert on error
+      setLists(prevLists => prevLists.map(list => {
+        if (list.id !== listId) return list;
+        if (listType === "TODO") {
+          return {
+            ...list,
+            todoItems: (list.todoItems || []).filter(item => item.id !== tempId).map(item => ({
+              ...item,
+              orderIndex: item.orderIndex - 1,
+            })),
+          };
+        } else {
+          return {
+            ...list,
+            kitItems: (list.kitItems || []).filter(item => item.id !== tempId).map(item => ({
+              ...item,
+              orderIndex: item.orderIndex - 1,
+            })),
+          };
+        }
+      }));
     }
   };
 
@@ -706,6 +864,58 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                 {/* Expanded Items - only in workflow mode */}
                 {isExpanded && shouldExpandInline && (
                   <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50">
+                    {/* Quick Add Item */}
+                    {isOrganizer && (
+                      <div className="mb-4">
+                        {quickAddListId === list.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={quickAddValue}
+                              onChange={(e) => setQuickAddValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && quickAddValue.trim()) {
+                                  handleQuickAddItem(list.id, list.type);
+                                } else if (e.key === "Escape") {
+                                  setQuickAddListId(null);
+                                  setQuickAddValue("");
+                                }
+                              }}
+                              placeholder={list.type === "TODO" ? "New task..." : "New item..."}
+                              className="flex-1 px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleQuickAddItem(list.id, list.type)}
+                              disabled={!quickAddValue.trim()}
+                              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                            >
+                              Add
+                            </button>
+                            <button
+                              onClick={() => {
+                                setQuickAddListId(null);
+                                setQuickAddValue("");
+                              }}
+                              className="px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setQuickAddListId(list.id)}
+                            className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add {list.type === "TODO" ? "task" : "item"}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {list.type === "TODO" ? (
                       <div className="space-y-2">
                         {(list.todoItems || []).map((item) => {
