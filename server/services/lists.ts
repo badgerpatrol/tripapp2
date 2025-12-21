@@ -88,16 +88,27 @@ export async function createTemplate(
   return template;
 }
 
+export interface ListMyTemplatesQuery {
+  createdInTrip?: boolean; // Filter by createdInTrip flag (true = only trip-created, false = only directly created, undefined = all)
+}
+
 /**
  * List my templates (private + my public), excluding inventory lists and trip copies
  */
-export async function listMyTemplates(ownerId: string) {
+export async function listMyTemplates(ownerId: string, query?: ListMyTemplatesQuery) {
+  const where: any = {
+    ownerId,
+    inventory: false,
+    tripId: null, // Exclude trip-specific copies
+  };
+
+  // Apply createdInTrip filter if specified
+  if (query?.createdInTrip !== undefined) {
+    where.createdInTrip = query.createdInTrip;
+  }
+
   const templates = await prisma.listTemplate.findMany({
-    where: {
-      ownerId,
-      inventory: false,
-      tripId: null, // Exclude trip-specific copies
-    },
+    where,
     include: {
       todoItems: true,
       kitItems: true,
@@ -696,6 +707,7 @@ async function createTripListFromTemplate(
 
 /**
  * Create an ad-hoc list in a trip (without a source template)
+ * Also creates a master template in the user's list collection with createdInTrip=true
  */
 export async function createTripListAdHoc(
   actorId: string,
@@ -706,67 +718,136 @@ export async function createTripListAdHoc(
   // Verify trip membership
   await requireTripMember(actorId, tripId);
 
-  const tripList = await prisma.listTemplate.create({
-    data: {
-      ownerId: actorId,
-      tripId,
-      type,
-      title,
-      description,
-      inventory: inventory ?? false,
-      visibility: "PRIVATE",
-      createdBy: actorId,
-    },
-  });
+  // Use a transaction to create both the master template and the trip list
+  const result = await prisma.$transaction(async (tx) => {
+    // First, create the master template (user's reusable list)
+    const masterTemplate = await tx.listTemplate.create({
+      data: {
+        ownerId: actorId,
+        type,
+        title,
+        description,
+        inventory: inventory ?? false,
+        visibility: "PRIVATE",
+        createdInTrip: true, // Mark as created in a trip
+      },
+    });
 
-  // Add items based on type
-  if (type === "TODO" && todoItems) {
-    await prisma.todoItemTemplate.createMany({
-      data: todoItems.map((item, idx) => ({
-        templateId: tripList.id,
-        label: item.label,
-        notes: item.notes,
-        perPerson: item.perPerson ?? false,
-        actionType: item.actionType,
-        actionData: item.actionData,
-        parameters: item.parameters,
-        orderIndex: item.orderIndex ?? idx,
-      })),
+    // Add items to master template based on type
+    if (type === "TODO" && todoItems) {
+      await tx.todoItemTemplate.createMany({
+        data: todoItems.map((item, idx) => ({
+          templateId: masterTemplate.id,
+          label: item.label,
+          notes: item.notes,
+          perPerson: item.perPerson ?? false,
+          actionType: item.actionType,
+          actionData: item.actionData,
+          parameters: item.parameters,
+          orderIndex: item.orderIndex ?? idx,
+        })),
+      });
+    } else if (type === "KIT" && kitItems) {
+      await tx.kitItemTemplate.createMany({
+        data: kitItems.map((item, idx) => ({
+          templateId: masterTemplate.id,
+          label: item.label,
+          notes: item.notes,
+          quantity: item.quantity ?? 1,
+          perPerson: item.perPerson ?? false,
+          required: item.required ?? true,
+          weightGrams: item.weightGrams,
+          category: item.category,
+          cost: item.cost,
+          url: item.url,
+          orderIndex: item.orderIndex ?? idx,
+          // Inventory fields
+          date: item.date,
+          needsRepair: item.needsRepair ?? false,
+          conditionNotes: item.conditionNotes,
+          lost: item.lost ?? false,
+          lastSeenText: item.lastSeenText,
+          lastSeenDate: item.lastSeenDate,
+        })),
+      });
+    }
+
+    // Now create the trip-specific list that references the master template
+    const tripList = await tx.listTemplate.create({
+      data: {
+        ownerId: actorId,
+        tripId,
+        type,
+        title,
+        description,
+        inventory: inventory ?? false,
+        visibility: "PRIVATE",
+        createdBy: actorId,
+        createdInTrip: true,
+        sourceTemplateId: masterTemplate.id, // Link to the master template
+        sourceTemplateUpdatedAt: masterTemplate.updatedAt,
+      },
     });
-  } else if (type === "KIT" && kitItems) {
-    await prisma.kitItemTemplate.createMany({
-      data: kitItems.map((item, idx) => ({
-        templateId: tripList.id,
-        label: item.label,
-        notes: item.notes,
-        quantity: item.quantity ?? 1,
-        perPerson: item.perPerson ?? false,
-        required: item.required ?? true,
-        weightGrams: item.weightGrams,
-        category: item.category,
-        cost: item.cost,
-        url: item.url,
-        orderIndex: item.orderIndex ?? idx,
-        // Inventory fields
-        date: item.date,
-        needsRepair: item.needsRepair ?? false,
-        conditionNotes: item.conditionNotes,
-        lost: item.lost ?? false,
-        lastSeenText: item.lastSeenText,
-        lastSeenDate: item.lastSeenDate,
-      })),
-    });
-  }
+
+    // Copy items to trip list
+    if (type === "TODO" && todoItems) {
+      await tx.todoItemTemplate.createMany({
+        data: todoItems.map((item, idx) => ({
+          templateId: tripList.id,
+          label: item.label,
+          notes: item.notes,
+          perPerson: item.perPerson ?? false,
+          actionType: item.actionType,
+          actionData: item.actionData,
+          parameters: item.parameters,
+          orderIndex: item.orderIndex ?? idx,
+        })),
+      });
+    } else if (type === "KIT" && kitItems) {
+      await tx.kitItemTemplate.createMany({
+        data: kitItems.map((item, idx) => ({
+          templateId: tripList.id,
+          label: item.label,
+          notes: item.notes,
+          quantity: item.quantity ?? 1,
+          perPerson: item.perPerson ?? false,
+          required: item.required ?? true,
+          weightGrams: item.weightGrams,
+          category: item.category,
+          cost: item.cost,
+          url: item.url,
+          orderIndex: item.orderIndex ?? idx,
+          // Inventory fields
+          date: item.date,
+          needsRepair: item.needsRepair ?? false,
+          conditionNotes: item.conditionNotes,
+          lost: item.lost ?? false,
+          lastSeenText: item.lastSeenText,
+          lastSeenDate: item.lastSeenDate,
+        })),
+      });
+    }
+
+    return { masterTemplate, tripList };
+  });
 
   await logEvent(
     "ListTemplate",
-    tripList.id,
-    EventType.LIST_INSTANCE_CREATED,
+    result.masterTemplate.id,
+    EventType.LIST_TEMPLATE_CREATED,
     actorId,
-    { tripId, type, adHoc: true }
+    { type, title, createdInTrip: true }
   );
 
-  return tripList;
+  await logEvent(
+    "ListTemplate",
+    result.tripList.id,
+    EventType.LIST_INSTANCE_CREATED,
+    actorId,
+    { tripId, type, adHoc: true, masterTemplateId: result.masterTemplate.id }
+  );
+
+  return result.tripList;
 }
 
 /**

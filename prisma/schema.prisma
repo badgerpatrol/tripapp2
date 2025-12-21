@@ -840,6 +840,7 @@ model ListTemplate {
   sourceTemplateId        String?   // The original template this was copied from
   sourceTemplateUpdatedAt DateTime? // When the source template was last updated at copy time
   createdBy               String?   // User who created this (for trip copies)
+  createdInTrip           Boolean   @default(false) // True if list was originally created within a trip
 
   // Relations
   owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -852,6 +853,7 @@ model ListTemplate {
   @@index([isTripTemplate])
   @@index([inventory])
   @@index([tripId, type, title])
+  @@index([createdInTrip])
   @@map("list_templates")
 }
 

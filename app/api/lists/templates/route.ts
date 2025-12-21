@@ -8,6 +8,10 @@ import { UserRole } from "@/lib/generated/prisma";
  * GET /api/lists/templates
  * Get all templates owned by the authenticated user.
  * If adminMode=true query param is provided and user is admin, returns all templates in the system.
+ *
+ * Query params:
+ * - adminMode: "true" to get all templates (admin only)
+ * - createdInTrip: "true" for trip-created lists only, "false" for directly-created only, omit for all
  */
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +30,14 @@ export async function GET(request: NextRequest) {
     // Check if admin mode is requested
     const { searchParams } = new URL(request.url);
     const adminMode = searchParams.get("adminMode") === "true";
+    const createdInTripParam = searchParams.get("createdInTrip");
+
+    // Parse createdInTrip filter
+    const createdInTrip = createdInTripParam === "true"
+      ? true
+      : createdInTripParam === "false"
+        ? false
+        : undefined;
 
     let templates;
     if (adminMode) {
@@ -40,8 +52,8 @@ export async function GET(request: NextRequest) {
       // Get all templates
       templates = await getAllTemplates();
     } else {
-      // Get user's templates
-      templates = await listMyTemplates(auth.uid);
+      // Get user's templates with optional filter
+      templates = await listMyTemplates(auth.uid, { createdInTrip });
     }
 
     return NextResponse.json(

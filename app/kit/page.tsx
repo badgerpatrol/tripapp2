@@ -20,6 +20,7 @@ interface ListTemplate {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  createdInTrip?: boolean;
   owner?: {
     id: string;
     displayName: string | null;
@@ -62,6 +63,7 @@ function KitPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showTripCreated, setShowTripCreated] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
@@ -83,7 +85,7 @@ function KitPageContent() {
     } else if (activeTab === "inventory") {
       fetchInventoryTemplates();
     }
-  }, [activeTab, isAdminMode]);
+  }, [activeTab, isAdminMode, showTripCreated]);
 
   // Auto-hide toast
   useEffect(() => {
@@ -101,7 +103,12 @@ function KitPageContent() {
 
     try {
       const token = await user.getIdToken();
-      const url = isAdminMode ? "/api/lists/templates?adminMode=true" : "/api/lists/templates";
+      const params = new URLSearchParams();
+      if (isAdminMode) params.set("adminMode", "true");
+      // By default hide trip-created lists unless checkbox is checked
+      if (!showTripCreated) params.set("createdInTrip", "false");
+
+      const url = `/api/lists/templates${params.toString() ? `?${params}` : ""}`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -277,29 +284,42 @@ function KitPageContent() {
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          {activeTab === "public-gallery" && (
-            <>
+        {/* Filters for My Kit Lists */}
+        {activeTab === "my-templates" && (
+          <div className="flex flex-wrap gap-4 mb-6 items-center">
+            <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
               <input
-                type="text"
-                placeholder="Search kit templates..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
-                className="flex-1 min-w-[200px] px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                type="checkbox"
+                checked={showTripCreated}
+                onChange={(e) => setShowTripCreated(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
               />
-              {searchQuery && (
-                <Button
-                  onClick={fetchPublicTemplates}
-                  className="bg-zinc-600 hover:bg-zinc-700 text-white"
-                >
-                  Search
-                </Button>
-              )}
-            </>
-          )}
-        </div>
+              Show lists created in trips
+            </label>
+          </div>
+        )}
+
+        {/* Filters for Public Gallery */}
+        {activeTab === "public-gallery" && (
+          <div className="flex flex-wrap gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="Search kit templates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
+              className="flex-1 min-w-[200px] px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+            />
+            {searchQuery && (
+              <Button
+                onClick={fetchPublicTemplates}
+                className="bg-zinc-600 hover:bg-zinc-700 text-white"
+              >
+                Search
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -401,11 +421,16 @@ function KitPageContent() {
                   )}
 
                   {/* Stats */}
-                  <div className="flex gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                  <div className="flex flex-wrap gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
                     <span>{template.kitItems?.length || 0} items</span>
                     {template.visibility === "PUBLIC" && (
                       <span className="flex items-center gap-1">
                         <span>🌐</span> Public
+                      </span>
+                    )}
+                    {template.createdInTrip && (
+                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                        <span>✈️</span> From trip
                       </span>
                     )}
                   </div>
