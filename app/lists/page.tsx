@@ -19,6 +19,7 @@ interface ListTemplate {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  createdInTrip?: boolean;
   owner?: {
     id: string;
     displayName: string | null;
@@ -39,6 +40,7 @@ interface ListTemplate {
   }>;
 }
 
+
 type Tab = "my-templates" | "public-gallery";
 
 function ListsPageContent() {
@@ -54,6 +56,7 @@ function ListsPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const typeFilter: ListType = "TODO"; // Only show TODO lists, exclude kit lists
+  const [showTripCreated, setShowTripCreated] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
@@ -72,7 +75,7 @@ function ListsPageContent() {
     } else {
       fetchPublicTemplates();
     }
-  }, [activeTab, typeFilter, isAdminMode]);
+  }, [activeTab, typeFilter, isAdminMode, showTripCreated]);
 
   // Auto-hide toast
   useEffect(() => {
@@ -90,7 +93,12 @@ function ListsPageContent() {
 
     try {
       const token = await user.getIdToken();
-      const url = isAdminMode ? "/api/lists/templates?adminMode=true" : "/api/lists/templates";
+      const params = new URLSearchParams();
+      if (isAdminMode) params.set("adminMode", "true");
+      // By default hide trip-created lists unless checkbox is checked
+      if (!showTripCreated) params.set("createdInTrip", "false");
+
+      const url = `/api/lists/templates${params.toString() ? `?${params}` : ""}`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -226,7 +234,22 @@ function ListsPageContent() {
           </button>
         </div>
 
-        {/* Filters */}
+        {/* Filters for My Checklists */}
+        {activeTab === "my-templates" && (
+          <div className="flex flex-wrap gap-4 mb-6 items-center">
+            <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showTripCreated}
+                onChange={(e) => setShowTripCreated(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+              />
+              Show lists created in trips
+            </label>
+          </div>
+        )}
+
+        {/* Filters for Public Gallery */}
         {activeTab === "public-gallery" && (
           <div className="flex flex-wrap gap-4 mb-6">
             <input
@@ -327,7 +350,7 @@ function ListsPageContent() {
                 )}
 
                 {/* Stats */}
-                <div className="flex gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                <div className="flex flex-wrap gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
                   <span>
                     {template.type === "TODO"
                       ? `${template.todoItems?.length || 0} tasks`
@@ -336,6 +359,11 @@ function ListsPageContent() {
                   {template.visibility === "PUBLIC" && (
                     <span className="flex items-center gap-1">
                       <span>🌐</span> Public
+                    </span>
+                  )}
+                  {template.createdInTrip && (
+                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                      <span>✈️</span> From trip
                     </span>
                   )}
                 </div>
