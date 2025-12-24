@@ -117,8 +117,8 @@ export async function GET(request: NextRequest) {
           { status: 403 }
         );
       }
-      // Get all trips
-      trips = await getAllTrips();
+      // Get all trips (pass userId for RSVP status lookup)
+      trips = await getAllTrips(auth.uid);
     } else {
       // Get user's trips
       trips = await getUserTrips(auth.uid);

@@ -19,7 +19,6 @@ interface Trip {
   createdAt: string;
   createdBy: {
     id: string;
-    email: string;
     displayName: string | null;
   };
   members: Array<{
@@ -27,12 +26,10 @@ interface Trip {
     userId: string;
     role: string;
     rsvpStatus: string;
-    user: {
-      id: string;
-      email: string;
-      displayName: string | null;
-    };
   }>;
+  _count: {
+    members: number;
+  };
 }
 
 // Component that handles the returnTo redirect - needs to be in Suspense
@@ -147,16 +144,26 @@ function HomeContent() {
     });
   };
 
+  // Compute display status - show "LIVE" if current date is within trip dates
+  const getDisplayStatus = (trip: Trip) => {
+    if (trip.startDate && trip.endDate) {
+      const now = new Date();
+      const start = new Date(trip.startDate);
+      const end = new Date(trip.endDate);
+      // Set times to compare dates only
+      now.setHours(0, 0, 0, 0);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      if (now >= start && now <= end) {
+        return "LIVE";
+      }
+    }
+    return trip.status;
+  };
+
   // Separate trips into invitations (PENDING) and accepted trips (ACCEPTED or MAYBE)
   const myRsvpStatus = (trip: Trip) => {
     const myMembership = trip.members.find(m => m.userId === user?.uid);
-    console.log(`[DEBUG] Trip "${trip.name}":`, {
-      userId: user?.uid,
-      memberCount: trip.members.length,
-      foundMembership: !!myMembership,
-      rsvpStatus: myMembership?.rsvpStatus,
-      memberUserIds: trip.members.map(m => ({ userId: m.userId, email: m.user.email }))
-    });
     return myMembership?.rsvpStatus || "PENDING";
   };
 
@@ -326,18 +333,7 @@ function HomeContent() {
           </div>
         ) : acceptedTrips.length > 0 ? (
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {acceptedTrips.length} active trip{acceptedTrips.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {acceptedTrips.map((trip) => {
                 const userRsvp = myRsvpStatus(trip);
@@ -357,17 +353,24 @@ function HomeContent() {
                             MAYBE
                           </span>
                         )}
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded ${
-                            trip.status === "PLANNING"
-                              ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                              : trip.status === "ACTIVE"
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                              : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                          }`}
-                        >
-                          {trip.status}
-                        </span>
+                        {(() => {
+                          const displayStatus = getDisplayStatus(trip);
+                          return (
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded ${
+                                displayStatus === "LIVE"
+                                  ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                                  : displayStatus === "PLANNING"
+                                  ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                  : displayStatus === "ACTIVE"
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                                  : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                              }`}
+                            >
+                              {displayStatus}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -394,14 +397,11 @@ function HomeContent() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                         </svg>
                         <span>
-                        {(() => {
-                          const nonViewerCount = trip.members.filter(m => m.role !== "VIEWER").length;
-                          return nonViewerCount === 0
-                            ? "no-one"
-                            : nonViewerCount === 1
-                            ? "1 person"
-                            : `${nonViewerCount} people`;
-                        })()}
+                        {trip._count.members === 0
+                          ? "no-one"
+                          : trip._count.members === 1
+                          ? "1 person"
+                          : `${trip._count.members} people`}
                         </span>
                       </div>
                     </div>

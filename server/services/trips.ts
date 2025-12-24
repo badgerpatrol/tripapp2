@@ -640,6 +640,7 @@ export async function getTripById(tripId: string) {
 
 /**
  * Gets all trips for a user (where they are a member).
+ * Optimized to only fetch the current user's membership and a member count.
  */
 export async function getUserTrips(userId: string) {
   return prisma.trip.findMany({
@@ -651,7 +652,15 @@ export async function getUserTrips(userId: string) {
       },
       deletedAt: null,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      baseCurrency: true,
+      startDate: true,
+      endDate: true,
+      status: true,
+      createdAt: true,
       createdBy: {
         select: {
           id: true,
@@ -660,18 +669,18 @@ export async function getUserTrips(userId: string) {
         },
       },
       members: {
-        where: { deletedAt: null },
+        where: { userId, deletedAt: null },
         select: {
           id: true,
           userId: true,
           role: true,
           rsvpStatus: true,
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              photoURL: true,
-            },
+        },
+      },
+      _count: {
+        select: {
+          members: {
+            where: { deletedAt: null, role: { not: "VIEWER" } },
           },
         },
       },
@@ -685,13 +694,22 @@ export async function getUserTrips(userId: string) {
 /**
  * Gets all trips in the system (admin only).
  * Used when admin mode is enabled.
+ * Optimized to only fetch member counts, not full member data.
  */
-export async function getAllTrips() {
+export async function getAllTrips(adminUserId?: string) {
   return prisma.trip.findMany({
     where: {
       deletedAt: null,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      baseCurrency: true,
+      startDate: true,
+      endDate: true,
+      status: true,
+      createdAt: true,
       createdBy: {
         select: {
           id: true,
@@ -699,19 +717,21 @@ export async function getAllTrips() {
           photoURL: true,
         },
       },
-      members: {
-        where: { deletedAt: null },
-        select: {
-          id: true,
-          userId: true,
-          role: true,
-          rsvpStatus: true,
-          user: {
+      members: adminUserId
+        ? {
+            where: { userId: adminUserId, deletedAt: null },
             select: {
               id: true,
-              displayName: true,
-              photoURL: true,
+              userId: true,
+              role: true,
+              rsvpStatus: true,
             },
+          }
+        : false,
+      _count: {
+        select: {
+          members: {
+            where: { deletedAt: null, role: { not: "VIEWER" } },
           },
         },
       },
