@@ -251,14 +251,10 @@ export default function TripDetailPage() {
 
   const tripId = params.id as string;
 
-  // Set default filter based on trip RSVP status
+  // Set default filter to "all" regardless of RSVP status
   useEffect(() => {
     if (trip) {
-      if (trip.rsvpStatus === "CLOSED") {
-        setMemberRsvpFilter("ACCEPTED");
-      } else {
-        setMemberRsvpFilter("all");
-      }
+      setMemberRsvpFilter("all");
     }
   }, [trip?.rsvpStatus]);
 

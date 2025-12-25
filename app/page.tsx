@@ -199,7 +199,7 @@ function HomeContent() {
               <div className="flex gap-3">
                 <Button
                   variant="primary"
-                  onClick={() => router.push("/trips/new")}
+                  onClick={() => router.push("/trips/new-v2")}
                   leftIcon={
                     <svg
                       className="w-5 h-5"
@@ -325,7 +325,7 @@ function HomeContent() {
             {canCreateTrip && (
               <Button
                 variant="primary"
-                onClick={() => router.push("/trips/new")}
+                onClick={() => router.push("/trips/new-v2")}
               >
                 Create Trip
               </Button>

@@ -25,7 +25,7 @@ function generateRandomPassword(): string {
  * Creates or updates a viewer user for sign-up mode.
  * Returns the user ID and password.
  */
-async function createOrUpdateSignUpViewer(
+export async function createOrUpdateSignUpViewer(
   tripId: string,
   tripName: string,
   existingUserId?: string | null,
