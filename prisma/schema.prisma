@@ -296,6 +296,7 @@ model Trip {
   id           String      @id @default(uuid())
   name         String
   description  String?
+  location     String?
   baseCurrency String      @default("USD")
   startDate    DateTime?
   endDate      DateTime?

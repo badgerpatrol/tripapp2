@@ -24,28 +24,19 @@ async function debugApiResponse() {
     console.log(`Trip: ${trip.name}`);
     console.log(`  ID: ${trip.id}`);
     console.log(`  Status: ${trip.status}`);
-    console.log(`  Members (${trip.members.length}):`);
+    console.log(`  Member count (non-viewer): ${trip._count.members}`);
+    console.log(`  Current user membership:`);
 
-    trip.members.forEach((member) => {
-      console.log(`    - ${member.user.displayName}`);
-      console.log(`      userId: ${member.userId}`);
-      console.log(`      RSVP: ${member.rsvpStatus}`);
-      console.log(`      Role: ${member.role}`);
-      console.log(`      Match current user: ${member.userId === user.id}`);
-    });
+    const myMembership = trip.members[0]; // Only current user's membership is returned
+    if (myMembership) {
+      console.log(`    userId: ${myMembership.userId}`);
+      console.log(`    RSVP: ${myMembership.rsvpStatus}`);
+      console.log(`    Role: ${myMembership.role}`);
+    } else {
+      console.log(`    NOT FOUND`);
+    }
 
     console.log();
-  });
-
-  // Simulate frontend logic
-  console.log("Frontend logic simulation:");
-  const currentUserId = user.id;
-
-  trips.forEach((trip) => {
-    const myMembership = trip.members.find(m => m.userId === currentUserId);
-    console.log(`Trip "${trip.name}":`);
-    console.log(`  My membership found: ${!!myMembership}`);
-    console.log(`  My RSVP: ${myMembership?.rsvpStatus || "NOT FOUND"}`);
   });
 
   await prisma.$disconnect();

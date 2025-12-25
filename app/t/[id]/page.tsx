@@ -35,6 +35,7 @@ interface TripDetail {
   id: string;
   name: string;
   description: string | null;
+  location: string | null;
   baseCurrency: string;
   startDate: string | null;
   endDate: string | null;

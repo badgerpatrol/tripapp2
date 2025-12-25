@@ -25,7 +25,7 @@ function generateRandomPassword(): string {
  * Creates or updates a viewer user for sign-up mode.
  * Returns the user ID and password.
  */
-async function createOrUpdateSignUpViewer(
+export async function createOrUpdateSignUpViewer(
   tripId: string,
   tripName: string,
   existingUserId?: string | null,
@@ -443,6 +443,7 @@ export async function updateTrip(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
+        ...(data.location !== undefined && { location: data.location }),
         ...(data.baseCurrency !== undefined && { baseCurrency: data.baseCurrency }),
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
@@ -640,6 +641,7 @@ export async function getTripById(tripId: string) {
 
 /**
  * Gets all trips for a user (where they are a member).
+ * Optimized to only fetch the current user's membership and a member count.
  */
 export async function getUserTrips(userId: string) {
   return prisma.trip.findMany({
@@ -651,7 +653,15 @@ export async function getUserTrips(userId: string) {
       },
       deletedAt: null,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      baseCurrency: true,
+      startDate: true,
+      endDate: true,
+      status: true,
+      createdAt: true,
       createdBy: {
         select: {
           id: true,
@@ -660,18 +670,18 @@ export async function getUserTrips(userId: string) {
         },
       },
       members: {
-        where: { deletedAt: null },
+        where: { userId, deletedAt: null },
         select: {
           id: true,
           userId: true,
           role: true,
           rsvpStatus: true,
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              photoURL: true,
-            },
+        },
+      },
+      _count: {
+        select: {
+          members: {
+            where: { deletedAt: null, role: { not: "VIEWER" } },
           },
         },
       },
@@ -685,13 +695,22 @@ export async function getUserTrips(userId: string) {
 /**
  * Gets all trips in the system (admin only).
  * Used when admin mode is enabled.
+ * Optimized to only fetch member counts, not full member data.
  */
-export async function getAllTrips() {
+export async function getAllTrips(adminUserId?: string) {
   return prisma.trip.findMany({
     where: {
       deletedAt: null,
     },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      baseCurrency: true,
+      startDate: true,
+      endDate: true,
+      status: true,
+      createdAt: true,
       createdBy: {
         select: {
           id: true,
@@ -699,19 +718,21 @@ export async function getAllTrips() {
           photoURL: true,
         },
       },
-      members: {
-        where: { deletedAt: null },
-        select: {
-          id: true,
-          userId: true,
-          role: true,
-          rsvpStatus: true,
-          user: {
+      members: adminUserId
+        ? {
+            where: { userId: adminUserId, deletedAt: null },
             select: {
               id: true,
-              displayName: true,
-              photoURL: true,
+              userId: true,
+              role: true,
+              rsvpStatus: true,
             },
+          }
+        : false,
+      _count: {
+        select: {
+          members: {
+            where: { deletedAt: null, role: { not: "VIEWER" } },
           },
         },
       },
@@ -805,6 +826,7 @@ export async function getTripOverviewForInvitee(
     id: trip.id,
     name: trip.name,
     description: trip.description,
+    location: trip.location,
     baseCurrency: trip.baseCurrency,
     startDate: trip.startDate,
     endDate: trip.endDate,
@@ -927,6 +949,7 @@ export async function getTripOverviewForMember(
     id: trip.id,
     name: trip.name,
     description: trip.description,
+    location: trip.location,
     baseCurrency: trip.baseCurrency,
     startDate: trip.startDate,
     endDate: trip.endDate,
