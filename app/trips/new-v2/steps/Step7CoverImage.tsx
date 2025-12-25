@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import type { StepProps } from "../types";
 
-export default function Step6CoverImage({
+export default function Step7CoverImage({
   state,
   updateState,
   error,

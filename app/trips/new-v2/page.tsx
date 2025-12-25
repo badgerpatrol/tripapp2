@@ -10,7 +10,8 @@ import Step2Details from "./steps/Step2Details";
 import Step3InviteOptions from "./steps/Step3InviteOptions";
 import Step4InviteSelection from "./steps/Step4InviteSelection";
 import Step5Share from "./steps/Step5Share";
-import Step6CoverImage from "./steps/Step6CoverImage";
+import Step6Choices from "./steps/Step6Choices";
+import Step7CoverImage from "./steps/Step7CoverImage";
 import {
   INITIAL_WIZARD_STATE,
   STEP_TITLES,
@@ -34,11 +35,12 @@ function WizardContent() {
   }));
   const [currentStep, setCurrentStep] = useState<WizardStep>(() => {
     const parsed = parseInt(stepParam || "1", 10);
-    return (parsed >= 1 && parsed <= 6 ? parsed : 1) as WizardStep;
+    return (parsed >= 1 && parsed <= 7 ? parsed : 1) as WizardStep;
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [hideFooter, setHideFooter] = useState(false);
 
   // Sync URL with step and tripId
   useEffect(() => {
@@ -55,7 +57,7 @@ function WizardContent() {
 
   // Determine which steps to show
   const shouldShowStep5 = state.allowNamedPeople || state.allowSignup;
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   // Get the actual step index (accounting for skipped steps)
   const getVisibleStep = (step: WizardStep): WizardStep => {
@@ -82,6 +84,8 @@ function WizardContent() {
       await saveInvites();
     } else if (currentStep === 5) {
       goToStep(6);
+    } else if (currentStep === 6) {
+      goToStep(7);
     }
   };
 
@@ -96,20 +100,25 @@ function WizardContent() {
   const handleSkip = () => {
     if (currentStep === 5 && !shouldShowStep5) {
       goToStep(6);
-    } else if (currentStep < 6) {
+    } else if (currentStep < 7) {
       const nextStep = currentStep === 4 && !shouldShowStep5 ? 6 : currentStep + 1;
       goToStep(nextStep as WizardStep);
     }
   };
 
   const handleFinish = async () => {
-    // Save cover image if present
-    if (state.headerImageData) {
-      await saveCoverImage();
-    }
-    // Navigate to trip page
-    if (state.tripId) {
-      router.push(`/trips/${state.tripId}`);
+    setIsLoading(true);
+    try {
+      // Save cover image if present
+      if (state.headerImageData) {
+        await saveCoverImage();
+      }
+      // Navigate to trip page
+      if (state.tripId) {
+        router.push(`/trips/${state.tripId}`);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -315,7 +324,7 @@ function WizardContent() {
     if (shouldShowStep5) {
       goToStep(5);
     } else {
-      goToStep(6);
+      goToStep(6); // Go to Choices step
     }
   };
 
@@ -362,6 +371,7 @@ function WizardContent() {
     setIsLoading,
     error,
     setError,
+    setHideFooter,
   };
 
   // Validation for proceed button
@@ -391,7 +401,7 @@ function WizardContent() {
     return null;
   }
 
-  const isLastStep = currentStep === 6;
+  const isLastStep = currentStep === 7;
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 pb-32">
@@ -451,25 +461,28 @@ function WizardContent() {
         {currentStep === 3 && <Step3InviteOptions {...stepProps} />}
         {currentStep === 4 && <Step4InviteSelection {...stepProps} />}
         {currentStep === 5 && <Step5Share {...stepProps} />}
-        {currentStep === 6 && <Step6CoverImage {...stepProps} />}
+        {currentStep === 6 && <Step6Choices {...stepProps} />}
+        {currentStep === 7 && <Step7CoverImage {...stepProps} />}
       </div>
 
-      {/* Footer navigation */}
-      <WizardFooterNav
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        tripCreated={!!state.tripId}
-        isLoading={isLoading}
-        isLastStep={isLastStep}
-        canProceed={canProceed}
-        onBack={handleBack}
-        onSkip={handleSkip}
-        onNext={handleNext}
-        onCancel={handleCancel}
-        onDelete={handleDelete}
-        onFinish={handleFinish}
-        nextLabel={currentStep === 1 ? "Create" : undefined}
-      />
+      {/* Footer navigation - hidden when modal is open */}
+      {!hideFooter && (
+        <WizardFooterNav
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          tripCreated={!!state.tripId}
+          isLoading={isLoading}
+          isLastStep={isLastStep}
+          canProceed={canProceed}
+          onBack={handleBack}
+          onSkip={handleSkip}
+          onNext={handleNext}
+          onCancel={handleCancel}
+          onDelete={handleDelete}
+          onFinish={handleFinish}
+          nextLabel={currentStep === 1 ? "Create" : undefined}
+        />
+      )}
     </div>
   );
 }
