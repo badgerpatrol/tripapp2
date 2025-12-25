@@ -29,7 +29,7 @@ export default function EditTripDialog({
   onClose,
   onSuccess,
 }: EditTripDialogProps) {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: trip.name,
@@ -274,6 +274,49 @@ export default function EditTripDialog({
     }
   };
 
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const handleShareTrip = async () => {
+    const tripUrl = `${window.location.origin}/t/${trip.id}`;
+    const ownerName = userProfile?.displayName || "Someone";
+    const inviteText = `${ownerName} has invited you to ${formData.name}`;
+
+    const shareText = [
+      inviteText,
+      formData.description ? `\n${formData.description}` : "",
+      formData.startDate && formData.endDate
+        ? `\nDates: ${formatDate(formData.startDate)} - ${formatDate(formData.endDate)}`
+        : "",
+      `\nJoin here: ${tripUrl}`,
+      formData.signUpPassword ? `\nCode: ${formData.signUpPassword}` : "",
+    ].join("");
+
+    if (navigator.share) {
+      try {
+        // Only pass text (which includes the URL) - passing both text and url
+        // causes many platforms (iOS Messages) to only show the url
+        await navigator.share({
+          text: shareText,
+        });
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Error sharing:", err);
+        }
+      }
+    } else {
+      // Fallback: copy URL
+      handleCopyUrl();
+    }
+  };
+
   const handleDelete = async () => {
     setError(null);
     setIsDeleting(true);
@@ -441,12 +484,9 @@ export default function EditTripDialog({
                   )}
                 </button>
               </div>
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                Share this URL with trip members for direct access without the main navigation menu.
-              </p>
             </div>
 
-            {/* Trip Access Configuration */}
+            {/* Trip Access Configuration - moved here, directly below URL */}
             <TripAccessConfig
               signInMode={formData.signInMode}
               signUpMode={formData.signUpMode}
@@ -461,6 +501,18 @@ export default function EditTripDialog({
                 }));
               }}
             />
+
+            {/* Share Trip Button */}
+            <button
+              type="button"
+              onClick={handleShareTrip}
+              className="w-full px-4 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share Trip
+            </button>
 
             {/* Base Currency */}
             <div>

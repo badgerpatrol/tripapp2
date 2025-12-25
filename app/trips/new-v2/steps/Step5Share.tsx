@@ -13,7 +13,7 @@ export default function Step5Share({
   isLoading,
   setIsLoading,
 }: StepProps) {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -65,8 +65,11 @@ export default function Step5Share({
   };
 
   const shareTrip = async () => {
+    const ownerName = userProfile?.displayName || "Someone";
+    const inviteText = `${ownerName} has invited you to ${state.name}`;
+
     const shareText = [
-      `Join my trip: ${state.name}`,
+      inviteText,
       state.description ? `\n${state.description}` : "",
       `\nDates: ${formatDate(state.startDate)} - ${formatDate(state.endDate)}`,
       `\nJoin here: ${tripUrl}`,
@@ -75,10 +78,10 @@ export default function Step5Share({
 
     if (navigator.share) {
       try {
+        // Only pass text (which includes the URL) - passing both text and url
+        // causes many platforms (iOS Messages) to only show the url
         await navigator.share({
-          title: `Join ${state.name}`,
           text: shareText,
-          url: tripUrl,
         });
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
