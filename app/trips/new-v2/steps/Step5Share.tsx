@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
+import ShareTripDialog from "@/components/ShareTripDialog";
 import type { StepProps } from "../types";
 
 export default function Step5Share({
@@ -16,6 +17,7 @@ export default function Step5Share({
   const { user, userProfile } = useAuth();
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const tripUrl = state.tripId
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/t/${state.tripId}`
@@ -62,46 +64,6 @@ export default function Step5Share({
     } catch (err) {
       console.error("Failed to copy:", err);
     }
-  };
-
-  const shareTrip = async () => {
-    const ownerName = userProfile?.displayName || "Someone";
-    const inviteText = `${ownerName} has invited you to ${state.name}`;
-
-    const shareText = [
-      inviteText,
-      state.description ? `\n${state.description}` : "",
-      `\nDates: ${formatDate(state.startDate)} - ${formatDate(state.endDate)}`,
-      `\nJoin here: ${tripUrl}`,
-      state.tripJoinCode ? `\nCode: ${state.tripJoinCode}` : "",
-    ].join("");
-
-    if (navigator.share) {
-      try {
-        // Only pass text (which includes the URL) - passing both text and url
-        // causes many platforms (iOS Messages) to only show the url
-        await navigator.share({
-          text: shareText,
-        });
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.error("Error sharing:", err);
-        }
-      }
-    } else {
-      // Fallback: copy URL
-      copyToClipboard(tripUrl, "url");
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
   };
 
   return (
@@ -171,7 +133,7 @@ export default function Step5Share({
           <Button
             variant="primary"
             full
-            onClick={shareTrip}
+            onClick={() => setShowShareDialog(true)}
             leftIcon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -186,6 +148,19 @@ export default function Step5Share({
           </div>
         </>
       )}
+
+      {/* Share Dialog */}
+      <ShareTripDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        tripName={state.name}
+        ownerName={userProfile?.displayName || "Someone"}
+        description={state.description}
+        startDate={state.startDate}
+        endDate={state.endDate}
+        tripUrl={tripUrl}
+        accessCode={state.tripJoinCode}
+      />
     </div>
   );
 }

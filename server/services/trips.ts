@@ -443,6 +443,7 @@ export async function updateTrip(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
+        ...(data.location !== undefined && { location: data.location }),
         ...(data.baseCurrency !== undefined && { baseCurrency: data.baseCurrency }),
         ...(data.startDate !== undefined && { startDate: data.startDate }),
         ...(data.endDate !== undefined && { endDate: data.endDate }),
@@ -825,6 +826,7 @@ export async function getTripOverviewForInvitee(
     id: trip.id,
     name: trip.name,
     description: trip.description,
+    location: trip.location,
     baseCurrency: trip.baseCurrency,
     startDate: trip.startDate,
     endDate: trip.endDate,
@@ -947,6 +949,7 @@ export async function getTripOverviewForMember(
     id: trip.id,
     name: trip.name,
     description: trip.description,
+    location: trip.location,
     baseCurrency: trip.baseCurrency,
     startDate: trip.startDate,
     endDate: trip.endDate,

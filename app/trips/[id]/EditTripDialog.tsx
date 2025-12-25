@@ -4,12 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useRouter } from "next/navigation";
 import TripAccessConfig from "@/components/TripAccessConfig";
+import ShareTripDialog from "@/components/ShareTripDialog";
 
 interface EditTripDialogProps {
   trip: {
     id: string;
     name: string;
     description: string | null;
+    location: string | null;
     baseCurrency: string;
     startDate: string | null;
     endDate: string | null;
@@ -34,6 +36,7 @@ export default function EditTripDialog({
   const [formData, setFormData] = useState({
     name: trip.name,
     description: trip.description || "",
+    location: trip.location || "",
     baseCurrency: trip.baseCurrency,
     startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
     endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
@@ -46,6 +49,7 @@ export default function EditTripDialog({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urlCopied, setUrlCopied] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   // Header image state
   const [headerImageData, setHeaderImageData] = useState<string | null>(trip.headerImageData || null);
@@ -186,6 +190,7 @@ export default function EditTripDialog({
       const payload: any = {
         name: formData.name,
         description: formData.description || null,
+        location: formData.location || null,
         baseCurrency: formData.baseCurrency,
         signUpMode: formData.signUpMode,
         signInMode: formData.signInMode,
@@ -271,49 +276,6 @@ export default function EditTripDialog({
       setTimeout(() => setUrlCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy URL:", err);
-    }
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const handleShareTrip = async () => {
-    const tripUrl = `${window.location.origin}/t/${trip.id}`;
-    const ownerName = userProfile?.displayName || "Someone";
-    const inviteText = `${ownerName} has invited you to ${formData.name}`;
-
-    const shareText = [
-      inviteText,
-      formData.description ? `\n${formData.description}` : "",
-      formData.startDate && formData.endDate
-        ? `\nDates: ${formatDate(formData.startDate)} - ${formatDate(formData.endDate)}`
-        : "",
-      `\nJoin here: ${tripUrl}`,
-      formData.signUpPassword ? `\nCode: ${formData.signUpPassword}` : "",
-    ].join("");
-
-    if (navigator.share) {
-      try {
-        // Only pass text (which includes the URL) - passing both text and url
-        // causes many platforms (iOS Messages) to only show the url
-        await navigator.share({
-          text: shareText,
-        });
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.error("Error sharing:", err);
-        }
-      }
-    } else {
-      // Fallback: copy URL
-      handleCopyUrl();
     }
   };
 
@@ -433,6 +395,104 @@ export default function EditTripDialog({
               />
             </div>
 
+            {/* Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
+              <div className="min-w-0">
+                <label
+                  htmlFor="startDate"
+                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                >
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  id="startDate"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  className="w-full min-w-0 appearance-none px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 box-border"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <label
+                  htmlFor="endDate"
+                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                >
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  className="w-full min-w-0 appearance-none px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 box-border"
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label
+                htmlFor="location"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+              >
+                Location
+              </label>
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                maxLength={200}
+                className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                placeholder="e.g., Paris, France"
+              />
+            </div>
+
+            {/* Base Currency */}
+            <div>
+              <label
+                htmlFor="baseCurrency"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+              >
+                Base Currency *
+              </label>
+              <input
+                type="text"
+                id="baseCurrency"
+                name="baseCurrency"
+                value={formData.baseCurrency}
+                onChange={handleChange}
+                required
+                maxLength={3}
+                pattern="[A-Z]{3}"
+                className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                placeholder="GBP"
+              />
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                3-letter currency code (e.g., USD, EUR, GBP)
+              </p>
+            </div>
+
+            {/* Trip Access Configuration - moved here, directly below URL */}
+            <TripAccessConfig
+              signInMode={formData.signInMode}
+              signUpMode={formData.signUpMode}
+              signUpPassword={formData.signUpPassword}
+              currentPassword={trip.signUpPassword}
+              onAccessChange={(config) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  signInMode: config.signInMode,
+                  signUpMode: config.signUpMode,
+                  signUpPassword: config.signUpPassword,
+                }));
+              }}
+            />
+
             {/* Trip URL */}
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -486,26 +546,10 @@ export default function EditTripDialog({
               </div>
             </div>
 
-            {/* Trip Access Configuration - moved here, directly below URL */}
-            <TripAccessConfig
-              signInMode={formData.signInMode}
-              signUpMode={formData.signUpMode}
-              signUpPassword={formData.signUpPassword}
-              currentPassword={trip.signUpPassword}
-              onAccessChange={(config) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  signInMode: config.signInMode,
-                  signUpMode: config.signUpMode,
-                  signUpPassword: config.signUpPassword,
-                }));
-              }}
-            />
-
             {/* Share Trip Button */}
             <button
               type="button"
-              onClick={handleShareTrip}
+              onClick={() => setShowShareDialog(true)}
               className="w-full px-4 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors flex items-center justify-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -514,67 +558,8 @@ export default function EditTripDialog({
               Share Trip
             </button>
 
-            {/* Base Currency */}
-            <div>
-              <label
-                htmlFor="baseCurrency"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-              >
-                Base Currency *
-              </label>
-              <input
-                type="text"
-                id="baseCurrency"
-                name="baseCurrency"
-                value={formData.baseCurrency}
-                onChange={handleChange}
-                required
-                maxLength={3}
-                pattern="[A-Z]{3}"
-                className="w-full px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                placeholder="GBP"
-              />
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                3-letter currency code (e.g., USD, EUR, GBP)
-              </p>
-            </div>
 
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
-              <div className="min-w-0">
-                <label
-                  htmlFor="startDate"
-                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-                >
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  id="startDate"
-                  name="startDate"
-                  value={formData.startDate}
-                  onChange={handleChange}
-                  className="w-full min-w-0 appearance-none px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 box-border"
-                />
-              </div>
-
-              <div className="min-w-0">
-                <label
-                  htmlFor="endDate"
-                  className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-                >
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  id="endDate"
-                  name="endDate"
-                  value={formData.endDate}
-                  onChange={handleChange}
-                  className="w-full min-w-0 appearance-none px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 box-border"
-                />
-              </div>
-            </div>
+            
 
             {/* Header Image */}
             <div className="space-y-3">
@@ -804,6 +789,19 @@ export default function EditTripDialog({
           </form>
         </div>
       </div>
+
+      {/* Share Dialog */}
+      <ShareTripDialog
+        isOpen={showShareDialog}
+        onClose={() => setShowShareDialog(false)}
+        tripName={formData.name}
+        ownerName={userProfile?.displayName || "Someone"}
+        description={formData.description}
+        startDate={formData.startDate}
+        endDate={formData.endDate}
+        tripUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/t/${trip.id}`}
+        accessCode={formData.signUpPassword}
+      />
     </div>
   );
 }
