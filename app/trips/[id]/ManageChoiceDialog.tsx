@@ -47,7 +47,7 @@ export default function ManageChoiceDialog({
   const [showMenuScan, setShowMenuScan] = useState(false);
   const [showMenuUrl, setShowMenuUrl] = useState(false);
   const [showGoogleSheet, setShowGoogleSheet] = useState(false);
-  const [tab, setTab] = useState<"details" | "items">(initialTab);
+  const [tab, setTab] = useState<"details" | "import" | "items">(initialTab);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -474,8 +474,8 @@ export default function ManageChoiceDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="flex-shrink-0 p-6 pb-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Manage Choice</h2>
             <button onClick={onClose} className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700">
@@ -492,7 +492,7 @@ export default function ManageChoiceDialog({
           )}
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-4 border-b border-zinc-200 dark:border-zinc-700">
+          <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-700">
             <button
               onClick={() => setTab("details")}
               className={`px-4 py-2 font-medium transition-colors ${
@@ -502,6 +502,16 @@ export default function ManageChoiceDialog({
               }`}
             >
               Details
+            </button>
+            <button
+              onClick={() => setTab("import")}
+              className={`px-4 py-2 font-medium transition-colors ${
+                tab === "import"
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              Import
             </button>
             <button
               onClick={() => setTab("items")}
@@ -514,120 +524,202 @@ export default function ManageChoiceDialog({
               Menu Items ({items.length})
             </button>
           </div>
+        </div>
 
           {loading ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="flex-1 flex items-center justify-center py-8">Loading...</div>
           ) : (
             <>
               {/* Details Tab */}
               {tab === "details" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Name *</label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => {
-                        setName(e.target.value);
-                        setDetailsDirty(true);
-                      }}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Description</label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => {
-                        setDescription(e.target.value);
-                        setDetailsDirty(true);
-                      }}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Place</label>
-                    <input
-                      type="text"
-                      value={place}
-                      onChange={(e) => {
-                        setPlace(e.target.value);
-                        setDetailsDirty(true);
-                      }}
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-3">Choice Status</label>
-                    <button
-                      onClick={handleToggleStatus}
-                      disabled={saving || (hasLinkedSpend && status === "CLOSED")}
-                      className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
-                        hasLinkedSpend && status === "CLOSED"
-                          ? "bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
-                          : status === "OPEN"
-                          ? "bg-green-600 hover:bg-green-700 text-white"
-                          : "bg-zinc-500 hover:bg-zinc-600 text-white"
-                      } ${saving ? "opacity-50 cursor-wait" : ""}`}
-                    >
-                      {saving ? (
-                        "Updating..."
-                      ) : hasLinkedSpend && status === "CLOSED" ? (
-                        "Delete spend to reopen choice"
-                      ) : status === "OPEN" ? (
-                        "Open - Click to Close"
-                      ) : (
-                        "Closed - Click to Reopen"
-                      )}
-                    </button>
-                    {hasLinkedSpend && status === "CLOSED" && (
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-                        A spend has been auto-generated from this choice. Delete the spend to reopen.
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Deadline (optional)</label>
-                    <div className="flex gap-2">
+                <div className="flex-1 flex flex-col min-h-0">
+                  {/* Scrollable Content */}
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Name *</label>
                       <input
-                        type="datetime-local"
-                        value={deadline}
+                        type="text"
+                        value={name}
                         onChange={(e) => {
-                          setDeadline(e.target.value);
-                          setStatusDirty(true);
+                          setName(e.target.value);
+                          setDetailsDirty(true);
                         }}
-                        className="flex-1 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      {deadline && (
-                        <button
-                          onClick={() => {
-                            setDeadline("");
-                            setStatusDirty(true);
-                          }}
-                          className="px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
-                          title="Remove deadline"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Description</label>
+                      <textarea
+                        value={description}
+                        onChange={(e) => {
+                          setDescription(e.target.value);
+                          setDetailsDirty(true);
+                        }}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Place</label>
+                      <input
+                        type="text"
+                        value={place}
+                        onChange={(e) => {
+                          setPlace(e.target.value);
+                          setDetailsDirty(true);
+                        }}
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-3">Choice Status</label>
+                      <button
+                        onClick={handleToggleStatus}
+                        disabled={saving || (hasLinkedSpend && status === "CLOSED")}
+                        className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+                          hasLinkedSpend && status === "CLOSED"
+                            ? "bg-zinc-300 dark:bg-zinc-600 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+                            : status === "OPEN"
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-zinc-500 hover:bg-zinc-600 text-white"
+                        } ${saving ? "opacity-50 cursor-wait" : ""}`}
+                      >
+                        {saving ? (
+                          "Updating..."
+                        ) : hasLinkedSpend && status === "CLOSED" ? (
+                          "Delete spend to reopen choice"
+                        ) : status === "OPEN" ? (
+                          "Open - Click to Close"
+                        ) : (
+                          "Closed - Click to Reopen"
+                        )}
+                      </button>
+                      {hasLinkedSpend && status === "CLOSED" && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                          A spend has been auto-generated from this choice. Delete the spend to reopen.
+                        </p>
                       )}
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Deadline (optional)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="datetime-local"
+                          value={deadline}
+                          onChange={(e) => {
+                            setDeadline(e.target.value);
+                            setStatusDirty(true);
+                          }}
+                          className="flex-1 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        />
+                        {deadline && (
+                          <button
+                            onClick={() => {
+                              setDeadline("");
+                              setStatusDirty(true);
+                            }}
+                            className="px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+                            title="Remove deadline"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-3 pt-4">
+
+                  {/* Sticky Footer */}
+                  <div
+                    className="flex-shrink-0 px-6 py-4 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                    style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+                  >
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleUpdateDetails}
+                        disabled={saving || !name}
+                        className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white font-medium"
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        className="px-4 py-2 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Import Tab */}
+              {tab === "import" && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  {/* Scrollable Content */}
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Import menu items from external sources. Choose one of the options below:
+                    </p>
+
                     <button
-                      onClick={handleUpdateDetails}
-                      disabled={saving || !name}
-                      className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white font-medium"
+                      onClick={() => setShowMenuScan(true)}
+                      className="w-full px-4 py-4 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center gap-3"
                     >
-                      {saving ? "Saving..." : "Save"}
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-zinc-900 dark:text-zinc-100">Scan Menu</div>
+                        <div className="text-sm text-zinc-500 dark:text-zinc-400">Take a photo of a menu to extract items</div>
+                      </div>
                     </button>
+
                     <button
-                      onClick={handleDelete}
-                      className="px-4 py-2 rounded-lg border border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      onClick={() => setShowMenuUrl(true)}
+                      className="w-full px-4 py-4 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center gap-3"
                     >
-                      Delete
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-zinc-900 dark:text-zinc-100">Read from URL</div>
+                        <div className="text-sm text-zinc-500 dark:text-zinc-400">Import items from a website menu page</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setShowGoogleSheet(true)}
+                      className="w-full px-4 py-4 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-green-500 hover:text-green-600 transition-colors flex items-center gap-3"
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600 dark:text-green-400" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19 11V9h-6V5h-2v4H5v2h6v4h2v-4h6zm0 8H5V7H3v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7h-2v12z"/>
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-zinc-900 dark:text-zinc-100">Google Sheet</div>
+                        <div className="text-sm text-zinc-500 dark:text-zinc-400">Import items from a Google Sheets spreadsheet</div>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Sticky Footer */}
+                  <div
+                    className="flex-shrink-0 px-6 py-4 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                    style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+                  >
+                    <button
+                      onClick={() => setTab("items")}
+                      className="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                    >
+                      View Menu Items ({items.length})
                     </button>
                   </div>
                 </div>
@@ -635,34 +727,87 @@ export default function ManageChoiceDialog({
 
               {/* Items Tab */}
               {tab === "items" && (
-                <div className="space-y-4">
-                  {/* Select All Checkbox and Bulk Delete */}
-                  {items.length > 0 && (() => {
-                    const selectableItems = items.filter(item => !item.isOptOut);
-                    return selectableItems.length > 0 && (
-                      <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectableItems.length > 0 && selectedItems.size === selectableItems.length}
-                            onChange={handleToggleSelectAll}
-                            className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                            Select All ({selectedItems.size} selected)
-                          </span>
-                        </label>
-                        {selectedItems.size > 0 && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  {/* Fixed Tools Bar */}
+                  <div className="flex-shrink-0 px-6 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 space-y-2">
+                    {showAddItem ? (
+                      <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                        <input
+                          type="text"
+                          placeholder="Item name *"
+                          value={newItem.name}
+                          onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Description"
+                          value={newItem.description}
+                          onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Price"
+                          value={newItem.price}
+                          onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
+                        />
+                        <div className="flex gap-2">
                           <button
-                            onClick={handleBulkDelete}
-                            className="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
+                            onClick={() => setShowAddItem(false)}
+                            className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg"
                           >
-                            Delete Selected ({selectedItems.size})
+                            Cancel
                           </button>
-                        )}
+                          <button
+                            onClick={handleAddItem}
+                            disabled={!newItem.name || saving}
+                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white rounded-lg"
+                          >
+                            Add Item
+                          </button>
+                        </div>
                       </div>
-                    );
-                  })()}
+                    ) : (
+                      <button
+                        onClick={() => setShowAddItem(true)}
+                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                      >
+                        + Add Menu Item
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Scrollable Menu Items List */}
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    {/* Select All Checkbox and Bulk Delete */}
+                    {items.length > 0 && (() => {
+                      const selectableItems = items.filter(item => !item.isOptOut);
+                      return selectableItems.length > 0 && (
+                        <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectableItems.length > 0 && selectedItems.size === selectableItems.length}
+                              onChange={handleToggleSelectAll}
+                              className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                              Select All ({selectedItems.size} selected)
+                            </span>
+                          </label>
+                          {selectedItems.size > 0 && (
+                            <button
+                              onClick={handleBulkDelete}
+                              className="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium"
+                            >
+                              Delete Selected ({selectedItems.size})
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                   {items.map(item => (
                     <div key={item.id}>
@@ -818,85 +963,18 @@ export default function ManageChoiceDialog({
                     </div>
                   ))}
 
-                  {showAddItem ? (
-                    <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
-                      <input
-                        type="text"
-                        placeholder="Item name *"
-                        value={newItem.name}
-                        onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Description"
-                        value={newItem.description}
-                        onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Price"
-                        value={newItem.price}
-                        onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setShowAddItem(false)}
-                          className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleAddItem}
-                          disabled={!newItem.name || saving}
-                          className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white rounded-lg"
-                        >
-                          Add Item
-                        </button>
+                    {items.length === 0 && (
+                      <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
+                        No menu items yet. Use the buttons above to add items.
                       </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <button
-                        onClick={() => setShowAddItem(true)}
-                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors"
-                      >
-                        + Add Menu Item
-                      </button>
-                      <button
-                        onClick={() => setShowMenuScan(true)}
-                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Scan Menu
-                      </button>
-                      <button
-                        onClick={() => setShowMenuUrl(true)}
-                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                        </svg>
-                        Read from URL
-                      </button>
-                      <button
-                        onClick={() => setShowGoogleSheet(true)}
-                        className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-green-500 hover:text-green-600 transition-colors flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M19 11V9h-6V5h-2v4H5v2h6v4h2v-4h6zm0 8H5V7H3v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V7h-2v12z"/>
-                        </svg>
-                        Read from Google Sheet
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
-                  <div className="pt-4">
+                  {/* Sticky Footer with Done button */}
+                  <div
+                    className="flex-shrink-0 px-6 py-4 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                    style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+                  >
                     <button
                       onClick={handleDoneWithSave}
                       disabled={saving}
@@ -910,7 +988,6 @@ export default function ManageChoiceDialog({
 
             </>
           )}
-        </div>
       </div>
 
       {/* Menu Scan Sheet */}

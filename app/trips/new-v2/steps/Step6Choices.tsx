@@ -178,15 +178,6 @@ export default function Step6Choices({
 
   return (
     <div className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Add Choices
-        </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-          Create choices for your trip (optional)
-        </p>
-      </div>
-
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
@@ -358,9 +349,7 @@ export default function Step6Choices({
         </Button>
       )}
 
-      <p className="text-center text-xs text-zinc-500 dark:text-zinc-400 mt-4">
-        You can skip this and add choices later from the trip page
-      </p>
+    
 
       {/* ManageChoiceDialog for adding menu items */}
       {state.tripId && (

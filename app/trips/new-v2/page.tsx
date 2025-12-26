@@ -416,12 +416,7 @@ function WizardContent() {
               Step {currentStep}: {STEP_TITLES[currentStep]}
             </p>
           </div>
-          <Link
-            href="/trips/new"
-            className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            Use classic form
-          </Link>
+          
         </div>
       </div>
 

@@ -23,15 +23,6 @@ export default function Step1Basics({
 
   return (
     <div className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Let's create your trip
-        </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-          Start with the basics
-        </p>
-      </div>
-
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
