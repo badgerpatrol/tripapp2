@@ -10,6 +10,14 @@ export interface CreatedChoice {
   itemCount: number; // number of menu items added
 }
 
+// Represents a list instance created during trip creation (already saved to DB)
+export interface CreatedList {
+  id: string;
+  title: string;
+  description?: string;
+  itemCount: number;
+}
+
 export interface WizardState {
   // Trip ID (set after Step 1 completes)
   tripId: string | null;
@@ -35,8 +43,10 @@ export interface WizardState {
   // Step 5 - Join code (generated on demand)
   tripJoinCode: string | null;
 
-  // Step 6 - Choices (created during wizard, already saved to DB)
+  // Step 6 - Choices and Lists (created during wizard, already saved to DB)
   createdChoices: CreatedChoice[];
+  createdKitLists: CreatedList[];
+  createdChecklists: CreatedList[];
 
   // Step 7 - Cover image
   headerImageData: string | null;
@@ -57,6 +67,8 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   namedInvitees: [],
   tripJoinCode: null,
   createdChoices: [],
+  createdKitLists: [],
+  createdChecklists: [],
   headerImageData: null,
   headerImagePreview: null,
 };
@@ -69,7 +81,7 @@ export const STEP_TITLES: Record<WizardStep, string> = {
   3: 'Who Can Join',
   4: 'Invite People',
   5: 'Share',
-  6: 'Choices',
+  6: 'Add Content',
   7: 'Cover Image',
 };
 

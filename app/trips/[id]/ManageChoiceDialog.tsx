@@ -25,7 +25,7 @@ interface ManageChoiceDialogProps {
   tripId: string;
   tripCurrency: string;
   onSuccess: () => void;
-  initialTab?: "details" | "items";
+  initialTab?: "details" | "import" | "items";
 }
 
 export default function ManageChoiceDialog({
