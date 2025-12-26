@@ -4,7 +4,10 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { SpendStatus, UserRole } from "@/lib/generated/prisma";
+import { useTripPasswordStore } from "@/lib/stores/tripPasswordStore";
 import Header from "@/components/Header";
+import TripPasswordLogin from "@/components/TripPasswordLogin";
+import { JoinTripDialog } from "@/components/JoinTripDialog";
 import EditTripDialog from "./EditTripDialog";
 import InviteUsersDialog from "./InviteUsersDialog";
 import AddSpendDialog from "./AddSpendDialog";
@@ -118,10 +121,36 @@ export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user, userProfile, loading: authLoading } = useAuth();
+  const { clearTripPassword } = useTripPasswordStore();
   const isViewer = userProfile?.role === UserRole.VIEWER;
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Public trip info (fetched before login for display)
+  const [publicTripInfo, setPublicTripInfo] = useState<{
+    tripName: string;
+    signUpEnabled: boolean;
+    signInEnabled: boolean;
+    passwordRequired: boolean;
+    participants: Array<{
+      id: string;
+      role: string;
+      user: {
+        id: string;
+        email: string;
+        displayName: string | null;
+        userType: "FULL" | "SIGNUP" | "SYSTEM";
+        emailHint: string | null;
+      };
+    }>;
+  } | null>(null);
+
+  // State to track if we should show sign-up dialog after password entry
+  const [showSignUpAfterPassword, setShowSignUpAfterPassword] = useState(false);
+
+  // Join trip dialog state (for participating in the trip)
+  const [isJoinTripDialogOpen, setIsJoinTripDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isAddSpendDialogOpen, setIsAddSpendDialogOpen] = useState(false);
@@ -252,6 +281,43 @@ export default function TripDetailPage() {
 
   const tripId = params.id as string;
 
+  // Fetch public trip info (for login screen display)
+  const fetchPublicInfo = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/trips/${tripId}/public`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPublicTripInfo({
+          tripName: data.tripName,
+          signUpEnabled: data.signUpEnabled,
+          signInEnabled: data.signInEnabled,
+          passwordRequired: data.passwordRequired,
+          participants: data.participants || [],
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching public trip info:", err);
+    }
+  }, [tripId]);
+
+  // Fetch public info on mount and when user changes
+  useEffect(() => {
+    fetchPublicInfo();
+  }, [fetchPublicInfo, user]);
+
+  // Open join dialog after password entry if sign-up was requested
+  useEffect(() => {
+    if (showSignUpAfterPassword && user && !authLoading) {
+      setIsJoinTripDialogOpen(true);
+      setShowSignUpAfterPassword(false);
+    }
+  }, [showSignUpAfterPassword, user, authLoading]);
+
   // Set default filter to "all" regardless of RSVP status
   useEffect(() => {
     if (trip) {
@@ -357,12 +423,12 @@ export default function TripDetailPage() {
     if (!authLoading && user) {
       fetchTrip();
       fetchChoices();
-    } else if (!authLoading && !user) {
-      router.push("/");
     }
-  }, [user, authLoading, fetchTrip, fetchChoices, router]);
+    // Don't redirect - show password login for unauthenticated users
+  }, [user, authLoading, fetchTrip, fetchChoices]);
 
-  if (authLoading || loading) {
+  // Show loading if auth is loading OR if we have a user but no trip yet (and no error)
+  if (authLoading || (user && !trip && !error)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
         <div className="text-zinc-600 dark:text-zinc-400">Loading trip...</div>
@@ -370,11 +436,47 @@ export default function TripDetailPage() {
     );
   }
 
-  if (error || !trip) {
+  // Show login form if not authenticated
+  if (!user) {
+    return (
+      <TripPasswordLogin
+        tripId={tripId}
+        tripName={publicTripInfo?.tripName}
+        onFullAccountLogin={() => {
+          // Redirect to main login with return URL
+          router.push(`/?returnTo=/trips/${tripId}`);
+        }}
+        onSignUp={() => {
+          // This will open the join dialog after user logs in as viewer
+          setShowSignUpAfterPassword(true);
+        }}
+      />
+    );
+  }
+
+  // Show error state
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
         <div className="text-center">
-          <p className="text-red-600 dark:text-red-400 mb-4">{error || "Trip not found"}</p>
+          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+          <a
+            href="/trips"
+            className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
+            Back to Trips
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Show trip not found (only if we have a user, no error, and no trip)
+  if (!trip) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 px-4">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400 mb-4">Trip not found</p>
           <a
             href="/trips"
             className="tap-target inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
@@ -1859,6 +1961,36 @@ export default function TripDetailPage() {
           </div>
         ) : null}
 
+        {/* Participate CTA for viewers */}
+        {userProfile?.role === "VIEWER" && publicTripInfo?.signUpEnabled && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl shadow-sm border-2 border-green-200 dark:border-green-800 p-6 md:p-8 mb-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+                  Want to take part?
+                </h2>
+                <p className="text-zinc-600 dark:text-zinc-400">
+                  Add your name or sign back in if you've been here before
+                </p>
+              </div>
+              <button
+                onClick={() => setIsJoinTripDialogOpen(true)}
+                className="tap-target px-6 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors flex items-center gap-2 flex-shrink-0"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Join in
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Kit Lists Section (for accepted members) - only show for organizers or when kit lists exist */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (kitListsCount !== null && kitListsCount > 0)) ? (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
@@ -3320,6 +3452,24 @@ export default function TripDetailPage() {
         selectedListId={selectedListId || undefined}
         currentMembers={trip?.participants || []}
       />
+
+      {/* Join Trip Dialog (for viewers to participate) */}
+      {publicTripInfo?.signUpEnabled && (
+        <JoinTripDialog
+          isOpen={isJoinTripDialogOpen}
+          onClose={() => setIsJoinTripDialogOpen(false)}
+          tripId={tripId}
+          tripName={trip?.name || publicTripInfo?.tripName || "Trip"}
+          participants={publicTripInfo?.participants?.map(p => ({
+            ...p,
+            role: "MEMBER",
+          })) || []}
+          onLoginRequired={(email) => {
+            console.log("Login required for:", email);
+          }}
+          onParticipantCreated={fetchPublicInfo}
+        />
+      )}
     </div>
   );
 }

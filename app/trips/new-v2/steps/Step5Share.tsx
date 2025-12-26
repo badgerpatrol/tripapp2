@@ -20,7 +20,7 @@ export default function Step5Share({
   const [showShareDialog, setShowShareDialog] = useState(false);
 
   const tripUrl = state.tripId
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/t/${state.tripId}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/trips/${state.tripId}`
     : "";
 
   // Ensure join code is generated

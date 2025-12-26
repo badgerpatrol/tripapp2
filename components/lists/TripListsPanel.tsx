@@ -151,6 +151,10 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     } catch (err: any) {
       console.error("Error fetching lists:", err);
       setError(err.message);
+      // Notify parent that loading is complete (with 0 lists) even on error
+      if (onListsLoaded) {
+        onListsLoaded(0);
+      }
     } finally {
       setLoading(false);
     }

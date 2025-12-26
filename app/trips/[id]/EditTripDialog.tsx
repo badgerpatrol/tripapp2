@@ -269,7 +269,7 @@ export default function EditTripDialog({
   };
 
   const handleCopyUrl = async () => {
-    const tripUrl = `${window.location.origin}/t/${trip.id}`;
+    const tripUrl = `${window.location.origin}/trips/${trip.id}`;
     try {
       await navigator.clipboard.writeText(tripUrl);
       setUrlCopied(true);
@@ -500,7 +500,7 @@ export default function EditTripDialog({
               </label>
               <div className="flex gap-2">
                 <div className="flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 font-mono text-sm overflow-x-auto whitespace-nowrap">
-                  {typeof window !== 'undefined' && `${window.location.origin}/t/${trip.id}`}
+                  {typeof window !== 'undefined' && `${window.location.origin}/trips/${trip.id}`}
                 </div>
                 <button
                   type="button"
@@ -799,7 +799,7 @@ export default function EditTripDialog({
         description={formData.description}
         startDate={formData.startDate}
         endDate={formData.endDate}
-        tripUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/t/${trip.id}`}
+        tripUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/trips/${trip.id}`}
         accessCode={formData.signUpPassword}
       />
     </div>
