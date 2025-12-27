@@ -117,7 +117,7 @@ export async function createOrUpdateSignUpViewer(
 
 /**
  * Creates default timeline items for a new trip.
- * Timeline includes: event created, RSVP deadline, spending window, trip dates, settlement complete
+ * Timeline includes: event created, event start, event end
  */
 async function createDefaultTimelineItems(
   tripId: string,
@@ -140,41 +140,7 @@ async function createDefaultTimelineItems(
     createdById: userId,
   });
 
-  // Calculate dates based on trip dates if provided
-  // RSVP deadline: 1 week before start if still in future, otherwise start date
-  let rsvpDeadline: Date;
-  if (startDate) {
-    const oneWeekBefore = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-    rsvpDeadline = oneWeekBefore > now ? oneWeekBefore : startDate;
-  } else {
-    rsvpDeadline = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
-  }
-
-  const spendingWindowStart = startDate
-    ? new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 1 week before start
-    : new Date(now.getTime() + 37 * 24 * 60 * 60 * 1000); // 37 days from now
-
-  const spendingWindowEnd = endDate
-    ? new Date(endDate.getTime() + 3 * 24 * 60 * 60 * 1000) // 3 days after end
-    : new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000); // 60 days from now
-
-  const settlementDeadline = endDate
-    ? new Date(endDate.getTime() + 14 * 24 * 60 * 60 * 1000) // 2 weeks after end
-    : new Date(now.getTime() + 74 * 24 * 60 * 60 * 1000); // 74 days from now
-
-  // 2. RSVP Deadline
-  timelineItems.push({
-    tripId,
-    title: "RSVP Deadline",
-    description: "All invitees should confirm attendance",
-    date: rsvpDeadline,
-    isCompleted: false,
-    order: 1,
-    createdById: userId,
-  });
-
-
-  // 4. Trip Start
+  // 2. Event Start
   if (startDate) {
     timelineItems.push({
       tripId,
@@ -182,12 +148,12 @@ async function createDefaultTimelineItems(
       description: "The trip begins!",
       date: startDate,
       isCompleted: false,
-      order: 3,
+      order: 1,
       createdById: userId,
     });
   }
 
-  // 5. Trip End
+  // 3. Event End
   if (endDate) {
     timelineItems.push({
       tripId,
@@ -195,32 +161,10 @@ async function createDefaultTimelineItems(
       description: "The trip concludes",
       date: endDate,
       isCompleted: false,
-      order: 4,
+      order: 2,
       createdById: userId,
     });
   }
-
-  // 6. Spending Window End
-  timelineItems.push({
-    tripId,
-    title: "Spending Window Closes",
-    description: "Finalize all expenses",
-    date: spendingWindowEnd,
-    isCompleted: false,
-    order: 5,
-    createdById: userId,
-  });
-
-  // 7. Settlement Deadline
-  timelineItems.push({
-    tripId,
-    title: "Settlement Deadline",
-    description: "All payments should be completed",
-    date: settlementDeadline,
-    isCompleted: false,
-    order: 6,
-    createdById: userId,
-  });
 
   return timelineItems;
 }
