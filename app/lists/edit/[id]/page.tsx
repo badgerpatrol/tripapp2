@@ -143,21 +143,6 @@ function EditListPageContent() {
     );
   };
 
-  const updateParameter = (itemId: string, paramName: string, value: any) => {
-    setItems(
-      items.map((item) => {
-        if (item.id !== itemId) return item;
-        return {
-          ...item,
-          parameters: {
-            ...(item.parameters || {}),
-            [paramName]: value
-          }
-        };
-      })
-    );
-  };
-
   const moveItem = (id: string, direction: "up" | "down") => {
     const index = items.findIndex((item) => item.id === id);
     if (index === -1) return;
@@ -520,80 +505,6 @@ function EditListPageContent() {
                         </button>
                       </div>
 
-                      {/* Action Type */}
-                      <div>
-                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                          Action (optional)
-                        </label>
-                        <select
-                          value={item.actionType || ""}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id,
-                              "actionType",
-                              e.target.value || null
-                            )
-                          }
-                          className="w-full px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                          disabled={saving}
-                        >
-                          <option value="">None</option>
-                          <option value="CREATE_CHOICE">Create Choice/Poll</option>
-                          <option value="SET_MILESTONE">Set Milestone</option>
-                          <option value="INVITE_USERS">Invite Users</option>
-                        </select>
-                        {item.actionType && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                            {item.actionType === "CREATE_CHOICE" && "Creates a new choice/poll when checked"}
-                            {item.actionType === "SET_MILESTONE" && "Sets a milestone date when checked"}
-                            {item.actionType === "INVITE_USERS" && "Opens invite dialog when checked"}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Milestone Name Parameter */}
-                      {item.actionType === "SET_MILESTONE" && (
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                            Milestone Name
-                          </label>
-                          <input
-                            type="text"
-                            value={item.parameters?.milestoneName || ""}
-                            onChange={(e) =>
-                              updateParameter(item.id, "milestoneName", e.target.value)
-                            }
-                            placeholder="Enter milestone name"
-                            className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                            disabled={saving}
-                          />
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                            The name of the milestone to create (optional)
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Choice Name Parameter */}
-                      {item.actionType === "CREATE_CHOICE" && (
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                            Choice Name
-                          </label>
-                          <input
-                            type="text"
-                            value={item.parameters?.choiceName || ""}
-                            onChange={(e) =>
-                              updateParameter(item.id, "choiceName", e.target.value)
-                            }
-                            placeholder="Enter choice name"
-                            className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                            disabled={saving}
-                          />
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                            The name of the choice to create (optional)
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     {/* Delete Button */}
