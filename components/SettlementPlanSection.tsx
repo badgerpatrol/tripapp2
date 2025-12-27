@@ -268,30 +268,29 @@ export default function SettlementPlanSection({
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-      {/* Header row with title and toggle - always stays together */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 flex-wrap flex-1">
-          <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Settlement Plan</h2>
-          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
-            Spending Closed
-          </span>
-        </div>
-        {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-            aria-label={collapsed ? "Expand section" : "Collapse section"}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {collapsed ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-              )}
-            </svg>
-          </button>
-        )}
+    <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6 relative">
+      {/* Toggle button - absolute positioned top right */}
+      {onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+          aria-label={collapsed ? "Expand section" : "Collapse section"}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {collapsed ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            )}
+          </svg>
+        </button>
+      )}
+      {/* Header row with title */}
+      <div className="flex items-center gap-2 flex-wrap mb-3 pr-10">
+        <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Settlement Plan</h2>
+        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
+          Spending Closed
+        </span>
       </div>
 
       {/* Action buttons row */}

@@ -29,6 +29,7 @@ import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
 import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
+import { AddListDialog } from "@/components/lists/AddListDialog";
 import TransportSection from "./TransportSection";
 import AddMilestoneDialog from "./AddMilestoneDialog";
 
@@ -196,6 +197,8 @@ export default function TripDetailPage() {
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
   const [checklistsCount, setChecklistsCount] = useState<number | null>(null); // null = not yet loaded
   const [kitListsCount, setKitListsCount] = useState<number | null>(null); // null = not yet loaded
+  const [isAddChecklistDialogOpen, setIsAddChecklistDialogOpen] = useState(false);
+  const [isAddKitListDialogOpen, setIsAddKitListDialogOpen] = useState(false);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -1866,25 +1869,32 @@ export default function TripDetailPage() {
         
         {/* Checklists Section (for accepted members) - only show for organizers or when checklists exist */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (checklistsCount !== null && checklistsCount > 0)) ? (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-            {/* Header row with title and toggle */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2 flex-wrap flex-1">
-                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Checklists</h2>
-              </div>
-              <button
-                onClick={() => toggleSection('checklists')}
-                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.checklists ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.checklists ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  )}
-                </svg>
-              </button>
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6 relative">
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('checklists')}
+              className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+              aria-label={collapsedSections.checklists ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.checklists ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            {/* Header row with title and +Add button */}
+            <div className="flex items-center justify-between gap-3 mb-3 pr-10">
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Checklists</h2>
+              {!collapsedSections.checklists && canInvite && !isViewer && (
+                <button
+                  onClick={() => setIsAddChecklistDialogOpen(true)}
+                  className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                >
+                  + Add
+                </button>
+              )}
             </div>
 
             {/* Checklists content - only show when not collapsed */}
@@ -1895,6 +1905,7 @@ export default function TripDetailPage() {
                 isOrganizer={canInvite && !isViewer}
                 hideContainer={true}
                 listTypeFilter="TODO"
+                hideAddButton={true}
                 onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
                 onOpenCreateChoice={(choiceName) => {
                   setIsCreateChoiceDialogOpen(true);
@@ -1958,25 +1969,32 @@ export default function TripDetailPage() {
 
         {/* Kit Lists Section (for accepted members) - only show for organizers or when kit lists exist */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (kitListsCount !== null && kitListsCount > 0)) ? (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-            {/* Header row with title and toggle */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2 flex-wrap flex-1">
-                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Kit Lists</h2>
-              </div>
-              <button
-                onClick={() => toggleSection('kitLists')}
-                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.kitLists ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.kitLists ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  )}
-                </svg>
-              </button>
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6 relative">
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('kitLists')}
+              className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+              aria-label={collapsedSections.kitLists ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.kitLists ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            {/* Header row with title and +Add button */}
+            <div className="flex items-center justify-between gap-3 mb-3 pr-10">
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Kit Lists</h2>
+              {!collapsedSections.kitLists && canInvite && !isViewer && (
+                <button
+                  onClick={() => setIsAddKitListDialogOpen(true)}
+                  className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                >
+                  + Add
+                </button>
+              )}
             </div>
 
             {/* Kit Lists content - only show when not collapsed */}
@@ -1987,6 +2005,7 @@ export default function TripDetailPage() {
                 isOrganizer={canInvite && !isViewer}
                 hideContainer={true}
                 listTypeFilter="KIT"
+                hideAddButton={true}
                 onOpenInviteDialog={() => setIsInviteDialogOpen(true)}
                 onOpenCreateChoice={(choiceName) => {
                   setIsCreateChoiceDialogOpen(true);
@@ -2045,8 +2064,22 @@ export default function TripDetailPage() {
 
         {/* RSVP Response Card (for invitees) */}
         {trip.userRsvpStatus === "PENDING" && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 md:p-8 mb-6">
-            <div className="flex items-start gap-4 mb-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 p-6 md:p-8 mb-6 relative">
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('rsvp')}
+              className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors"
+              aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.rsvp ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            <div className="flex items-start gap-4 mb-6 pr-10">
               <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center flex-shrink-0">
                 <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
@@ -2063,19 +2096,6 @@ export default function TripDetailPage() {
                     : " Please respond to let them know if you can make it."}
                 </p>
               </div>
-              <button
-                onClick={() => toggleSection('rsvp')}
-                className="tap-target p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.rsvp ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  )}
-                </svg>
-              </button>
             </div>
 
             {!collapsedSections.rsvp && (
@@ -2127,80 +2147,79 @@ export default function TripDetailPage() {
 
         {/* Current RSVP Status (for users who have responded) */}
         {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
-          <div className={`rounded-xl shadow-sm border p-6 md:p-8 mb-6 ${
+          <div className={`rounded-xl shadow-sm border p-6 md:p-8 mb-6 relative ${
             trip.userRsvpStatus === "ACCEPTED"
               ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
               : trip.userRsvpStatus === "DECLINED"
               ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
               : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
           }`}>
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('rsvp')}
+              className={`absolute top-2 right-2 tap-target p-2 rounded-lg transition-colors ${
+                trip.userRsvpStatus === "ACCEPTED"
+                  ? "hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
+                  : trip.userRsvpStatus === "DECLINED"
+                  ? "hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
+                  : "hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"
+              }`}
+              aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.rsvp ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            <div className="flex items-start gap-4 pr-10">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                trip.userRsvpStatus === "ACCEPTED"
+                  ? "bg-green-100 dark:bg-green-900/50"
+                  : trip.userRsvpStatus === "DECLINED"
+                  ? "bg-red-100 dark:bg-red-900/50"
+                  : "bg-yellow-100 dark:bg-yellow-900/50"
+              }`}>
+                <svg className={`w-6 h-6 ${
                   trip.userRsvpStatus === "ACCEPTED"
-                    ? "bg-green-100 dark:bg-green-900/50"
+                    ? "text-green-600 dark:text-green-400"
                     : trip.userRsvpStatus === "DECLINED"
-                    ? "bg-red-100 dark:bg-red-900/50"
-                    : "bg-yellow-100 dark:bg-yellow-900/50"
-                }`}>
-                  <svg className={`w-6 h-6 ${
-                    trip.userRsvpStatus === "ACCEPTED"
-                      ? "text-green-600 dark:text-green-400"
-                      : trip.userRsvpStatus === "DECLINED"
-                      ? "text-red-600 dark:text-red-400"
-                      : "text-yellow-600 dark:text-yellow-400"
-                  }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {trip.userRsvpStatus === "ACCEPTED" ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    ) : trip.userRsvpStatus === "DECLINED" ? (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    )}
-                  </svg>
-                </div>
-                <div>
-                  <h3 className={`text-lg font-bold mb-1 ${
-                    trip.userRsvpStatus === "ACCEPTED"
-                      ? "text-green-900 dark:text-green-100"
-                      : trip.userRsvpStatus === "DECLINED"
-                      ? "text-red-900 dark:text-red-100"
-                      : "text-yellow-900 dark:text-yellow-100"
-                  }`}>
-                    You {trip.userRsvpStatus === "ACCEPTED" ? "accepted" : trip.userRsvpStatus === "DECLINED" ? "declined" : "might attend"} this invitation
-                  </h3>
-                  <p className={`text-sm ${
-                    trip.userRsvpStatus === "ACCEPTED"
-                      ? "text-green-700 dark:text-green-300"
-                      : trip.userRsvpStatus === "DECLINED"
-                      ? "text-red-700 dark:text-red-300"
-                      : "text-yellow-700 dark:text-yellow-300"
-                  }`}>
-                    {trip.userRsvpStatus === "ACCEPTED" && "Of course you're in!"}
-                    {trip.userRsvpStatus === "DECLINED" && "Shunning it."}
-                    {trip.userRsvpStatus === "MAYBE" && "Faffing at the moment but will make your mind up later."}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => toggleSection('rsvp')}
-                className={`tap-target p-2 rounded-lg transition-colors flex-shrink-0 ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
-                    : "hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"
-                }`}
-                aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.rsvp ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-yellow-600 dark:text-yellow-400"
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {trip.userRsvpStatus === "ACCEPTED" ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  ) : trip.userRsvpStatus === "DECLINED" ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   )}
                 </svg>
-              </button>
+              </div>
+              <div>
+                <h3 className={`text-lg font-bold mb-1 ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "text-green-900 dark:text-green-100"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "text-red-900 dark:text-red-100"
+                    : "text-yellow-900 dark:text-yellow-100"
+                }`}>
+                  You {trip.userRsvpStatus === "ACCEPTED" ? "accepted" : trip.userRsvpStatus === "DECLINED" ? "declined" : "might attend"} this invitation
+                </h3>
+                <p className={`text-sm ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "text-green-700 dark:text-green-300"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "text-red-700 dark:text-red-300"
+                    : "text-yellow-700 dark:text-yellow-300"
+                }`}>
+                  {trip.userRsvpStatus === "ACCEPTED" && "Of course you're in!"}
+                  {trip.userRsvpStatus === "DECLINED" && "Shunning it."}
+                  {trip.userRsvpStatus === "MAYBE" && "Faffing at the moment but will make your mind up later."}
+                </p>
+              </div>
             </div>
 
             {!collapsedSections.rsvp && (
@@ -2244,10 +2263,24 @@ export default function TripDetailPage() {
           </div>
         )}
         {/* Members */}
-        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-          {/* Header row with title and toggle - always stays together */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2 flex-wrap flex-1">
+        <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6 relative">
+          {/* Toggle button - absolute positioned top right */}
+          <button
+            onClick={() => toggleSection('members')}
+            className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+            aria-label={collapsedSections.members ? "Expand section" : "Collapse section"}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {collapsedSections.members ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              )}
+            </svg>
+          </button>
+          {/* Header row with title and +Add button */}
+          <div className="flex items-center justify-between gap-2 mb-3 pr-10">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Members</h2>
               {trip.rsvpStatus === "CLOSED" && (
                 <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
@@ -2255,19 +2288,14 @@ export default function TripDetailPage() {
                 </span>
               )}
             </div>
-            <button
-              onClick={() => toggleSection('members')}
-              className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-              aria-label={collapsedSections.members ? "Expand section" : "Collapse section"}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {collapsedSections.members ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                )}
-              </svg>
-            </button>
+            {!collapsedSections.members && canInvite && !isViewer && (!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
+              <button
+                onClick={() => setIsInviteDialogOpen(true)}
+                className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+              >
+                + Add
+              </button>
+            )}
           </div>
 
           {/* Action buttons row */}
@@ -2284,18 +2312,6 @@ export default function TripDetailPage() {
               >
                 {isTogglingRsvpStatus ? "Working..." : `${trip.rsvpStatus === "CLOSED" ? "Reopen" : "Close"} RSVP`}
               </button>
-              {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") && (
-                <button
-                  onClick={() => setIsInviteDialogOpen(true)}
-                  className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
-                >
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  <span className="hidden sm:inline">Invite Users</span>
-                  <span className="sm:hidden">Invite</span>
-                </button>
-              )}
             </div>
           )}
 
@@ -2406,41 +2422,36 @@ export default function TripDetailPage() {
 
         {/* Choices Section (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || choices.length > 0) && (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-            {/* Header row with title and toggle */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2 flex-wrap flex-1">
-                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Choices</h2>
-              </div>
-              <button
-                onClick={() => toggleSection('choices')}
-                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.choices ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.choices ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  )}
-                </svg>
-              </button>
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6 relative">
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('choices')}
+              className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+              aria-label={collapsedSections.choices ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.choices ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            {/* Header row with title and +Add button */}
+            <div className="flex items-center justify-between gap-2 mb-3 pr-10">
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Choices</h2>
+              {!collapsedSections.choices && canInvite && !isViewer && (
+                <button
+                  onClick={() => setIsCreateChoiceDialogOpen(true)}
+                  className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                >
+                  + Add
+                </button>
+              )}
             </div>
 
-            {/* Action buttons row */}
             {!collapsedSections.choices && (
               <>
-                <div className="flex items-center gap-2 flex-wrap mb-4">
-                  {canInvite && !isViewer && (
-                    <button
-                      onClick={() => setIsCreateChoiceDialogOpen(true)}
-                      className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      Create Choice
-                    </button>
-                  )}
-                </div>
-
                 {/* Choices display */}
                 {choices.length === 0 ? (
                   <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
@@ -2639,10 +2650,24 @@ export default function TripDetailPage() {
               />
             ) : (
               /* Show Spends section when spending is open OR when toggled to show spends */
-              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6">
-                {/* Header row with title and toggle - always stays together */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2 flex-wrap flex-1">
+              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6 relative">
+                {/* Toggle button - absolute positioned top right */}
+                <button
+                  onClick={() => toggleSection('spends')}
+                  className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+                  aria-label={collapsedSections.spends ? "Expand section" : "Collapse section"}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {collapsedSections.spends ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    )}
+                  </svg>
+                </button>
+                {/* Header row with title and +Add button */}
+                <div className="flex items-center justify-between gap-2 mb-3 pr-10">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
                     {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
                       <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
@@ -2650,19 +2675,14 @@ export default function TripDetailPage() {
                       </span>
                     )}
                   </div>
-                  <button
-                    onClick={() => toggleSection('spends')}
-                    className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                    aria-label={collapsedSections.spends ? "Expand section" : "Collapse section"}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {collapsedSections.spends ? (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      ) : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                      )}
-                    </svg>
-                  </button>
+                  {!collapsedSections.spends && (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && !isViewer && (
+                    <button
+                      onClick={() => setIsAddSpendDialogOpen(true)}
+                      className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                    >
+                      + Add
+                    </button>
+                  )}
                 </div>
 
                 {/* Action buttons row */}
@@ -2679,15 +2699,6 @@ export default function TripDetailPage() {
                       </svg>
                       <span className="hidden sm:inline">View Settlement</span>
                       <span className="sm:hidden">Settlement</span>
-                    </button>
-                  )}
-                  {/* Only show Add Spend button when spending is open and user is not a viewer */}
-                  {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && !isViewer && (
-                    <button
-                      onClick={() => setIsAddSpendDialogOpen(true)}
-                      className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      Add Spend
                     </button>
                   )}
                   {canInvite && !isViewer && (
@@ -2785,41 +2796,37 @@ export default function TripDetailPage() {
 
         {/* Timeline (if available) */}
         {trip.timeline && trip.timeline.length > 0 && (
-          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 md:p-8 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Timeline</h2>
-              <button
-                onClick={() => toggleSection('timeline')}
-                className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors flex-shrink-0"
-                aria-label={collapsedSections.timeline ? "Expand section" : "Collapse section"}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {collapsedSections.timeline ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  )}
-                </svg>
-              </button>
-            </div>
-            
-            {/* Add Milestone Button */}
-              {canInvite && !isViewer && (
-                <div className="mt-4">
-                  <button
-                    onClick={() => setIsAddingMilestone(true)}
-                    className="tap-target w-full py-3 px-4 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add Milestone
-                  </button>
-                </div>
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 md:p-8 mb-6 relative">
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('timeline')}
+              className="absolute top-2 right-2 tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+              aria-label={collapsedSections.timeline ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.timeline ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            {/* Header row with title and +Add button */}
+            <div className="flex items-center justify-between gap-2 mb-3 pr-10">
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Timeline</h2>
+              {!collapsedSections.timeline && canInvite && !isViewer && (
+                <button
+                  onClick={() => setIsAddingMilestone(true)}
+                  className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                >
+                  + Add
+                </button>
               )}
+            </div>
 
             {!collapsedSections.timeline && (
-              <div className="space-y-3">
+              <>
+                <div className="space-y-3">
               {trip.timeline.map((item) => {
                 const isEditing = editingTimelineItemId === item.id;
                 const canEdit = canInvite && !isViewer && item.title !== "Event Created";
@@ -2991,9 +2998,8 @@ export default function TripDetailPage() {
                   </div>
                 );
               })}
-
-              
               </div>
+              </>
             )}
           </div>
         )}
@@ -3416,6 +3422,30 @@ export default function TripDetailPage() {
         user={user}
         onSuccess={handleEditSuccess}
         existingMilestones={trip?.timeline?.map((t) => ({ id: t.id, title: t.title })) || []}
+      />
+
+      {/* Add Checklist Dialog */}
+      <AddListDialog
+        isOpen={isAddChecklistDialogOpen}
+        onClose={() => setIsAddChecklistDialogOpen(false)}
+        tripId={tripId}
+        onSuccess={() => {
+          setIsAddChecklistDialogOpen(false);
+          setListsRefreshKey(prev => prev + 1);
+        }}
+        listTypeFilter="TODO"
+      />
+
+      {/* Add Kit List Dialog */}
+      <AddListDialog
+        isOpen={isAddKitListDialogOpen}
+        onClose={() => setIsAddKitListDialogOpen(false)}
+        tripId={tripId}
+        onSuccess={() => {
+          setIsAddKitListDialogOpen(false);
+          setListsRefreshKey(prev => prev + 1);
+        }}
+        listTypeFilter="KIT"
       />
     </div>
   );
