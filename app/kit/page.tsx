@@ -8,7 +8,7 @@ import { TopEndListPage } from "@/components/layout/TopEndListPage";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { ListRow } from "@/components/ui/ListRow";
-import { ContextMenu, ContextMenuItem } from "@/components/ContextMenu";
+import QuickAddItemSheet from "@/components/lists/QuickAddItemSheet";
 import { ListType, Visibility } from "@/lib/generated/prisma";
 
 interface ListTemplate {
@@ -71,12 +71,11 @@ function KitPageContent() {
   const [showTripCreated, setShowTripCreated] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{
+  // Quick add item sheet state
+  const [quickAddSheet, setQuickAddSheet] = useState<{
     isOpen: boolean;
-    position: { x: number; y: number };
     template: ListTemplate | null;
-  }>({ isOpen: false, position: { x: 0, y: 0 }, template: null });
+  }>({ isOpen: false, template: null });
 
   useEffect(() => {
     if (!user) return;
@@ -204,64 +203,13 @@ function KitPageContent() {
     router.push(`/lists/${template.id}?returnTo=/kit${activeTab !== 'my-templates' ? `?section=${activeTab}` : ''}`);
   }, [router, activeTab]);
 
-  const handleLongPress = useCallback((template: ListTemplate, e: React.Touch | React.MouseEvent) => {
-    // Both Touch and MouseEvent have clientX/clientY
-    const x = (e as { clientX: number }).clientX;
-    const y = (e as { clientY: number }).clientY;
-    setContextMenu({
+  const handleLongPress = useCallback((template: ListTemplate, _e: React.Touch | React.MouseEvent) => {
+    // Open quick add item sheet for this template
+    setQuickAddSheet({
       isOpen: true,
-      position: { x, y },
       template,
     });
   }, []);
-
-  const getContextMenuItems = useCallback((): ContextMenuItem[] => {
-    if (!contextMenu.template) return [];
-
-    const template = contextMenu.template;
-    const isOwner = template.ownerId === user?.uid;
-
-    const items: ContextMenuItem[] = [
-      {
-        label: "Open",
-        onClick: () => handleRowClick(template),
-      },
-    ];
-
-    if (isOwner) {
-      items.push(
-        {
-          label: "Edit",
-          onClick: () => router.push(`/lists/${template.id}/edit?returnTo=/kit`),
-        },
-        {
-          label: "Duplicate",
-          onClick: async () => {
-            // TODO: Implement duplicate functionality
-            setToast({ message: "Duplicate coming soon", type: "success" });
-          },
-        },
-        {
-          label: "Delete",
-          variant: "danger",
-          onClick: async () => {
-            // TODO: Implement delete confirmation
-            setToast({ message: "Delete coming soon", type: "success" });
-          },
-        }
-      );
-    } else {
-      items.push({
-        label: "Copy to My Lists",
-        onClick: async () => {
-          // TODO: Implement copy/fork functionality
-          setToast({ message: "Copy coming soon", type: "success" });
-        },
-      });
-    }
-
-    return items;
-  }, [contextMenu.template, user?.uid, router, handleRowClick]);
 
   const handleFabClick = useCallback(() => {
     if (activeTab === "inventory") {
@@ -439,12 +387,20 @@ function KitPageContent() {
         )}
       </TopEndListPage>
 
-      {/* Context Menu */}
-      <ContextMenu
-        isOpen={contextMenu.isOpen}
-        onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
-        position={contextMenu.position}
-        items={getContextMenuItems()}
+      {/* Quick Add Item Sheet */}
+      <QuickAddItemSheet
+        isOpen={quickAddSheet.isOpen}
+        onClose={() => setQuickAddSheet({ ...quickAddSheet, isOpen: false })}
+        templateId={quickAddSheet.template?.id || ""}
+        templateTitle={quickAddSheet.template?.title || ""}
+        onItemAdded={() => {
+          // Refresh the templates list
+          if (activeTab === "my-templates") {
+            fetchMyTemplates();
+          } else if (activeTab === "inventory") {
+            fetchInventoryTemplates();
+          }
+        }}
       />
     </>
   );
