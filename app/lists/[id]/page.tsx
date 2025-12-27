@@ -9,6 +9,8 @@ import { ForkTemplateDialog } from "@/components/lists/ForkTemplateDialog";
 import { CopyToTripDialog } from "@/components/lists/CopyToTripDialog";
 import { EditKitItemDialog } from "@/components/lists/EditKitItemDialog";
 import { EditTodoItemDialog } from "@/components/lists/EditTodoItemDialog";
+import QuickAddItemSheet from "@/components/lists/QuickAddItemSheet";
+import QuickAddTodoItemSheet from "@/components/lists/QuickAddTodoItemSheet";
 
 interface ListTemplate {
   id: string;
@@ -80,6 +82,7 @@ function ViewListPageContent() {
     isOpen: false,
     item: null,
   });
+  const [addItemSheetOpen, setAddItemSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !templateId) return;
@@ -246,7 +249,7 @@ function ViewListPageContent() {
               onClick={() => setCopyDialog({ isOpen: true, template })}
               className="px-3 py-1.5 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
             >
-              Use in Trip
+              Use
             </Button>
           </div>
         </div>
@@ -272,13 +275,26 @@ function ViewListPageContent() {
 
         {/* Items List */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-            {template.type === "TODO" ? "Tasks" : "Items"} (
-            {template.type === "TODO"
-              ? template.todoItems?.length || 0
-              : template.kitItems?.length || 0}
-            )
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+              {template.type === "TODO" ? "Tasks" : "Items"} (
+              {template.type === "TODO"
+                ? template.todoItems?.length || 0
+                : template.kitItems?.length || 0}
+              )
+            </h2>
+            {isOwner && (
+              <button
+                onClick={() => setAddItemSheetOpen(true)}
+                className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                title={template.type === "TODO" ? "Add task" : "Add item"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
+          </div>
 
           {template.type === "TODO" && template.todoItems && template.todoItems.length > 0 ? (
             <div className="-mx-6">
@@ -433,6 +449,66 @@ function ViewListPageContent() {
             };
             fetchTemplate();
             setToast({ message: "Task updated", type: "success" });
+          }}
+        />
+      )}
+
+      {/* Quick Add Item Sheet */}
+      {template && template.type === "KIT" && (
+        <QuickAddItemSheet
+          isOpen={addItemSheetOpen}
+          onClose={() => setAddItemSheetOpen(false)}
+          templateId={template.id}
+          templateTitle={template.title}
+          onItemAdded={() => {
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Item added", type: "success" });
+          }}
+        />
+      )}
+
+      {/* Quick Add Todo Item Sheet */}
+      {template && template.type === "TODO" && (
+        <QuickAddTodoItemSheet
+          isOpen={addItemSheetOpen}
+          onClose={() => setAddItemSheetOpen(false)}
+          templateId={template.id}
+          templateTitle={template.title}
+          onItemAdded={() => {
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Task added", type: "success" });
           }}
         />
       )}
