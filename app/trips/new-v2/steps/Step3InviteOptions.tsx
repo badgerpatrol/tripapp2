@@ -42,17 +42,20 @@ export default function Step3InviteOptions({
     {
       level: ACCESS_LEVELS.USERS_ONLY,
       label: "Users with accounts only",
-      description: "Only registered users can access this trip"
+      description: "Only registered users can access this trip",
+      security: { label: "Most Secure", color: "text-green-600 dark:text-green-400" }
     },
     {
       level: ACCESS_LEVELS.NAMED_PEOPLE,
       label: "Named People",
-      description: "Show a list of invitees so visitors can identify themselves"
+      description: "Named invitees without accounts can also join. Uses access code.",
+      security: { label: "Less Secure", color: "text-yellow-600 dark:text-yellow-400" }
     },
     {
       level: ACCESS_LEVELS.ALLOW_SIGNUP,
       label: "Allow Sign-Up",
-      description: "Allow new users to sign up for the trip with their own name"
+      description: "Invitees register if they want to join. Uses access code.",
+      security: { label: "Wild West", color: "text-red-600 dark:text-red-400" }
     },
   ];
 
@@ -104,6 +107,9 @@ export default function Step3InviteOptions({
                     {levelInfo.description}
                   </span>
                 </div>
+                <span className={clsx("text-xs font-medium whitespace-nowrap", levelInfo.security.color)}>
+                  {levelInfo.security.label}
+                </span>
               </label>
             );
           })}

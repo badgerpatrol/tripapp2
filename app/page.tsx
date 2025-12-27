@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import { useAdminMode } from "@/lib/admin/AdminModeContext";
 import LoginForm from "@/components/LoginForm";
 import { Button } from "@/components/ui/button";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
 import { UserRole } from "@/lib/generated/prisma";
 
 interface Trip {
@@ -195,31 +196,6 @@ function HomeContent() {
                 Plot world domination
               </p>
             </div>
-            {canCreateTrip && (
-              <div className="flex gap-3">
-                <Button
-                  variant="primary"
-                  onClick={() => router.push("/trips/new-v2")}
-                  leftIcon={
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                  }
-                >
-                  New Trip
-                </Button>
-              </div>
-            )}
           </div>
 
         {error && (
@@ -413,6 +389,14 @@ function HomeContent() {
         ) : null}
         </div>
       </div>
+
+      {/* Floating Action Button for creating new trip */}
+      {canCreateTrip && (
+        <FloatingActionButton
+          onClick={() => router.push("/trips/new-v2")}
+          aria-label="New trip"
+        />
+      )}
     </div>
   );
 }
