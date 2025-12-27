@@ -145,10 +145,6 @@ function ViewListPageContent() {
     }
   };
 
-  const getTypeIcon = (type: ListType) => {
-    return type === "TODO" ? "✓" : "🎒";
-  };
-
   const getTypeBadgeColor = (type: ListType) => {
     return type === "TODO"
       ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
@@ -240,31 +236,17 @@ function ViewListPageContent() {
 
         {/* Header Card */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{getTypeIcon(template.type)}</span>
-              <div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">
-                  {template.title}
-                </h1>
-                <div className="flex items-center gap-3">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(template.type)}`}>
-                    {template.type}
-                  </span>
-                  <span className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
-                    {template.visibility === "PUBLIC" ? (
-                      <><span>🌐</span> Public</>
-                    ) : (
-                      <><span>🔒</span> Private</>
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="mb-4">
+            <h1 className="text-xl font-semibold text-zinc-900 dark:text-white">
+              {template.title}
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              {template.visibility === "PUBLIC" ? "Public" : "Private"}
+            </p>
           </div>
 
           {template.description && (
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
               {template.description}
             </p>
           )}
@@ -275,16 +257,16 @@ function ViewListPageContent() {
               {template.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded"
+                  className="px-2 py-0.5 text-xs text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded"
                 >
-                  #{tag}
+                  {tag}
                 </span>
               ))}
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 mt-6">
+          <div className="flex flex-wrap gap-2 mt-6">
             {isOwner && (
               <>
                 <Button
@@ -294,13 +276,13 @@ function ViewListPageContent() {
                       : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(returnTo)}`;
                     router.push(editPath);
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
                 >
                   Edit
                 </Button>
                 <Button
                   onClick={() => setDeleteConfirm({ isOpen: true, template })}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
                 >
                   Delete
                 </Button>
@@ -309,14 +291,14 @@ function ViewListPageContent() {
             {!isOwner && (
               <Button
                 onClick={() => setForkDialog({ isOpen: true, template })}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
               >
                 Copy
               </Button>
             )}
             <Button
               onClick={() => setCopyDialog({ isOpen: true, template })}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
             >
               Use in Trip
             </Button>
@@ -334,111 +316,70 @@ function ViewListPageContent() {
           </h2>
 
           {template.type === "TODO" && template.todoItems && template.todoItems.length > 0 ? (
-            <div className="space-y-3">
+            <div className="-mx-6">
               {template.todoItems
                 .sort((a, b) => a.orderIndex - b.orderIndex)
-                .map((item, index) => (
+                .map((item, index, arr) => (
                   <div
                     key={item.id}
-                    className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg"
+                    className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""}`}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                        {index + 1}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-zinc-900 dark:text-white font-medium">
-                            {item.label}
-                          </p>
-                          <span className={`px-1.5 py-0.5 text-xs rounded ${
-                            item.perPerson
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                              : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                          }`}>
-                            {item.perPerson ? "per person" : "shared"}
-                          </span>
-                        </div>
-                        {item.notes && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                            {item.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <span className="text-zinc-900 dark:text-white font-medium truncate">
+                      {item.label}
+                    </span>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
+                      {item.perPerson ? "per person" : "shared"}
+                    </span>
                   </div>
                 ))}
             </div>
           ) : template.type === "KIT" && template.kitItems && template.kitItems.length > 0 ? (
-            <div className="space-y-3">
+            <div className="-mx-6">
               {template.kitItems
                 .sort((a, b) => a.orderIndex - b.orderIndex)
-                .map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                        {index + 1}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-zinc-900 dark:text-white font-medium">
-                            {item.label}
-                          </p>
-                          <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                            × {item.quantity}
+                .map((item, index, arr) => {
+                  // Build inline tags
+                  const tags: { text: string; className: string }[] = [];
+
+                  if (!template.inventory) {
+                    tags.push({
+                      text: item.perPerson ? "per person" : "shared",
+                      className: "text-zinc-400 dark:text-zinc-500"
+                    });
+                    tags.push({
+                      text: item.required ? "mandatory" : "optional",
+                      className: item.required
+                        ? "text-green-600/70 dark:text-green-400/70"
+                        : "text-zinc-400 dark:text-zinc-500"
+                    });
+                  }
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""}`}
+                    >
+                      <span className="text-zinc-900 dark:text-white font-medium truncate">
+                        {item.label}
+                        {item.quantity > 1 && (
+                          <span className="ml-1.5 font-normal text-zinc-400 dark:text-zinc-500">
+                            ×{item.quantity}
                           </span>
-                          {!template.inventory && (
-                            <span className={`px-1.5 py-0.5 text-xs rounded ${
-                              item.perPerson
-                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                            }`}>
-                              {item.perPerson ? "per person" : "shared"}
-                            </span>
-                          )}
-                          {!template.inventory && (
-                            <span className={`px-1.5 py-0.5 text-xs rounded ${
-                              item.required
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                                : "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400"
-                            }`}>
-                              {item.required ? "mandatory" : "optional"}
-                            </span>
-                          )}
-                        </div>
-                        {item.notes && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                            {item.notes}
-                          </p>
                         )}
-                        <div className="flex flex-wrap gap-3 mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                          {item.category && (
-                            <span>Category: {item.category}</span>
-                          )}
-                          {item.weightGrams && (
-                            <span>Weight: {item.weightGrams}g</span>
-                          )}
-                          {item.cost && (
-                            <span>Cost: ${Number(item.cost).toFixed(2)}</span>
-                          )}
-                        </div>
-                        {item.url && (
-                          <a
-                            href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block"
-                          >
-                            {item.url}
-                          </a>
-                        )}
-                      </div>
+                      </span>
+                      {tags.length > 0 && (
+                        <span className="text-xs shrink-0">
+                          {tags.map((tag, i) => (
+                            <span key={i}>
+                              {i > 0 && <span className="text-zinc-300 dark:text-zinc-600 mx-1">·</span>}
+                              <span className={tag.className}>{tag.text}</span>
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           ) : (
             <p className="text-zinc-500 dark:text-zinc-400 text-center py-8">
