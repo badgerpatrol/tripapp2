@@ -44,6 +44,22 @@ export async function POST(
 
     const { title, description, date } = validation.data;
 
+    // Validate date is in the future if provided
+    if (date) {
+      const milestoneDate = new Date(date);
+      if (milestoneDate <= new Date()) {
+        return NextResponse.json(
+          { error: "Milestone date must be in the future" },
+          { status: 400 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { error: "Milestone date is required" },
+        { status: 400 }
+      );
+    }
+
     // Create the timeline item using service function
     const timelineItem = await createTimelineItem(tripId, auth.uid, {
       title,

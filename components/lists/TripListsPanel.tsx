@@ -77,9 +77,11 @@ interface TripListsPanelProps {
   hideContainer?: boolean; // If true, will not render the outer container wrapper (for use when wrapped externally)
   onListsLoaded?: (count: number) => void; // Callback when lists are loaded, reports the count
   listTypeFilter?: ListType; // If set, only show lists of this type (TODO or KIT)
+  hideAddButton?: boolean; // If true, hides the main +Add button (for when parent controls it)
+  onAddClick?: () => void; // Callback when add is triggered (allows parent to control the dialog)
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, listTypeFilter }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, listTypeFilter, hideAddButton = false, onAddClick }: TripListsPanelProps) {
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -591,17 +593,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       )}
 
       {/* Action buttons row */}
-      {!inWorkflowMode && isOrganizer && (
+      {!inWorkflowMode && isOrganizer && !hideAddButton && (
         <div className="flex items-center gap-2 flex-wrap mb-4">
           <button
-            onClick={() => setIsAddListDialogOpen(true)}
-            className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
+            onClick={() => onAddClick ? onAddClick() : setIsAddListDialogOpen(true)}
+            className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
           >
-            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="hidden sm:inline">Add List</span>
-            <span className="sm:hidden">Add</span>
+            + Add
           </button>
         </div>
       )}
