@@ -631,7 +631,7 @@ function EditKitListPageContent() {
               className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
               disabled={saving || deleting}
             >
-              Delete List
+              Delete
             </Button>
             <div className="flex gap-4">
               <Button
@@ -647,7 +647,7 @@ function EditKitListPageContent() {
                 className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
                 disabled={saving}
               >
-                {saving ? "Saving..." : "Save Changes"}
+                {saving ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
@@ -1004,7 +1004,7 @@ function EditKitListPageContent() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
-                    Delete List
+                    Delete
                   </h3>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
                     Are you sure you want to delete "{title}"? This action cannot be undone.
