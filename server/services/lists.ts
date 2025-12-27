@@ -1304,7 +1304,7 @@ export async function addTodoItem(
 export async function addKitItem(
   actorId: string,
   templateId: string,
-  payload: { label: string; notes?: string; quantity?: number; orderIndex?: number; perPerson?: boolean }
+  payload: { label: string; notes?: string; quantity?: number; orderIndex?: number; perPerson?: boolean; required?: boolean }
 ) {
   const template = await prisma.listTemplate.findUnique({
     where: { id: templateId },
@@ -1354,6 +1354,7 @@ export async function addKitItem(
       quantity: payload.quantity ?? 1,
       orderIndex,
       perPerson: payload.perPerson ?? false,
+      required: payload.required ?? true,
     },
   });
 

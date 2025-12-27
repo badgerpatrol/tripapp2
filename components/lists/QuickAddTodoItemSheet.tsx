@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 
-interface QuickAddItemSheetProps {
+interface QuickAddTodoItemSheetProps {
   isOpen: boolean;
   onClose: () => void;
   templateId: string;
@@ -12,17 +12,15 @@ interface QuickAddItemSheetProps {
   onItemAdded: () => void;
 }
 
-export default function QuickAddItemSheet({
+export default function QuickAddTodoItemSheet({
   isOpen,
   onClose,
   templateId,
   templateTitle,
   onItemAdded,
-}: QuickAddItemSheetProps) {
+}: QuickAddTodoItemSheetProps) {
   const { user } = useAuth();
   const [label, setLabel] = useState("");
-  const [quantity, setQuantity] = useState(1);
-  const [required, setRequired] = useState(true);
   const [perPerson, setPerPerson] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +39,6 @@ export default function QuickAddItemSheet({
   useEffect(() => {
     if (!isOpen) {
       setLabel("");
-      setQuantity(1);
-      setRequired(true);
       setPerPerson(false);
       setError(null);
     }
@@ -58,7 +54,7 @@ export default function QuickAddItemSheet({
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`/api/lists/templates/${templateId}/kit-items`, {
+      const response = await fetch(`/api/lists/templates/${templateId}/todo-items`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,8 +62,6 @@ export default function QuickAddItemSheet({
         },
         body: JSON.stringify({
           label: label.trim(),
-          quantity,
-          required,
           perPerson,
         }),
       });
@@ -129,57 +123,13 @@ export default function QuickAddItemSheet({
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g., Sleeping bag"
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              placeholder="e.g., Book flights"
+              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               disabled={saving}
               required
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-              Quantity
-            </label>
-            <input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
-              min="0"
-              step="0.1"
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-              disabled={saving}
-            />
-          </div>
-
-          {/* Mandatory/Optional toggle */}
-          <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setRequired(true)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                required
-                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-              disabled={saving}
-            >
-              Mandatory
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequired(false)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                !required
-                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-              disabled={saving}
-            >
-              Optional
-            </button>
-          </div>
-
-          {/* Shared/Per Person toggle */}
           <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
             <button
               type="button"
@@ -218,7 +168,7 @@ export default function QuickAddItemSheet({
             </Button>
             <Button
               type="submit"
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
               disabled={saving || !label.trim()}
             >
               {saving ? "Adding..." : "Add Item"}

@@ -9,6 +9,7 @@ const AddKitItemSchema = z.object({
   quantity: z.number().optional(),
   orderIndex: z.number().optional(),
   perPerson: z.boolean().optional(),
+  required: z.boolean().optional(),
 });
 
 /**
