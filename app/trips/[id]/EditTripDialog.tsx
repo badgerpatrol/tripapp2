@@ -33,13 +33,25 @@ export default function EditTripDialog({
 }: EditTripDialogProps) {
   const { user, userProfile } = useAuth();
   const router = useRouter();
+  // Helper to format date for datetime-local input (YYYY-MM-DDTHH:MM)
+  const formatDateTimeLocal = (dateString: string | null): string => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [formData, setFormData] = useState({
     name: trip.name,
     description: trip.description || "",
     location: trip.location || "",
     baseCurrency: trip.baseCurrency,
-    startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
-    endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
+    startDate: formatDateTimeLocal(trip.startDate),
+    endDate: formatDateTimeLocal(trip.endDate),
     signUpMode: trip.signUpMode || false,
     signInMode: trip.signInMode || false,
     signUpPassword: trip.signUpPassword || "",
@@ -269,7 +281,7 @@ export default function EditTripDialog({
   };
 
   const handleCopyUrl = async () => {
-    const tripUrl = `${window.location.origin}/t/${trip.id}`;
+    const tripUrl = `${window.location.origin}/trips/${trip.id}`;
     try {
       await navigator.clipboard.writeText(tripUrl);
       setUrlCopied(true);
@@ -402,10 +414,10 @@ export default function EditTripDialog({
                   htmlFor="startDate"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                 >
-                  Start Date
+                  Start Date & Time
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   id="startDate"
                   name="startDate"
                   value={formData.startDate}
@@ -419,10 +431,10 @@ export default function EditTripDialog({
                   htmlFor="endDate"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                 >
-                  End Date
+                  End Date & Time
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   id="endDate"
                   name="endDate"
                   value={formData.endDate}
@@ -500,7 +512,7 @@ export default function EditTripDialog({
               </label>
               <div className="flex gap-2">
                 <div className="flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-900/50 text-zinc-700 dark:text-zinc-300 font-mono text-sm overflow-x-auto whitespace-nowrap">
-                  {typeof window !== 'undefined' && `${window.location.origin}/t/${trip.id}`}
+                  {typeof window !== 'undefined' && `${window.location.origin}/trips/${trip.id}`}
                 </div>
                 <button
                   type="button"
@@ -772,7 +784,7 @@ export default function EditTripDialog({
                   disabled={isSubmitting || isDeleting}
                   className="tap-target flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? "Saving..." : "Save Changes"}
+                  {isSubmitting ? "Saving..." : "Save"}
                 </button>
               </div>
 
@@ -799,7 +811,7 @@ export default function EditTripDialog({
         description={formData.description}
         startDate={formData.startDate}
         endDate={formData.endDate}
-        tripUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/t/${trip.id}`}
+        tripUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/trips/${trip.id}`}
         accessCode={formData.signUpPassword}
       />
     </div>

@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
 import { ForkTemplateDialog } from "@/components/lists/ForkTemplateDialog";
 import { CopyToTripDialog } from "@/components/lists/CopyToTripDialog";
+import { EditKitItemDialog } from "@/components/lists/EditKitItemDialog";
+import { EditTodoItemDialog } from "@/components/lists/EditTodoItemDialog";
+import QuickAddItemSheet from "@/components/lists/QuickAddItemSheet";
+import QuickAddTodoItemSheet from "@/components/lists/QuickAddTodoItemSheet";
 
 interface ListTemplate {
   id: string;
@@ -64,11 +68,21 @@ function ViewListPageContent() {
     isOpen: false,
     template: null,
   });
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; template: ListTemplate | null }>({
+  const [editItemDialog, setEditItemDialog] = useState<{
+    isOpen: boolean;
+    item: NonNullable<ListTemplate["kitItems"]>[number] | null;
+  }>({
     isOpen: false,
-    template: null,
+    item: null,
   });
-  const [deleting, setDeleting] = useState(false);
+  const [editTodoItemDialog, setEditTodoItemDialog] = useState<{
+    isOpen: boolean;
+    item: NonNullable<ListTemplate["todoItems"]>[number] | null;
+  }>({
+    isOpen: false,
+    item: null,
+  });
+  const [addItemSheetOpen, setAddItemSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !templateId) return;
@@ -113,40 +127,6 @@ function ViewListPageContent() {
 
   const handleCopySuccess = () => {
     setToast({ message: "Template copied to trip!", type: "success" });
-  };
-
-  const handleDelete = async (template: ListTemplate) => {
-    if (!user) return;
-
-    setDeleting(true);
-    setError(null);
-
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch(`/api/lists/templates/${template.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete template");
-      }
-
-      setToast({ message: "Template deleted successfully!", type: "success" });
-      setTimeout(() => router.push("/lists"), 1000);
-    } catch (err: any) {
-      console.error("Error deleting template:", err);
-      setError(err.message);
-    } finally {
-      setDeleting(false);
-      setDeleteConfirm({ isOpen: false, template: null });
-    }
-  };
-
-  const getTypeIcon = (type: ListType) => {
-    return type === "TODO" ? "✓" : "🎒";
   };
 
   const getTypeBadgeColor = (type: ListType) => {
@@ -225,220 +205,164 @@ function ViewListPageContent() {
           </div>
         )}
 
-        {/* Back Button */}
-        <div className="mb-6">
+        {/* Compact Header with Back Button and Title */}
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => router.push(returnTo)}
-            className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+            className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back
           </button>
-        </div>
-
-        {/* Header Card */}
-        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{getTypeIcon(template.type)}</span>
-              <div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">
-                  {template.title}
-                </h1>
-                <div className="flex items-center gap-3">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(template.type)}`}>
-                    {template.type}
-                  </span>
-                  <span className="flex items-center gap-1 text-sm text-zinc-500 dark:text-zinc-400">
-                    {template.visibility === "PUBLIC" ? (
-                      <><span>🌐</span> Public</>
-                    ) : (
-                      <><span>🔒</span> Private</>
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">
+              {template.title}
+            </h1>
           </div>
-
-          {template.description && (
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-              {template.description}
-            </p>
-          )}
-
-          {/* Tags */}
-          {template.tags && template.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {template.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 mt-6">
+          <div className="flex items-center gap-2 shrink-0">
             {isOwner && (
-              <>
-                <Button
-                  onClick={() => {
-                    const editPath = template.type === "KIT"
-                      ? `/lists/edit-kit/${template.id}?returnTo=${encodeURIComponent(returnTo)}`
-                      : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(returnTo)}`;
-                    router.push(editPath);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => setDeleteConfirm({ isOpen: true, template })}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Delete
-                </Button>
-              </>
+              <Button
+                onClick={() => {
+                  const currentPageWithReturn = returnTo !== "/lists"
+                    ? `/lists/${template.id}?returnTo=${encodeURIComponent(returnTo)}`
+                    : `/lists/${template.id}`;
+                  const editPath = template.type === "KIT"
+                    ? `/lists/edit-kit/${template.id}?returnTo=${encodeURIComponent(currentPageWithReturn)}`
+                    : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(currentPageWithReturn)}`;
+                  router.push(editPath);
+                }}
+                className="px-3 py-1.5 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+              >
+                Edit
+              </Button>
             )}
             {!isOwner && (
               <Button
                 onClick={() => setForkDialog({ isOpen: true, template })}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="px-3 py-1.5 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
               >
                 Copy
               </Button>
             )}
             <Button
               onClick={() => setCopyDialog({ isOpen: true, template })}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="px-3 py-1.5 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
             >
-              Use in Trip
+              Use
             </Button>
           </div>
         </div>
 
+        {/* Description and Tags - Compact */}
+        {(template.description || (template.tags && template.tags.length > 0)) && (
+          <div className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+            {template.description && <p className="mb-2">{template.description}</p>}
+            {template.tags && template.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {template.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-0.5 text-xs text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Items List */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
-            {template.type === "TODO" ? "Tasks" : "Items"} (
-            {template.type === "TODO"
-              ? template.todoItems?.length || 0
-              : template.kitItems?.length || 0}
-            )
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+              {template.type === "TODO" ? "Tasks" : "Items"} (
+              {template.type === "TODO"
+                ? template.todoItems?.length || 0
+                : template.kitItems?.length || 0}
+              )
+            </h2>
+            {isOwner && (
+              <button
+                onClick={() => setAddItemSheetOpen(true)}
+                className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                title={template.type === "TODO" ? "Add task" : "Add item"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
+          </div>
 
           {template.type === "TODO" && template.todoItems && template.todoItems.length > 0 ? (
-            <div className="space-y-3">
+            <div className="-mx-6">
               {template.todoItems
                 .sort((a, b) => a.orderIndex - b.orderIndex)
-                .map((item, index) => (
+                .map((item, index, arr) => (
                   <div
                     key={item.id}
-                    className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg"
+                    onClick={isOwner ? () => setEditTodoItemDialog({ isOpen: true, item }) : undefined}
+                    className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""} ${isOwner ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:bg-zinc-100 dark:active:bg-zinc-800" : ""}`}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                        {index + 1}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-zinc-900 dark:text-white font-medium">
-                            {item.label}
-                          </p>
-                          <span className={`px-1.5 py-0.5 text-xs rounded ${
-                            item.perPerson
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                              : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                          }`}>
-                            {item.perPerson ? "per person" : "shared"}
-                          </span>
-                        </div>
-                        {item.notes && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                            {item.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <span className="text-zinc-900 dark:text-white font-medium truncate">
+                      {item.label}
+                    </span>
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
+                      {item.perPerson ? "per person" : "shared"}
+                    </span>
                   </div>
                 ))}
             </div>
           ) : template.type === "KIT" && template.kitItems && template.kitItems.length > 0 ? (
-            <div className="space-y-3">
+            <div className="-mx-6">
               {template.kitItems
                 .sort((a, b) => a.orderIndex - b.orderIndex)
-                .map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                        {index + 1}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-zinc-900 dark:text-white font-medium">
-                            {item.label}
-                          </p>
-                          <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                            × {item.quantity}
+                .map((item, index, arr) => {
+                  // Build inline tags
+                  const tags: { text: string; className: string }[] = [];
+
+                  if (!template.inventory) {
+                    tags.push({
+                      text: item.perPerson ? "per person" : "shared",
+                      className: "text-zinc-400 dark:text-zinc-500"
+                    });
+                    tags.push({
+                      text: item.required ? "mandatory" : "optional",
+                      className: item.required
+                        ? "text-green-600/70 dark:text-green-400/70"
+                        : "text-zinc-400 dark:text-zinc-500"
+                    });
+                  }
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={isOwner ? () => setEditItemDialog({ isOpen: true, item }) : undefined}
+                      className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""} ${isOwner ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:bg-zinc-100 dark:active:bg-zinc-800" : ""}`}
+                    >
+                      <span className="text-zinc-900 dark:text-white font-medium truncate">
+                        {item.label}
+                        {item.quantity > 1 && (
+                          <span className="ml-1.5 font-normal text-zinc-400 dark:text-zinc-500">
+                            ×{item.quantity}
                           </span>
-                          {!template.inventory && (
-                            <span className={`px-1.5 py-0.5 text-xs rounded ${
-                              item.perPerson
-                                ? "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
-                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                            }`}>
-                              {item.perPerson ? "per person" : "shared"}
-                            </span>
-                          )}
-                          {!template.inventory && (
-                            <span className={`px-1.5 py-0.5 text-xs rounded ${
-                              item.required
-                                ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
-                                : "bg-zinc-100 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-400"
-                            }`}>
-                              {item.required ? "mandatory" : "optional"}
-                            </span>
-                          )}
-                        </div>
-                        {item.notes && (
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                            {item.notes}
-                          </p>
                         )}
-                        <div className="flex flex-wrap gap-3 mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                          {item.category && (
-                            <span>Category: {item.category}</span>
-                          )}
-                          {item.weightGrams && (
-                            <span>Weight: {item.weightGrams}g</span>
-                          )}
-                          {item.cost && (
-                            <span>Cost: ${Number(item.cost).toFixed(2)}</span>
-                          )}
-                        </div>
-                        {item.url && (
-                          <a
-                            href={item.url.startsWith('http://') || item.url.startsWith('https://') ? item.url : `https://${item.url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block"
-                          >
-                            {item.url}
-                          </a>
-                        )}
-                      </div>
+                      </span>
+                      {tags.length > 0 && (
+                        <span className="text-xs shrink-0">
+                          {tags.map((tag, i) => (
+                            <span key={i}>
+                              {i > 0 && <span className="text-zinc-300 dark:text-zinc-600 mx-1">·</span>}
+                              <span className={tag.className}>{tag.text}</span>
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           ) : (
             <p className="text-zinc-500 dark:text-zinc-400 text-center py-8">
@@ -467,45 +391,128 @@ function ViewListPageContent() {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
-      {deleteConfirm.isOpen && deleteConfirm.template && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
-                  Delete Template
-                </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Are you sure you want to delete "{deleteConfirm.template.title}"? This action cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                onClick={() => setDeleteConfirm({ isOpen: false, template: null })}
-                className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => handleDelete(deleteConfirm.template!)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Edit Kit Item Dialog */}
+      {editItemDialog.item && template && (
+        <EditKitItemDialog
+          isOpen={editItemDialog.isOpen}
+          templateId={template.id}
+          item={editItemDialog.item}
+          onClose={() => setEditItemDialog({ isOpen: false, item: null })}
+          onSaved={() => {
+            setEditItemDialog({ isOpen: false, item: null });
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Item updated", type: "success" });
+          }}
+        />
       )}
+
+      {/* Edit Todo Item Dialog */}
+      {editTodoItemDialog.item && template && (
+        <EditTodoItemDialog
+          isOpen={editTodoItemDialog.isOpen}
+          templateId={template.id}
+          item={editTodoItemDialog.item}
+          onClose={() => setEditTodoItemDialog({ isOpen: false, item: null })}
+          onSaved={() => {
+            setEditTodoItemDialog({ isOpen: false, item: null });
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Task updated", type: "success" });
+          }}
+        />
+      )}
+
+      {/* Quick Add Item Sheet */}
+      {template && template.type === "KIT" && (
+        <QuickAddItemSheet
+          isOpen={addItemSheetOpen}
+          onClose={() => setAddItemSheetOpen(false)}
+          templateId={template.id}
+          templateTitle={template.title}
+          onItemAdded={() => {
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Item added", type: "success" });
+          }}
+        />
+      )}
+
+      {/* Quick Add Todo Item Sheet */}
+      {template && template.type === "TODO" && (
+        <QuickAddTodoItemSheet
+          isOpen={addItemSheetOpen}
+          onClose={() => setAddItemSheetOpen(false)}
+          templateId={template.id}
+          templateTitle={template.title}
+          onItemAdded={() => {
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Task added", type: "success" });
+          }}
+        />
+      )}
+
     </div>
   );
 }

@@ -122,7 +122,61 @@ export async function listMyTemplates(ownerId: string, query?: ListMyTemplatesQu
     orderBy: { updatedAt: "desc" },
   });
 
-  return templates;
+  // For templates created in trips, find the associated trip name
+  // Trip copies reference the master template via sourceTemplateId
+  const createdInTripTemplateIds = templates
+    .filter((t) => t.createdInTrip)
+    .map((t) => t.id);
+
+  if (createdInTripTemplateIds.length > 0) {
+    // Find trip copies that reference these templates
+    const tripCopies = await prisma.listTemplate.findMany({
+      where: {
+        sourceTemplateId: { in: createdInTripTemplateIds },
+        tripId: { not: null },
+      },
+      select: {
+        sourceTemplateId: true,
+        tripId: true,
+      },
+    });
+
+    // Get unique trip IDs
+    const tripIds = [...new Set(tripCopies.map((c) => c.tripId).filter((id): id is string => id !== null))];
+
+    // Fetch trip names
+    const trips = tripIds.length > 0
+      ? await prisma.trip.findMany({
+          where: { id: { in: tripIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+
+    const tripMap = new Map(trips.map((t) => [t.id, t.name]));
+
+    // Map sourceTemplateId to trip name (use first trip if multiple)
+    const templateToTripName = new Map<string, string>();
+    for (const copy of tripCopies) {
+      if (copy.sourceTemplateId && copy.tripId && !templateToTripName.has(copy.sourceTemplateId)) {
+        const tripName = tripMap.get(copy.tripId);
+        if (tripName) {
+          templateToTripName.set(copy.sourceTemplateId, tripName);
+        }
+      }
+    }
+
+    // Add tripName to templates
+    return templates.map((t) => ({
+      ...t,
+      createdInTripName: t.createdInTrip ? templateToTripName.get(t.id) ?? null : null,
+    }));
+  }
+
+  // No createdInTrip templates, return as-is with null tripName
+  return templates.map((t) => ({
+    ...t,
+    createdInTripName: null,
+  }));
 }
 
 /**
@@ -550,6 +604,54 @@ export async function updateKitItem(
 
   // Update the item
   const updatedItem = await prisma.kitItemTemplate.update({
+    where: { id: itemId },
+    data: updateData,
+  });
+
+  return updatedItem;
+}
+
+/**
+ * Update a single todo item in a template
+ */
+export async function updateTodoItem(
+  actorId: string,
+  templateId: string,
+  itemId: string,
+  payload: import("@/types/schemas").TodoItemUpdateInput
+) {
+  // Verify template exists and user has permission
+  const template = await prisma.listTemplate.findUnique({
+    where: { id: templateId },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  if (!canEditTemplate(actorId, template)) {
+    throw new Error("Forbidden: Cannot edit this template");
+  }
+
+  // Verify item exists and belongs to this template
+  const item = await prisma.todoItemTemplate.findUnique({
+    where: { id: itemId },
+  });
+
+  if (!item || item.templateId !== templateId) {
+    throw new Error("Item not found");
+  }
+
+  // Build the update data object
+  const updateData: Record<string, unknown> = {};
+
+  if (payload.label !== undefined) updateData.label = payload.label;
+  if (payload.notes !== undefined) updateData.notes = payload.notes || null;
+  if (payload.perPerson !== undefined) updateData.perPerson = payload.perPerson;
+  if (payload.orderIndex !== undefined) updateData.orderIndex = payload.orderIndex;
+
+  // Update the item
+  const updatedItem = await prisma.todoItemTemplate.update({
     where: { id: itemId },
     data: updateData,
   });
@@ -1202,7 +1304,7 @@ export async function addTodoItem(
 export async function addKitItem(
   actorId: string,
   templateId: string,
-  payload: { label: string; notes?: string; quantity?: number; orderIndex?: number; perPerson?: boolean }
+  payload: { label: string; notes?: string; quantity?: number; orderIndex?: number; perPerson?: boolean; required?: boolean }
 ) {
   const template = await prisma.listTemplate.findUnique({
     where: { id: templateId },
@@ -1252,6 +1354,7 @@ export async function addKitItem(
       quantity: payload.quantity ?? 1,
       orderIndex,
       perPerson: payload.perPerson ?? false,
+      required: payload.required ?? true,
     },
   });
 

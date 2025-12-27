@@ -68,6 +68,8 @@ function EditKitListPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -473,6 +475,35 @@ function EditKitListPageContent() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!user) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/lists/templates/${templateId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete list");
+      }
+
+      // Navigate to lists page after deletion
+      router.push("/lists");
+    } catch (err: any) {
+      console.error("Error deleting list:", err);
+      setError(err.message);
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
@@ -512,9 +543,6 @@ function EditKitListPageContent() {
               Edit Kit List
             </h1>
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400 ml-14">
-            Update your packing list template
-          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -596,64 +624,72 @@ function EditKitListPageContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 justify-end">
+          <div className="flex gap-4 justify-between">
             <Button
               type="button"
-              onClick={() => router.push(returnTo)}
-              className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-              disabled={saving}
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+              disabled={saving || deleting}
             >
-              Cancel
+              Delete
             </Button>
-            <Button
-              type="submit"
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
+            <div className="flex gap-4">
+              <Button
+                type="button"
+                onClick={() => router.push(returnTo)}
+                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </div>
 
           {/* Items Card */}
           <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-                Items ({items.filter((i) => i.label.trim()).length})
-              </h2>
-              <div className="flex flex-wrap gap-2">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
+              Items ({items.filter((i) => i.label.trim()).length})
+            </h2>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button
+                type="button"
+                onClick={() => setIsPhotoScanOpen(true)}
+                className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                disabled={saving}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                </svg>
+                Scan Photo
+              </Button>
+              {!inventory && (
                 <Button
                   type="button"
-                  onClick={() => setIsPhotoScanOpen(true)}
-                  className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  onClick={() => setIsInventorySheetOpen(true)}
+                  className="text-sm px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
                   disabled={saving}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
-                  Scan From Photo
+                  From Inventory
                 </Button>
-                {!inventory && (
-                  <Button
-                    type="button"
-                    onClick={() => setIsInventorySheetOpen(true)}
-                    className="text-sm px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
-                    disabled={saving}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    From Inventory
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  onClick={addItem}
-                  className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
-                  disabled={saving}
-                >
-                  + Add Item
-                </Button>
-              </div>
+              )}
+              <Button
+                type="button"
+                onClick={addItem}
+                className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+                disabled={saving}
+              >
+                + Add Item
+              </Button>
             </div>
 
             <div className="space-y-4">
@@ -736,8 +772,8 @@ function EditKitListPageContent() {
                         />
                       </div>
 
-                      {/* Row 2: Weight, Cost, URL */}
-                      <div className="grid grid-cols-3 gap-3">
+                      {/* Row 2: Weight and Cost */}
+                      <div className="grid grid-cols-2 gap-3">
                         <input
                           type="number"
                           value={item.weightGrams}
@@ -757,39 +793,76 @@ function EditKitListPageContent() {
                           className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
                           disabled={saving}
                         />
-                        <input
-                          type="text"
-                          value={item.url}
-                          onChange={(e) => updateItem(item.id!, "url", e.target.value)}
-                          placeholder="URL (optional)"
-                          className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                          disabled={saving}
-                        />
                       </div>
 
-                      {/* Checkboxes - hide for inventory lists */}
+                      {/* Row 3: URL */}
+                      <input
+                        type="text"
+                        value={item.url}
+                        onChange={(e) => updateItem(item.id!, "url", e.target.value)}
+                        placeholder="URL (optional)"
+                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                        disabled={saving}
+                      />
+
+                      {/* Toggles - hide for inventory lists */}
                       {!inventory && (
-                        <div className="flex gap-4 text-sm">
-                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={item.perPerson}
-                              onChange={(e) => updateItem(item.id!, "perPerson", e.target.checked)}
-                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                        <div className="flex gap-3">
+                          {/* Mandatory/Optional toggle */}
+                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "required", true)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                item.required
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                               disabled={saving}
-                            />
-                            Per person
-                          </label>
-                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={item.required}
-                              onChange={(e) => updateItem(item.id!, "required", e.target.checked)}
-                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                            >
+                              Mandatory
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "required", false)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                !item.required
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                               disabled={saving}
-                            />
-                            Required
-                          </label>
+                            >
+                              Optional
+                            </button>
+                          </div>
+
+                          {/* Shared/Per Person toggle */}
+                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "perPerson", false)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                !item.perPerson
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                              disabled={saving}
+                            >
+                              Shared
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "perPerson", true)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                item.perPerson
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                              disabled={saving}
+                            >
+                              Per Person
+                            </button>
+                          </div>
                         </div>
                       )}
 
@@ -953,6 +1026,46 @@ function EditKitListPageContent() {
           onClose={() => setIsInventorySheetOpen(false)}
           onItemsSelected={handlePhotoScanComplete}
         />
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                    Delete
+                  </h3>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Are you sure you want to delete "{title}"? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

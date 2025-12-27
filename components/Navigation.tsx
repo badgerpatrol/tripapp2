@@ -27,12 +27,14 @@ export default function Navigation() {
   const isKitPage =
     pathname?.startsWith("/kit") ||
     pathname === "/lists/create-kit" ||
+    pathname?.startsWith("/lists/edit-kit") ||
     (pathname?.startsWith("/lists") && returnTo.startsWith("/kit"));
 
   // Check if we're in lists/checklist context
   const isListsPage =
     pathname?.startsWith("/lists") &&
     pathname !== "/lists/create-kit" &&
+    !pathname?.startsWith("/lists/edit-kit") &&
     !returnTo.startsWith("/kit");
 
   const isGroupsPage = pathname?.startsWith("/groups");

@@ -94,7 +94,8 @@ export function AddListDialog({
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch("/api/lists/templates", {
+      // Exclude lists that were created in other trips (createdInTrip=false)
+      const response = await fetch("/api/lists/templates?createdInTrip=false", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -274,10 +275,6 @@ export function AddListDialog({
 
   const templates = activeTab === "my-templates" ? filteredMyTemplates : publicTemplates;
 
-  const getTypeIcon = (type: ListType) => {
-    return type === "TODO" ? "✓" : "🎒";
-  };
-
   // Determine dialog title and tab labels based on listTypeFilter
   const dialogTitle = listTypeFilter === "TODO"
     ? "Add Checklist to Trip"
@@ -294,7 +291,7 @@ export function AddListDialog({
   const publicGalleryLabel = listTypeFilter === "TODO"
     ? "Public Checklists"
     : listTypeFilter === "KIT"
-      ? "Public Kit Lists"
+      ? "Public Gallery"
       : "Public Gallery";
 
   const isCreateNewTab = activeTab === "create-new";
@@ -386,9 +383,7 @@ export function AddListDialog({
         {/* Create New Tab Content */}
         {activeTab === "create-new" && (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Create an empty list directly in this trip. You can add items after creating it.
-            </p>
+           
 
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -458,9 +453,7 @@ export function AddListDialog({
         {/* Filters and Template Selection - only show for template tabs */}
         {activeTab !== "create-new" && (
           <>
-            <p className="text-zinc-600 dark:text-zinc-400 text-sm">
-              Copy a list from your templates or the public gallery into this trip.
-            </p>
+            
 
             <div className="flex flex-wrap gap-3">
               {activeTab === "public-gallery" && (
@@ -529,20 +522,8 @@ export function AddListDialog({
                     className="mt-1 mr-3"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{getTypeIcon(template.type)}</span>
-                      <div className="font-medium text-zinc-900 dark:text-white truncate">
-                        {template.title}
-                      </div>
-                      <span
-                        className={`px-2 py-0.5 text-xs font-medium rounded flex-shrink-0 ${
-                          template.listType === "TODO"
-                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                            : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                        }`}
-                      >
-                        {template.listType === "TODO" ? "To-Do" : "Kit"}
-                      </span>
+                    <div className="font-medium text-zinc-900 dark:text-white truncate mb-1">
+                      {template.title}
                     </div>
                     {template.description && (
                       <div className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">

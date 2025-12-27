@@ -1,26 +1,23 @@
 "use client";
 
 import { useAuth } from "@/lib/auth/AuthContext";
-import { usePathname } from "next/navigation";
 import Navigation from "./Navigation";
 import Header from "./Header";
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const pathname = usePathname();
 
-  // Check if this is a standalone trip route (e.g., /t/trip-id)
-  const isStandaloneTripRoute = pathname?.startsWith('/t/');
-
+  // Only show header/navigation when user is logged in
+  // When not logged in on /trips/[id], the page shows password login without nav
   return (
     <>
-      {user && !isStandaloneTripRoute && (
+      {user && (
         <>
           <Header />
           <Navigation />
         </>
       )}
-      <main className={user && !isStandaloneTripRoute ? "pt-28" : ""}>
+      <main className={user ? "pt-28" : ""}>
         {children}
       </main>
     </>

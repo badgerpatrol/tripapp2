@@ -20,13 +20,16 @@ interface EditTodoListFormProps {
   listId: string;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted?: () => void;
   isTripList?: boolean; // If true, hide visibility/tags fields
 }
 
-export function EditTodoListForm({ listId, onClose, onSaved, isTripList = false }: EditTodoListFormProps) {
+export function EditTodoListForm({ listId, onClose, onSaved, onDeleted, isTripList = false }: EditTodoListFormProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -215,6 +218,40 @@ export function EditTodoListForm({ listId, onClose, onSaved, isTripList = false 
     }
   };
 
+  const handleDelete = async () => {
+    if (!user || !listId) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/lists/instances/${listId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete list");
+      }
+
+      setShowDeleteConfirm(false);
+      if (onDeleted) {
+        onDeleted();
+      } else {
+        onClose();
+      }
+    } catch (err: any) {
+      console.error("Error deleting list:", err);
+      setError(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -227,7 +264,8 @@ export function EditTodoListForm({ listId, onClose, onSaved, isTripList = false 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+      <div className="flex-1 overflow-y-auto space-y-6 pb-4 min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
@@ -454,25 +492,72 @@ export function EditTodoListForm({ listId, onClose, onSaved, isTripList = false 
           )}
         </div>
       </div>
-
-      {/* Actions */}
-      <div className="flex gap-4 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-700">
-        <Button
-          type="button"
-          onClick={onClose}
-          className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-          disabled={saving}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
       </div>
+
+      {/* Fixed Footer Actions */}
+      <div className="flex-shrink-0 flex gap-4 justify-between pt-4 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
+        {isTripList ? (
+          <Button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+            disabled={saving || deleting}
+          >
+            Delete
+          </Button>
+        ) : (
+          <div />
+        )}
+        <div className="flex gap-4">
+          <Button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+            disabled={saving || deleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={saving || deleting}
+          >
+            {saving ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
+              Delete?
+            </h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+              Are you sure you want to delete "<strong>{title}</strong>"? This will permanently remove the list and all its items from this trip. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete List"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

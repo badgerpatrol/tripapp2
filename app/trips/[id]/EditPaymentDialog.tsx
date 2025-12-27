@@ -231,7 +231,7 @@ export default function EditPaymentDialog({
               variant="primary"
               full
             >
-              {isSubmitting ? "Saving..." : "Save Changes"}
+              {isSubmitting ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>

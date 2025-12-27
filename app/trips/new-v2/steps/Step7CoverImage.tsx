@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import type { StepProps } from "../types";
 
-export default function Step6CoverImage({
+export default function Step7CoverImage({
   state,
   updateState,
   error,
@@ -56,15 +56,6 @@ export default function Step6CoverImage({
 
   return (
     <div className="space-y-4">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Cover Image
-        </h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-          Add a photo for your trip
-        </p>
-      </div>
-
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}

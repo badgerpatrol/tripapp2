@@ -755,6 +755,14 @@ export const KitItemUpdateSchema = z.object({
   lastSeenDate: z.coerce.date().optional().nullable()
 }).strict();
 
+// Schema for updating a single todo item
+export const TodoItemUpdateSchema = z.object({
+  label: z.string().min(1, "Label is required").optional(),
+  notes: z.string().optional(),
+  perPerson: z.boolean().optional(),
+  orderIndex: z.number().int().nonnegative().optional(),
+}).strict();
+
 export const ListTemplateUpdate = z.object({
   title: z.string().min(1, "Title is required").optional(),
   description: z.string().optional(),
@@ -819,6 +827,7 @@ export const ListTripInstancesQuerySchema = z.object({
 export type TodoItemTemplateInputType = z.infer<typeof TodoItemTemplateInput>;
 export type KitItemTemplateInputType = z.infer<typeof KitItemTemplateInput>;
 export type KitItemUpdateInput = z.infer<typeof KitItemUpdateSchema>;
+export type TodoItemUpdateInput = z.infer<typeof TodoItemUpdateSchema>;
 export type ListTemplateCreateInput = z.infer<typeof ListTemplateCreate>;
 export type ListTemplateUpdateInput = z.infer<typeof ListTemplateUpdate>;
 export type TodoMergeModeType = z.infer<typeof TodoMergeMode>;

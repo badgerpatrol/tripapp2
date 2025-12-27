@@ -119,7 +119,16 @@ export default function TripPasswordLogin({
       // Store password in memory for later use
       setTripPassword(tripId, password);
 
-      // Check if sign-in mode is enabled - if so, show invitee selector
+      // If both signIn and signUp are enabled, skip the select-invitee step
+      // and go directly to the join dialog (via viewer login + onSignUp callback)
+      if (tripInfo?.signInEnabled && tripInfo?.signUpEnabled && tripInfo.participants.length > 0) {
+        // Log in as viewer and trigger the join dialog
+        onSignUp?.();
+        await signInWithEmailAndPassword(auth, data.viewerEmail, password);
+        return;
+      }
+
+      // Check if only sign-in mode is enabled - show invitee selector
       if (tripInfo?.signInEnabled && tripInfo.participants.length > 0) {
         setStep("select-invitee");
         setLoading(false);

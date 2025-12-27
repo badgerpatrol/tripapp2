@@ -37,6 +37,8 @@ function EditListPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -141,21 +143,6 @@ function EditListPageContent() {
     );
   };
 
-  const updateParameter = (itemId: string, paramName: string, value: any) => {
-    setItems(
-      items.map((item) => {
-        if (item.id !== itemId) return item;
-        return {
-          ...item,
-          parameters: {
-            ...(item.parameters || {}),
-            [paramName]: value
-          }
-        };
-      })
-    );
-  };
-
   const moveItem = (id: string, direction: "up" | "down") => {
     const index = items.findIndex((item) => item.id === id);
     if (index === -1) return;
@@ -237,6 +224,35 @@ function EditListPageContent() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!user) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/lists/templates/${templateId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete list");
+      }
+
+      // Navigate to lists page after deletion
+      router.push("/lists");
+    } catch (err: any) {
+      console.error("Error deleting list:", err);
+      setError(err.message);
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
@@ -282,12 +298,9 @@ function EditListPageContent() {
               </svg>
             </button>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-              Edit TODO List
+              Edit Checklist
             </h1>
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400 ml-14">
-            Update your TODO list template
-          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -364,22 +377,32 @@ function EditListPageContent() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4 justify-end pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
+            <div className="flex gap-4 justify-between pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
               <Button
                 type="button"
-                onClick={() => router.push(`/lists/${templateId}`)}
-                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
-                disabled={saving}
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                disabled={saving || deleting}
               >
-                Cancel
+                Delete
               </Button>
-              <Button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  onClick={() => router.push(`/lists/${templateId}`)}
+                  className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save"}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -454,94 +477,34 @@ function EditListPageContent() {
                         disabled={saving}
                       />
 
-                      {/* Per Person Toggle */}
-                      <div className="flex gap-4 text-sm">
-                        <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={item.perPerson}
-                            onChange={(e) => updateItem(item.id, "perPerson", e.target.checked)}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                            disabled={saving}
-                          />
-                          Per person
-                        </label>
-                      </div>
-
-                      {/* Action Type */}
-                      <div>
-                        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                          Action (optional)
-                        </label>
-                        <select
-                          value={item.actionType || ""}
-                          onChange={(e) =>
-                            updateItem(
-                              item.id,
-                              "actionType",
-                              e.target.value || null
-                            )
-                          }
-                          className="w-full px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                      {/* Shared/Per Person Toggle */}
+                      <div className="flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => updateItem(item.id, "perPerson", false)}
+                          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+                            !item.perPerson
+                              ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                          }`}
                           disabled={saving}
                         >
-                          <option value="">None</option>
-                          <option value="CREATE_CHOICE">Create Choice/Poll</option>
-                          <option value="SET_MILESTONE">Set Milestone</option>
-                          <option value="INVITE_USERS">Invite Users</option>
-                        </select>
-                        {item.actionType && (
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                            {item.actionType === "CREATE_CHOICE" && "Creates a new choice/poll when checked"}
-                            {item.actionType === "SET_MILESTONE" && "Sets a milestone date when checked"}
-                            {item.actionType === "INVITE_USERS" && "Opens invite dialog when checked"}
-                          </p>
-                        )}
+                          Shared
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateItem(item.id, "perPerson", true)}
+                          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+                            item.perPerson
+                              ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                          }`}
+                          disabled={saving}
+                        >
+                          Per Person
+                        </button>
                       </div>
 
-                      {/* Milestone Name Parameter */}
-                      {item.actionType === "SET_MILESTONE" && (
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                            Milestone Name
-                          </label>
-                          <input
-                            type="text"
-                            value={item.parameters?.milestoneName || ""}
-                            onChange={(e) =>
-                              updateParameter(item.id, "milestoneName", e.target.value)
-                            }
-                            placeholder="Enter milestone name"
-                            className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                            disabled={saving}
-                          />
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                            The name of the milestone to create (optional)
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Choice Name Parameter */}
-                      {item.actionType === "CREATE_CHOICE" && (
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                            Choice Name
-                          </label>
-                          <input
-                            type="text"
-                            value={item.parameters?.choiceName || ""}
-                            onChange={(e) =>
-                              updateParameter(item.id, "choiceName", e.target.value)
-                            }
-                            placeholder="Enter choice name"
-                            className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                            disabled={saving}
-                          />
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                            The name of the choice to create (optional)
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     {/* Delete Button */}
@@ -562,6 +525,46 @@ function EditListPageContent() {
             </div>
           </div>
         </form>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                    Delete
+                  </h3>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Are you sure you want to delete "{title}"? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
