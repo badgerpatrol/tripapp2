@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ListType, Visibility } from "@/lib/generated/prisma";
 import { ForkTemplateDialog } from "@/components/lists/ForkTemplateDialog";
 import { CopyToTripDialog } from "@/components/lists/CopyToTripDialog";
+import { EditKitItemDialog } from "@/components/lists/EditKitItemDialog";
 
 interface ListTemplate {
   id: string;
@@ -69,6 +70,13 @@ function ViewListPageContent() {
     template: null,
   });
   const [deleting, setDeleting] = useState(false);
+  const [editItemDialog, setEditItemDialog] = useState<{
+    isOpen: boolean;
+    item: NonNullable<ListTemplate["kitItems"]>[number] | null;
+  }>({
+    isOpen: false,
+    item: null,
+  });
 
   useEffect(() => {
     if (!user || !templateId) return;
@@ -357,7 +365,8 @@ function ViewListPageContent() {
                   return (
                     <div
                       key={item.id}
-                      className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""}`}
+                      onClick={isOwner ? () => setEditItemDialog({ isOpen: true, item }) : undefined}
+                      className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""} ${isOwner ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:bg-zinc-100 dark:active:bg-zinc-800" : ""}`}
                     >
                       <span className="text-zinc-900 dark:text-white font-medium truncate">
                         {item.label}
@@ -405,6 +414,37 @@ function ViewListPageContent() {
           onClose={() => setCopyDialog({ isOpen: false, template: null })}
           template={copyDialog.template}
           onSuccess={handleCopySuccess}
+        />
+      )}
+
+      {/* Edit Item Dialog */}
+      {editItemDialog.item && template && (
+        <EditKitItemDialog
+          isOpen={editItemDialog.isOpen}
+          templateId={template.id}
+          item={editItemDialog.item}
+          onClose={() => setEditItemDialog({ isOpen: false, item: null })}
+          onSaved={() => {
+            setEditItemDialog({ isOpen: false, item: null });
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Item updated", type: "success" });
+          }}
         />
       )}
 
