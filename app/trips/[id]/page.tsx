@@ -30,6 +30,7 @@ import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
 import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
 import TransportSection from "./TransportSection";
+import AddMilestoneDialog from "./AddMilestoneDialog";
 
 interface TripDetail {
   id: string;
@@ -176,9 +177,6 @@ export default function TripDetailPage() {
   const [isTogglingRsvpStatus, setIsTogglingRsvpStatus] = useState(false);
   const [isTogglingSpendStatus, setIsTogglingSpendStatus] = useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
-  const [newMilestoneTitle, setNewMilestoneTitle] = useState("");
-  const [newMilestoneDescription, setNewMilestoneDescription] = useState("");
-  const [newMilestoneDate, setNewMilestoneDate] = useState("");
 
   // Choices state
   const [choices, setChoices] = useState<any[]>([]);
@@ -1729,41 +1727,6 @@ export default function TripDetailPage() {
     }
   };
 
-  const handleAddMilestone = async () => {
-    if (!user || !newMilestoneTitle.trim()) return;
-
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch(`/api/trips/${tripId}/timeline`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          title: newMilestoneTitle.trim(),
-          description: newMilestoneDescription.trim() || undefined,
-          date: newMilestoneDate || null,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(errorData.error || "Failed to create milestone");
-      }
-
-      // Success - reset form and refresh the trip data
-      setIsAddingMilestone(false);
-      setNewMilestoneTitle("");
-      setNewMilestoneDescription("");
-      setNewMilestoneDate("");
-      handleEditSuccess();
-    } catch (err) {
-      console.error("Error creating milestone:", err);
-      alert(err instanceof Error ? err.message : "Failed to create milestone");
-    }
-  };
-
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 py-8 px-4">
@@ -2840,78 +2803,18 @@ export default function TripDetailPage() {
               </button>
             </div>
             
-            {/* Add Milestone Form */}
+            {/* Add Milestone Button */}
               {canInvite && !isViewer && (
                 <div className="mt-4">
-                  {!isAddingMilestone ? (
-                    <button
-                      onClick={() => setIsAddingMilestone(true)}
-                      className="tap-target w-full py-3 px-4 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Add Milestone
-                    </button>
-                  ) : (
-                    <div className="p-4 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                          Title <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={newMilestoneTitle}
-                          onChange={(e) => setNewMilestoneTitle(e.target.value)}
-                          placeholder="e.g., Book Flights"
-                          className="w-full px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                          Description
-                        </label>
-                        <input
-                          type="text"
-                          value={newMilestoneDescription}
-                          onChange={(e) => setNewMilestoneDescription(e.target.value)}
-                          placeholder="Optional description"
-                          className="w-full px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                          Date & Time
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={newMilestoneDate}
-                          onChange={(e) => setNewMilestoneDate(e.target.value)}
-                          className="w-full max-w-[240px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={handleAddMilestone}
-                          disabled={!newMilestoneTitle.trim()}
-                          className="tap-target flex-1 px-4 py-2 text-sm rounded bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
-                        >
-                          Add Milestone
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsAddingMilestone(false);
-                            setNewMilestoneTitle("");
-                            setNewMilestoneDescription("");
-                            setNewMilestoneDate("");
-                          }}
-                          className="tap-target flex-1 px-4 py-2 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setIsAddingMilestone(true)}
+                    className="tap-target w-full py-3 px-4 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/10 text-zinc-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Milestone
+                  </button>
                 </div>
               )}
 
@@ -3483,6 +3386,15 @@ export default function TripDetailPage() {
           onParticipantCreated={fetchPublicInfo}
         />
       )}
+
+      {/* Add Milestone Dialog */}
+      <AddMilestoneDialog
+        isOpen={isAddingMilestone}
+        onClose={() => setIsAddingMilestone(false)}
+        tripId={tripId}
+        user={user}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }
