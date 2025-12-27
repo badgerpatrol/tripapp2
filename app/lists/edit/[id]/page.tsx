@@ -37,6 +37,8 @@ function EditListPageContent() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -237,6 +239,35 @@ function EditListPageContent() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!user) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/lists/templates/${templateId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete list");
+      }
+
+      // Navigate to lists page after deletion
+      router.push("/lists");
+    } catch (err: any) {
+      console.error("Error deleting list:", err);
+      setError(err.message);
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
@@ -282,12 +313,9 @@ function EditListPageContent() {
               </svg>
             </button>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-              Edit TODO List
+              Edit Checklist
             </h1>
           </div>
-          <p className="text-zinc-600 dark:text-zinc-400 ml-14">
-            Update your TODO list template
-          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -364,22 +392,32 @@ function EditListPageContent() {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4 justify-end pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
+            <div className="flex gap-4 justify-between pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
               <Button
                 type="button"
-                onClick={() => router.push(`/lists/${templateId}`)}
-                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
-                disabled={saving}
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                disabled={saving || deleting}
               >
-                Cancel
+                Delete List
               </Button>
-              <Button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </Button>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  onClick={() => router.push(`/lists/${templateId}`)}
+                  className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
+                  disabled={saving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -562,6 +600,46 @@ function EditListPageContent() {
             </div>
           </div>
         </form>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                    Delete List
+                  </h3>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Are you sure you want to delete "{title}"? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

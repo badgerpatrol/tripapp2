@@ -66,11 +66,6 @@ function ViewListPageContent() {
     isOpen: false,
     template: null,
   });
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; template: ListTemplate | null }>({
-    isOpen: false,
-    template: null,
-  });
-  const [deleting, setDeleting] = useState(false);
   const [editItemDialog, setEditItemDialog] = useState<{
     isOpen: boolean;
     item: NonNullable<ListTemplate["kitItems"]>[number] | null;
@@ -129,36 +124,6 @@ function ViewListPageContent() {
 
   const handleCopySuccess = () => {
     setToast({ message: "Template copied to trip!", type: "success" });
-  };
-
-  const handleDelete = async (template: ListTemplate) => {
-    if (!user) return;
-
-    setDeleting(true);
-    setError(null);
-
-    try {
-      const token = await user.getIdToken();
-      const response = await fetch(`/api/lists/templates/${template.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete template");
-      }
-
-      setToast({ message: "Template deleted successfully!", type: "success" });
-      setTimeout(() => router.push("/lists"), 1000);
-    } catch (err: any) {
-      console.error("Error deleting template:", err);
-      setError(err.message);
-    } finally {
-      setDeleting(false);
-      setDeleteConfirm({ isOpen: false, template: null });
-    }
   };
 
   const getTypeBadgeColor = (type: ListType) => {
@@ -237,93 +202,73 @@ function ViewListPageContent() {
           </div>
         )}
 
-        {/* Back Button */}
-        <div className="mb-6">
+        {/* Compact Header with Back Button and Title */}
+        <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => router.push(returnTo)}
-            className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+            className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back
           </button>
-        </div>
-
-        {/* Header Card */}
-        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6 mb-6">
-          <div className="mb-4">
-            <h1 className="text-xl font-semibold text-zinc-900 dark:text-white">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-semibold text-zinc-900 dark:text-white truncate">
               {template.title}
             </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              {template.visibility === "PUBLIC" ? "Public" : "Private"}
-            </p>
           </div>
-
-          {template.description && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-              {template.description}
-            </p>
-          )}
-
-          {/* Tags */}
-          {template.tags && template.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {template.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 text-xs text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-2 mt-6">
+          <div className="flex items-center gap-2 shrink-0">
             {isOwner && (
-              <>
-                <Button
-                  onClick={() => {
-                    // Preserve the returnTo chain so we return to the correct list page (kit vs checklists)
-                    const currentPageWithReturn = returnTo !== "/lists"
-                      ? `/lists/${template.id}?returnTo=${encodeURIComponent(returnTo)}`
-                      : `/lists/${template.id}`;
-                    const editPath = template.type === "KIT"
-                      ? `/lists/edit-kit/${template.id}?returnTo=${encodeURIComponent(currentPageWithReturn)}`
-                      : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(currentPageWithReturn)}`;
-                    router.push(editPath);
-                  }}
-                  className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => setDeleteConfirm({ isOpen: true, template })}
-                  className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
-                >
-                  Delete
-                </Button>
-              </>
+              <Button
+                onClick={() => {
+                  const currentPageWithReturn = returnTo !== "/lists"
+                    ? `/lists/${template.id}?returnTo=${encodeURIComponent(returnTo)}`
+                    : `/lists/${template.id}`;
+                  const editPath = template.type === "KIT"
+                    ? `/lists/edit-kit/${template.id}?returnTo=${encodeURIComponent(currentPageWithReturn)}`
+                    : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(currentPageWithReturn)}`;
+                  router.push(editPath);
+                }}
+                className="px-3 py-1.5 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+              >
+                Edit
+              </Button>
             )}
             {!isOwner && (
               <Button
                 onClick={() => setForkDialog({ isOpen: true, template })}
-                className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+                className="px-3 py-1.5 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
               >
                 Copy
               </Button>
             )}
             <Button
               onClick={() => setCopyDialog({ isOpen: true, template })}
-              className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+              className="px-3 py-1.5 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
             >
               Use in Trip
             </Button>
           </div>
         </div>
+
+        {/* Description and Tags - Compact */}
+        {(template.description || (template.tags && template.tags.length > 0)) && (
+          <div className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+            {template.description && <p className="mb-2">{template.description}</p>}
+            {template.tags && template.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {template.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-0.5 text-xs text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 rounded"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Items List */}
         <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
@@ -492,45 +437,6 @@ function ViewListPageContent() {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
-      {deleteConfirm.isOpen && deleteConfirm.template && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
-                  Delete Template
-                </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Are you sure you want to delete "{deleteConfirm.template.title}"? This action cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                onClick={() => setDeleteConfirm({ isOpen: false, template: null })}
-                className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => handleDelete(deleteConfirm.template!)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white"
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
