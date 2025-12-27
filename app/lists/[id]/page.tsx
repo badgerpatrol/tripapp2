@@ -8,6 +8,7 @@ import { ListType, Visibility } from "@/lib/generated/prisma";
 import { ForkTemplateDialog } from "@/components/lists/ForkTemplateDialog";
 import { CopyToTripDialog } from "@/components/lists/CopyToTripDialog";
 import { EditKitItemDialog } from "@/components/lists/EditKitItemDialog";
+import { EditTodoItemDialog } from "@/components/lists/EditTodoItemDialog";
 
 interface ListTemplate {
   id: string;
@@ -73,6 +74,13 @@ function ViewListPageContent() {
   const [editItemDialog, setEditItemDialog] = useState<{
     isOpen: boolean;
     item: NonNullable<ListTemplate["kitItems"]>[number] | null;
+  }>({
+    isOpen: false,
+    item: null,
+  });
+  const [editTodoItemDialog, setEditTodoItemDialog] = useState<{
+    isOpen: boolean;
+    item: NonNullable<ListTemplate["todoItems"]>[number] | null;
   }>({
     isOpen: false,
     item: null,
@@ -331,7 +339,8 @@ function ViewListPageContent() {
                 .map((item, index, arr) => (
                   <div
                     key={item.id}
-                    className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""}`}
+                    onClick={isOwner ? () => setEditTodoItemDialog({ isOpen: true, item }) : undefined}
+                    className={`px-4 py-2.5 flex items-center justify-between gap-3 ${index !== arr.length - 1 ? "border-b border-zinc-100 dark:border-zinc-800" : ""} ${isOwner ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 active:bg-zinc-100 dark:active:bg-zinc-800" : ""}`}
                   >
                     <span className="text-zinc-900 dark:text-white font-medium truncate">
                       {item.label}
@@ -418,7 +427,7 @@ function ViewListPageContent() {
         />
       )}
 
-      {/* Edit Item Dialog */}
+      {/* Edit Kit Item Dialog */}
       {editItemDialog.item && template && (
         <EditKitItemDialog
           isOpen={editItemDialog.isOpen}
@@ -445,6 +454,37 @@ function ViewListPageContent() {
             };
             fetchTemplate();
             setToast({ message: "Item updated", type: "success" });
+          }}
+        />
+      )}
+
+      {/* Edit Todo Item Dialog */}
+      {editTodoItemDialog.item && template && (
+        <EditTodoItemDialog
+          isOpen={editTodoItemDialog.isOpen}
+          templateId={template.id}
+          item={editTodoItemDialog.item}
+          onClose={() => setEditTodoItemDialog({ isOpen: false, item: null })}
+          onSaved={() => {
+            setEditTodoItemDialog({ isOpen: false, item: null });
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Task updated", type: "success" });
           }}
         />
       )}

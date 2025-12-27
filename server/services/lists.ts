@@ -557,6 +557,54 @@ export async function updateKitItem(
   return updatedItem;
 }
 
+/**
+ * Update a single todo item in a template
+ */
+export async function updateTodoItem(
+  actorId: string,
+  templateId: string,
+  itemId: string,
+  payload: import("@/types/schemas").TodoItemUpdateInput
+) {
+  // Verify template exists and user has permission
+  const template = await prisma.listTemplate.findUnique({
+    where: { id: templateId },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  if (!canEditTemplate(actorId, template)) {
+    throw new Error("Forbidden: Cannot edit this template");
+  }
+
+  // Verify item exists and belongs to this template
+  const item = await prisma.todoItemTemplate.findUnique({
+    where: { id: itemId },
+  });
+
+  if (!item || item.templateId !== templateId) {
+    throw new Error("Item not found");
+  }
+
+  // Build the update data object
+  const updateData: Record<string, unknown> = {};
+
+  if (payload.label !== undefined) updateData.label = payload.label;
+  if (payload.notes !== undefined) updateData.notes = payload.notes || null;
+  if (payload.perPerson !== undefined) updateData.perPerson = payload.perPerson;
+  if (payload.orderIndex !== undefined) updateData.orderIndex = payload.orderIndex;
+
+  // Update the item
+  const updatedItem = await prisma.todoItemTemplate.update({
+    where: { id: itemId },
+    data: updateData,
+  });
+
+  return updatedItem;
+}
+
 // ============================================================================
 // Trip List Management (Lists added to trips)
 // ============================================================================
