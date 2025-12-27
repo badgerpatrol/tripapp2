@@ -1,10 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useAdminMode } from "@/lib/admin/AdminModeContext";
-import { Button } from "@/components/ui/button";
+import { TopEndListPage } from "@/components/layout/TopEndListPage";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { FloatingActionButton } from "@/components/ui/FloatingActionButton";
+import { ListRow } from "@/components/ui/ListRow";
+import { ContextMenu, ContextMenuItem } from "@/components/ContextMenu";
 import { ListType, Visibility } from "@/lib/generated/prisma";
 
 interface ListTemplate {
@@ -31,15 +35,7 @@ interface ListTemplate {
     notes: string | null;
     orderIndex: number;
   }>;
-  kitItems?: Array<{
-    id: string;
-    label: string;
-    quantity: number;
-    category: string | null;
-    orderIndex: number;
-  }>;
 }
-
 
 type Tab = "my-templates" | "public-gallery";
 
@@ -48,16 +44,27 @@ function ListsPageContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { isAdminMode } = useAdminMode();
+
+  // Initialize active tab from URL parameter if present
   const tabParam = searchParams.get("tab") as Tab | null;
-  const [activeTab, setActiveTab] = useState<Tab>(tabParam || "my-templates");
+  const initialTab: Tab = tabParam === "public-gallery" ? "public-gallery" : "my-templates";
+
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
   const [publicTemplates, setPublicTemplates] = useState<ListTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const typeFilter: ListType = "TODO"; // Only show TODO lists, exclude kit lists
+  const typeFilter: ListType = "TODO";
   const [showTripCreated, setShowTripCreated] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    template: ListTemplate | null;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, template: null });
 
   useEffect(() => {
     if (!user) return;
@@ -110,7 +117,9 @@ function ListsPageContent() {
       }
 
       const data = await response.json();
-      setMyTemplates(data.templates || []);
+      // Filter to only TODO type
+      const todoTemplates = (data.templates || []).filter((t: ListTemplate) => t.type === "TODO");
+      setMyTemplates(todoTemplates);
     } catch (err: any) {
       console.error("Error fetching my templates:", err);
       setError(err.message);
@@ -126,7 +135,7 @@ function ListsPageContent() {
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set("query", searchQuery);
-      params.set("type", typeFilter); // Always filter for TODO lists only
+      params.set("type", typeFilter);
 
       const response = await fetch(`/api/lists/templates/public?${params}`);
 
@@ -144,51 +153,153 @@ function ListsPageContent() {
     }
   };
 
+  const handleRowClick = useCallback((template: ListTemplate) => {
+    const returnTo = activeTab === "public-gallery"
+      ? "/lists?tab=public-gallery"
+      : "/lists";
+    router.push(`/lists/${template.id}?returnTo=${encodeURIComponent(returnTo)}`);
+  }, [router, activeTab]);
 
-  const getTypeIcon = (type: ListType) => {
-    return type === "TODO" ? "✓" : "🎒";
-  };
+  const handleLongPress = useCallback((template: ListTemplate, e: React.Touch | React.MouseEvent) => {
+    const x = (e as { clientX: number }).clientX;
+    const y = (e as { clientY: number }).clientY;
+    setContextMenu({
+      isOpen: true,
+      position: { x, y },
+      template,
+    });
+  }, []);
 
-  const getTypeBadgeColor = (type: ListType) => {
-    return type === "TODO"
-      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-      : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-  };
+  const getContextMenuItems = useCallback((): ContextMenuItem[] => {
+    if (!contextMenu.template) return [];
 
-  const filteredMyTemplates = myTemplates.filter((t) => t.type === typeFilter);
+    const template = contextMenu.template;
+    const isOwner = template.ownerId === user?.uid;
 
-  const templates = activeTab === "my-templates" ? filteredMyTemplates : publicTemplates;
+    const items: ContextMenuItem[] = [
+      {
+        label: "Open",
+        onClick: () => handleRowClick(template),
+      },
+    ];
 
+    if (isOwner) {
+      items.push(
+        {
+          label: "Edit",
+          onClick: () => router.push(`/lists/${template.id}/edit?returnTo=/lists`),
+        },
+        {
+          label: "Duplicate",
+          onClick: async () => {
+            setToast({ message: "Duplicate coming soon", type: "success" });
+          },
+        },
+        {
+          label: "Delete",
+          variant: "danger",
+          onClick: async () => {
+            setToast({ message: "Delete coming soon", type: "success" });
+          },
+        }
+      );
+    } else {
+      items.push({
+        label: "Copy to My Lists",
+        onClick: async () => {
+          setToast({ message: "Copy coming soon", type: "success" });
+        },
+      });
+    }
+
+    return items;
+  }, [contextMenu.template, user?.uid, router, handleRowClick]);
+
+  const handleFabClick = useCallback(() => {
+    window.location.href = "/lists/create-todo";
+  }, []);
+
+  const templates = activeTab === "my-templates" ? myTemplates : publicTemplates;
+
+  // Loading state for auth
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600 mx-auto"></div>
-            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
-          </div>
+      <div className="fixed inset-0 flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600 mx-auto"></div>
+          <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">
-                📋 Checklists
-              </h1>
-              <p className="text-zinc-600 dark:text-zinc-400">
-                Create and manage reusable TODO checklist templates
-              </p>
-            </div>
-          </div>
-        </div>
+  const segmentedOptions = [
+    { value: "my-templates" as const, label: "My Checklists", count: myTemplates.length },
+    { value: "public-gallery" as const, label: "Public", count: publicTemplates.length },
+  ];
 
+  return (
+    <>
+      <TopEndListPage
+        title="Checklists"
+        stickyContent={
+          <div>
+            <SegmentedControl
+              options={segmentedOptions}
+              value={activeTab}
+              onChange={setActiveTab}
+              aria-label="Checklist sections"
+            />
+
+            {/* Filters for My Checklists */}
+            {activeTab === "my-templates" && (
+              <div className="px-4 py-2">
+                <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showTripCreated}
+                    onChange={(e) => setShowTripCreated(e.target.checked)}
+                    className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+                  />
+                  Show lists created in trips
+                </label>
+              </div>
+            )}
+
+            {/* Search for Public Gallery */}
+            {activeTab === "public-gallery" && (
+              <div className="px-4 py-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Search checklists..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
+                    className="flex-1 px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={fetchPublicTemplates}
+                      className="px-3 py-2 text-sm font-medium bg-zinc-600 hover:bg-zinc-700 text-white rounded-lg"
+                    >
+                      Search
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        }
+        fab={
+          activeTab === "my-templates" && (
+            <FloatingActionButton
+              onClick={handleFabClick}
+              aria-label="New checklist"
+            />
+          )
+        }
+      >
         {/* Toast */}
         {toast && (
           <div
@@ -210,71 +321,9 @@ function ListsPageContent() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-4 border-b border-zinc-200 dark:border-zinc-700 mb-6">
-          <button
-            onClick={() => setActiveTab("my-templates")}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === "my-templates"
-                ? "border-zinc-600 text-zinc-900 dark:text-white"
-                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
-            }`}
-          >
-            My Checklists ({filteredMyTemplates.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("public-gallery")}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === "public-gallery"
-                ? "border-zinc-600 text-zinc-900 dark:text-white"
-                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300"
-            }`}
-          >
-            Public Gallery ({publicTemplates.length})
-          </button>
-        </div>
-
-        {/* Filters for My Checklists */}
-        {activeTab === "my-templates" && (
-          <div className="flex flex-wrap gap-4 mb-6 items-center">
-            <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showTripCreated}
-                onChange={(e) => setShowTripCreated(e.target.checked)}
-                className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
-              />
-              Show lists created in trips
-            </label>
-          </div>
-        )}
-
-        {/* Filters for Public Gallery */}
-        {activeTab === "public-gallery" && (
-          <div className="flex flex-wrap gap-4 mb-6">
-            <input
-              type="text"
-              placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
-              className="flex-1 min-w-[200px] px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
-            />
-
-            {searchQuery && (
-              <Button
-                onClick={fetchPublicTemplates}
-                className="bg-zinc-600 hover:bg-zinc-700 text-white"
-              >
-                Search
-              </Button>
-            )}
-          </div>
-        )}
-
         {/* Error */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="mx-4 mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-red-800 dark:text-red-200">{error}</p>
           </div>
         )}
@@ -286,124 +335,67 @@ function ListsPageContent() {
           </div>
         )}
 
-        {/* New Checklist Button - Always show for My Checklists */}
-        {!loading && activeTab === "my-templates" && (
-          <div className="mb-6 flex justify-end">
-            <Button
-              onClick={() => window.location.href = "/lists/create-todo"}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              ✓ New Checklist
-            </Button>
-          </div>
-        )}
-
-        {/* Templates Grid */}
+        {/* Empty State */}
         {!loading && templates.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-zinc-500 dark:text-zinc-400 text-lg">
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <p className="text-lg font-medium text-zinc-900 dark:text-white mb-2">
               {activeTab === "my-templates"
-                ? "No templates yet. Create your first one!"
-                : "No public templates found. Try adjusting your filters."}
+                ? "No checklists yet"
+                : "No public checklists found"}
             </p>
+            {activeTab === "my-templates" && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                Create reusable TODO checklists for your trips
+              </p>
+            )}
+            {activeTab === "public-gallery" && searchQuery && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                Try adjusting your search terms
+              </p>
+            )}
           </div>
         )}
 
+        {/* List Content */}
         {!loading && templates.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {templates.map((template) => (
-              <div
+          <div className="bg-white dark:bg-zinc-900">
+            {templates.map((template, index) => (
+              <ListRow
                 key={template.id}
-                onClick={() => {
-                  const returnTo = activeTab === "public-gallery"
-                    ? "/lists?tab=public-gallery"
-                    : "/lists";
-                  router.push(`/lists/${template.id}?returnTo=${encodeURIComponent(returnTo)}`);
-                }}
-                className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{getTypeIcon(template.type)}</span>
-                    <h3 className="font-semibold text-zinc-900 dark:text-white">
-                      {template.title}
-                    </h3>
-                  </div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeColor(template.type)}`}>
-                    {template.type}
-                  </span>
-                </div>
-
-                {/* Description */}
-                {template.description && (
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 line-clamp-2">
-                    {template.description}
-                  </p>
-                )}
-
-                {/* Creator */}
-                {template.owner && (
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                    By {template.owner.displayName ?? "Unknown"}
-                  </div>
-                )}
-
-                {/* Stats */}
-                <div className="flex flex-wrap gap-4 text-sm text-zinc-500 dark:text-zinc-400 mb-4">
-                  <span>
-                    {template.type === "TODO"
-                      ? `${template.todoItems?.length || 0} tasks`
-                      : `${template.kitItems?.length || 0} items`}
-                  </span>
-                  {template.visibility === "PUBLIC" && (
-                    <span className="flex items-center gap-1">
-                      <span>🌐</span> Public
-                    </span>
-                  )}
-                  {template.createdInTrip && (
-                    <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                      <span>✈️</span> From trip
-                    </span>
-                  )}
-                </div>
-
-                {/* Tags */}
-                {template.tags && template.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {template.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                    {template.tags.length > 3 && (
-                      <span className="px-2 py-1 text-xs text-zinc-500">
-                        +{template.tags.length - 3}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+                primary={template.title}
+                secondary={
+                  activeTab === "public-gallery" && template.owner
+                    ? `by ${template.owner.displayName || "Unknown"}`
+                    : undefined
+                }
+                trailing={template.todoItems?.length ?? 0}
+                onClick={() => handleRowClick(template)}
+                onLongPress={(e) => handleLongPress(template, e)}
+                isLast={index === templates.length - 1}
+              />
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </TopEndListPage>
+
+      {/* Context Menu */}
+      <ContextMenu
+        isOpen={contextMenu.isOpen}
+        onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
+        position={contextMenu.position}
+        items={getContextMenuItems()}
+      />
+    </>
   );
 }
 
 export default function ListsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600 mx-auto"></div>
-            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
-          </div>
+      <div className="fixed inset-0 flex items-center justify-center bg-zinc-50 dark:bg-zinc-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-600 mx-auto"></div>
+          <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
         </div>
       </div>
     }>
