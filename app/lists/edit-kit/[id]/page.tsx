@@ -654,44 +654,42 @@ function EditKitListPageContent() {
 
           {/* Items Card */}
           <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-                Items ({items.filter((i) => i.label.trim()).length})
-              </h2>
-              <div className="flex flex-wrap gap-2">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
+              Items ({items.filter((i) => i.label.trim()).length})
+            </h2>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Button
+                type="button"
+                onClick={() => setIsPhotoScanOpen(true)}
+                className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                disabled={saving}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                </svg>
+                Scan Photo
+              </Button>
+              {!inventory && (
                 <Button
                   type="button"
-                  onClick={() => setIsPhotoScanOpen(true)}
-                  className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  onClick={() => setIsInventorySheetOpen(true)}
+                  className="text-sm px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
                   disabled={saving}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
-                  Scan From Photo
+                  From Inventory
                 </Button>
-                {!inventory && (
-                  <Button
-                    type="button"
-                    onClick={() => setIsInventorySheetOpen(true)}
-                    className="text-sm px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
-                    disabled={saving}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    From Inventory
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  onClick={addItem}
-                  className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
-                  disabled={saving}
-                >
-                  + Add Item
-                </Button>
-              </div>
+              )}
+              <Button
+                type="button"
+                onClick={addItem}
+                className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+                disabled={saving}
+              >
+                + Add Item
+              </Button>
             </div>
 
             <div className="space-y-4">
@@ -774,8 +772,8 @@ function EditKitListPageContent() {
                         />
                       </div>
 
-                      {/* Row 2: Weight, Cost, URL */}
-                      <div className="grid grid-cols-3 gap-3">
+                      {/* Row 2: Weight and Cost */}
+                      <div className="grid grid-cols-2 gap-3">
                         <input
                           type="number"
                           value={item.weightGrams}
@@ -795,39 +793,76 @@ function EditKitListPageContent() {
                           className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
                           disabled={saving}
                         />
-                        <input
-                          type="text"
-                          value={item.url}
-                          onChange={(e) => updateItem(item.id!, "url", e.target.value)}
-                          placeholder="URL (optional)"
-                          className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                          disabled={saving}
-                        />
                       </div>
 
-                      {/* Checkboxes - hide for inventory lists */}
+                      {/* Row 3: URL */}
+                      <input
+                        type="text"
+                        value={item.url}
+                        onChange={(e) => updateItem(item.id!, "url", e.target.value)}
+                        placeholder="URL (optional)"
+                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                        disabled={saving}
+                      />
+
+                      {/* Toggles - hide for inventory lists */}
                       {!inventory && (
-                        <div className="flex gap-4 text-sm">
-                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={item.perPerson}
-                              onChange={(e) => updateItem(item.id!, "perPerson", e.target.checked)}
-                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                        <div className="flex gap-3">
+                          {/* Mandatory/Optional toggle */}
+                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "required", true)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                item.required
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                               disabled={saving}
-                            />
-                            Per person
-                          </label>
-                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={item.required}
-                              onChange={(e) => updateItem(item.id!, "required", e.target.checked)}
-                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                            >
+                              Mandatory
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "required", false)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                !item.required
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                               disabled={saving}
-                            />
-                            Required
-                          </label>
+                            >
+                              Optional
+                            </button>
+                          </div>
+
+                          {/* Shared/Per Person toggle */}
+                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "perPerson", false)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                !item.perPerson
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                              disabled={saving}
+                            >
+                              Shared
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id!, "perPerson", true)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                item.perPerson
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                              disabled={saving}
+                            >
+                              Per Person
+                            </button>
+                          </div>
                         </div>
                       )}
 

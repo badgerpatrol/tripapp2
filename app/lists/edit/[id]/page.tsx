@@ -492,18 +492,32 @@ function EditListPageContent() {
                         disabled={saving}
                       />
 
-                      {/* Per Person Toggle */}
-                      <div className="flex gap-4 text-sm">
-                        <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={item.perPerson}
-                            onChange={(e) => updateItem(item.id, "perPerson", e.target.checked)}
-                            className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                            disabled={saving}
-                          />
-                          Per person
-                        </label>
+                      {/* Shared/Per Person Toggle */}
+                      <div className="flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => updateItem(item.id, "perPerson", false)}
+                          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+                            !item.perPerson
+                              ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                          }`}
+                          disabled={saving}
+                        >
+                          Shared
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateItem(item.id, "perPerson", true)}
+                          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+                            item.perPerson
+                              ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                          }`}
+                          disabled={saving}
+                        >
+                          Per Person
+                        </button>
                       </div>
 
                       {/* Action Type */}

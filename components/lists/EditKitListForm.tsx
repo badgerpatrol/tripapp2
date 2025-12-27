@@ -375,7 +375,8 @@ export function EditKitListForm({ listId, onClose, onSaved, isTripList = false }
                     disabled={saving}
                   />
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {/* Row 1: Quantity and Category */}
+                  <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
                       value={item.quantity}
@@ -394,6 +395,10 @@ export function EditKitListForm({ listId, onClose, onSaved, isTripList = false }
                       className="px-3 py-1.5 text-sm border border-zinc-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                       disabled={saving}
                     />
+                  </div>
+
+                  {/* Row 2: Weight and Cost */}
+                  <div className="grid grid-cols-2 gap-2">
                     <input
                       type="number"
                       value={item.weightGrams}

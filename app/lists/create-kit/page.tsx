@@ -386,7 +386,7 @@ function CreateKitListPageContent() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   </svg>
-                  Scan From Photo
+                  Scan Photo
                 </Button>
                 {!inventory && (
                   <Button
@@ -523,29 +523,64 @@ function CreateKitListPageContent() {
                         />
                       </div>
 
-                      {/* Checkboxes - hide for inventory lists */}
+                      {/* Toggles - hide for inventory lists */}
                       {!inventory && (
-                        <div className="flex gap-4 text-sm">
-                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={item.perPerson}
-                              onChange={(e) => updateItem(item.id, "perPerson", e.target.checked)}
-                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                        <div className="flex gap-3">
+                          {/* Mandatory/Optional toggle */}
+                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id, "required", true)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                item.required
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                               disabled={loading}
-                            />
-                            Per person
-                          </label>
-                          <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={item.required}
-                              onChange={(e) => updateItem(item.id, "required", e.target.checked)}
-                              className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                            >
+                              Mandatory
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id, "required", false)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                !item.required
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
                               disabled={loading}
-                            />
-                            Required
-                          </label>
+                            >
+                              Optional
+                            </button>
+                          </div>
+
+                          {/* Shared/Per Person toggle */}
+                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id, "perPerson", false)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                !item.perPerson
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                              disabled={loading}
+                            >
+                              Shared
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateItem(item.id, "perPerson", true)}
+                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
+                                item.perPerson
+                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                              disabled={loading}
+                            >
+                              Per Person
+                            </button>
+                          </div>
                         </div>
                       )}
 
