@@ -124,7 +124,7 @@ export default function QuickAddTodoItemSheet({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g., Book flights"
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               disabled={saving}
               required
             />

@@ -130,7 +130,7 @@ export default function QuickAddItemSheet({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g., Sleeping bag"
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              className="w-full px-4 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
               disabled={saving}
               required
             />
@@ -146,7 +146,7 @@ export default function QuickAddItemSheet({
               onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
               min="0"
               step="0.1"
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              className="w-full px-4 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
               disabled={saving}
             />
           </div>
