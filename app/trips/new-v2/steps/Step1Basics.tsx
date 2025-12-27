@@ -42,19 +42,19 @@ export default function Step1Basics({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Start Date" htmlFor="startDate" required>
+        <Field label="Start Date & Time" htmlFor="startDate" required>
           <Input
             id="startDate"
-            type="date"
+            type="datetime-local"
             value={state.startDate}
             onChange={(e) => handleStartDateChange(e.target.value)}
           />
         </Field>
 
-        <Field label="End Date" htmlFor="endDate" required>
+        <Field label="End Date & Time" htmlFor="endDate" required>
           <Input
             id="endDate"
-            type="date"
+            type="datetime-local"
             value={state.endDate}
             onChange={(e) => handleEndDateChange(e.target.value)}
             min={state.startDate}

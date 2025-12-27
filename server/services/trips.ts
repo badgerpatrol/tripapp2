@@ -129,13 +129,20 @@ async function createDefaultTimelineItems(
   const timelineItems = [];
 
   // 1. Event Created (completed)
+  // Ensure the "Event Created" date is before the event start time
+  // If not, set it to 1 second before event start
+  let eventCreatedDate = now;
+  if (startDate && now >= startDate) {
+    eventCreatedDate = new Date(startDate.getTime() - 1000); // 1 second before start
+  }
+
   timelineItems.push({
     tripId,
     title: "Event Created",
     description: "Trip planning has begun",
-    date: now,
+    date: eventCreatedDate,
     isCompleted: true,
-    completedAt: now,
+    completedAt: eventCreatedDate,
     order: 0,
     createdById: userId,
   });

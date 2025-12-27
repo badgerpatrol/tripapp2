@@ -491,11 +491,13 @@ export default function TripDetailPage() {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Not set";
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleString("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
       year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     });
   };
 
@@ -2879,13 +2881,13 @@ export default function TripDetailPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                          Date
+                          Date & Time
                         </label>
                         <input
-                          type="date"
+                          type="datetime-local"
                           value={newMilestoneDate}
                           onChange={(e) => setNewMilestoneDate(e.target.value)}
-                          className="w-full max-w-[200px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                          className="w-full max-w-[240px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
                         />
                       </div>
                       <div className="flex gap-2 pt-2">
@@ -2984,10 +2986,10 @@ export default function TripDetailPage() {
                       {isEditing && (
                         <div className="mt-3 space-y-2">
                           <input
-                            type="date"
+                            type="datetime-local"
                             value={editingTimelineDate}
                             onChange={(e) => setEditingTimelineDate(e.target.value)}
-                            className="w-full max-w-[180px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                            className="w-full max-w-[220px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
                           />
                           <div className="flex gap-2">
                             <button
@@ -3017,7 +3019,18 @@ export default function TripDetailPage() {
                         <button
                           onClick={() => {
                             setEditingTimelineItemId(item.id);
-                            setEditingTimelineDate(item.date ? new Date(item.date).toISOString().split("T")[0] : "");
+                            // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
+                            if (item.date) {
+                              const d = new Date(item.date);
+                              const year = d.getFullYear();
+                              const month = String(d.getMonth() + 1).padStart(2, '0');
+                              const day = String(d.getDate()).padStart(2, '0');
+                              const hours = String(d.getHours()).padStart(2, '0');
+                              const minutes = String(d.getMinutes()).padStart(2, '0');
+                              setEditingTimelineDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+                            } else {
+                              setEditingTimelineDate("");
+                            }
                           }}
                           className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
                           title="Edit milestone date"

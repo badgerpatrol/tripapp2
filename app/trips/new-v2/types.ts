@@ -24,7 +24,7 @@ export interface WizardState {
 
   // Step 1 - Basics
   name: string;
-  startDate: string; // YYYY-MM-DD format
+  startDate: string; // YYYY-MM-DDTHH:MM format for datetime-local
   endDate: string;
   description: string;
 
@@ -53,11 +53,23 @@ export interface WizardState {
   headerImagePreview: string | null;
 }
 
+// Helper to get current datetime in local format for datetime-local input
+function getCurrentDateTimeLocal(): string {
+  const now = new Date();
+  // Format: YYYY-MM-DDTHH:MM (for datetime-local input)
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export const INITIAL_WIZARD_STATE: WizardState = {
   tripId: null,
   name: '',
-  startDate: new Date().toISOString().split('T')[0],
-  endDate: new Date().toISOString().split('T')[0],
+  startDate: getCurrentDateTimeLocal(),
+  endDate: getCurrentDateTimeLocal(),
   description: '',
   location: '',
   baseCurrency: 'GBP',

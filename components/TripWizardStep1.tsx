@@ -46,8 +46,19 @@ export default function TripWizardStep1({ tripId: initialTripId, onCancel }: Tri
           const trip = data.trip;
           if (trip) {
             const loadedName = trip.name || "";
-            const loadedStartDate = trip.startDate ? trip.startDate.split("T")[0] : "";
-            const loadedEndDate = trip.endDate ? trip.endDate.split("T")[0] : "";
+            // Format dates for datetime-local input (YYYY-MM-DDTHH:MM)
+            const formatDateTimeLocal = (dateString: string | null): string => {
+              if (!dateString) return "";
+              const d = new Date(dateString);
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              const hours = String(d.getHours()).padStart(2, '0');
+              const minutes = String(d.getMinutes()).padStart(2, '0');
+              return `${year}-${month}-${day}T${hours}:${minutes}`;
+            };
+            const loadedStartDate = formatDateTimeLocal(trip.startDate);
+            const loadedEndDate = formatDateTimeLocal(trip.endDate);
 
             setName(loadedName);
             setStartDate(loadedStartDate);
@@ -251,19 +262,19 @@ export default function TripWizardStep1({ tripId: initialTripId, onCancel }: Tri
 
       {/* Date Range */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
-        <Field label="Start Date" htmlFor="startDate">
+        <Field label="Start Date & Time" htmlFor="startDate">
           <Input
             id="startDate"
-            type="date"
+            type="datetime-local"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
         </Field>
 
-        <Field label="End Date" htmlFor="endDate">
+        <Field label="End Date & Time" htmlFor="endDate">
           <Input
             id="endDate"
-            type="date"
+            type="datetime-local"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             min={startDate || undefined}

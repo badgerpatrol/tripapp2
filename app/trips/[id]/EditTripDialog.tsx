@@ -33,13 +33,25 @@ export default function EditTripDialog({
 }: EditTripDialogProps) {
   const { user, userProfile } = useAuth();
   const router = useRouter();
+  // Helper to format date for datetime-local input (YYYY-MM-DDTHH:MM)
+  const formatDateTimeLocal = (dateString: string | null): string => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [formData, setFormData] = useState({
     name: trip.name,
     description: trip.description || "",
     location: trip.location || "",
     baseCurrency: trip.baseCurrency,
-    startDate: trip.startDate ? trip.startDate.split("T")[0] : "",
-    endDate: trip.endDate ? trip.endDate.split("T")[0] : "",
+    startDate: formatDateTimeLocal(trip.startDate),
+    endDate: formatDateTimeLocal(trip.endDate),
     signUpMode: trip.signUpMode || false,
     signInMode: trip.signInMode || false,
     signUpPassword: trip.signUpPassword || "",
@@ -402,10 +414,10 @@ export default function EditTripDialog({
                   htmlFor="startDate"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                 >
-                  Start Date
+                  Start Date & Time
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   id="startDate"
                   name="startDate"
                   value={formData.startDate}
@@ -419,10 +431,10 @@ export default function EditTripDialog({
                   htmlFor="endDate"
                   className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                 >
-                  End Date
+                  End Date & Time
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   id="endDate"
                   name="endDate"
                   value={formData.endDate}
