@@ -279,9 +279,10 @@ function ViewListPageContent() {
               <>
                 <Button
                   onClick={() => {
+                    const currentPage = `/lists/${template.id}`;
                     const editPath = template.type === "KIT"
-                      ? `/lists/edit-kit/${template.id}?returnTo=${encodeURIComponent(returnTo)}`
-                      : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(returnTo)}`;
+                      ? `/lists/edit-kit/${template.id}?returnTo=${encodeURIComponent(currentPage)}`
+                      : `/lists/edit/${template.id}?returnTo=${encodeURIComponent(currentPage)}`;
                     router.push(editPath);
                   }}
                   className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
