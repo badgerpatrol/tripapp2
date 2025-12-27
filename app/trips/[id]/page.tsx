@@ -3394,6 +3394,7 @@ export default function TripDetailPage() {
         tripId={tripId}
         user={user}
         onSuccess={handleEditSuccess}
+        existingMilestones={trip?.timeline?.map((t) => ({ id: t.id, title: t.title })) || []}
       />
     </div>
   );
