@@ -122,7 +122,61 @@ export async function listMyTemplates(ownerId: string, query?: ListMyTemplatesQu
     orderBy: { updatedAt: "desc" },
   });
 
-  return templates;
+  // For templates created in trips, find the associated trip name
+  // Trip copies reference the master template via sourceTemplateId
+  const createdInTripTemplateIds = templates
+    .filter((t) => t.createdInTrip)
+    .map((t) => t.id);
+
+  if (createdInTripTemplateIds.length > 0) {
+    // Find trip copies that reference these templates
+    const tripCopies = await prisma.listTemplate.findMany({
+      where: {
+        sourceTemplateId: { in: createdInTripTemplateIds },
+        tripId: { not: null },
+      },
+      select: {
+        sourceTemplateId: true,
+        tripId: true,
+      },
+    });
+
+    // Get unique trip IDs
+    const tripIds = [...new Set(tripCopies.map((c) => c.tripId).filter((id): id is string => id !== null))];
+
+    // Fetch trip names
+    const trips = tripIds.length > 0
+      ? await prisma.trip.findMany({
+          where: { id: { in: tripIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+
+    const tripMap = new Map(trips.map((t) => [t.id, t.name]));
+
+    // Map sourceTemplateId to trip name (use first trip if multiple)
+    const templateToTripName = new Map<string, string>();
+    for (const copy of tripCopies) {
+      if (copy.sourceTemplateId && copy.tripId && !templateToTripName.has(copy.sourceTemplateId)) {
+        const tripName = tripMap.get(copy.tripId);
+        if (tripName) {
+          templateToTripName.set(copy.sourceTemplateId, tripName);
+        }
+      }
+    }
+
+    // Add tripName to templates
+    return templates.map((t) => ({
+      ...t,
+      createdInTripName: t.createdInTrip ? templateToTripName.get(t.id) ?? null : null,
+    }));
+  }
+
+  // No createdInTrip templates, return as-is with null tripName
+  return templates.map((t) => ({
+    ...t,
+    createdInTripName: null,
+  }));
 }
 
 /**

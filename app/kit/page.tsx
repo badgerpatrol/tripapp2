@@ -25,6 +25,7 @@ interface ListTemplate {
   createdAt: string;
   updatedAt: string;
   createdInTrip?: boolean;
+  createdInTripName?: string | null;
   owner?: {
     id: string;
     displayName: string | null;
@@ -270,7 +271,12 @@ function KitPageContent() {
     }
   }, [activeTab]);
 
-  const templates = activeTab === "my-templates" ? myTemplates : activeTab === "public-gallery" ? publicTemplates : inventoryTemplates;
+  // Filter my templates by search query
+  const filteredMyTemplates = myTemplates.filter((t) =>
+    t.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const templates = activeTab === "my-templates" ? filteredMyTemplates : activeTab === "public-gallery" ? publicTemplates : inventoryTemplates;
 
   // Loading state for auth
   if (authLoading || !user) {
@@ -294,6 +300,17 @@ function KitPageContent() {
     <>
       <TopEndListPage
         title="Kit"
+        titleRight={
+          <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={showTripCreated}
+              onChange={(e) => setShowTripCreated(e.target.checked)}
+              className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
+            />
+            Show from trips
+          </label>
+        }
         stickyContent={
           <div>
             <SegmentedControl
@@ -303,44 +320,27 @@ function KitPageContent() {
               aria-label="Kit list sections"
             />
 
-            {/* Filters for My Kit Lists */}
-            {activeTab === "my-templates" && (
-              <div className="px-4 py-2">
-                <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showTripCreated}
-                    onChange={(e) => setShowTripCreated(e.target.checked)}
-                    className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500"
-                  />
-                  Show lists created in trips
-                </label>
+            {/* Search box - shown for all tabs */}
+            <div className="px-4 py-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Search kit lists..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && activeTab === "public-gallery" && fetchPublicTemplates()}
+                  className="flex-1 px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                />
+                {searchQuery && activeTab === "public-gallery" && (
+                  <button
+                    onClick={fetchPublicTemplates}
+                    className="px-3 py-2 text-sm font-medium bg-zinc-600 hover:bg-zinc-700 text-white rounded-lg"
+                  >
+                    Search
+                  </button>
+                )}
               </div>
-            )}
-
-            {/* Search for Public Gallery */}
-            {activeTab === "public-gallery" && (
-              <div className="px-4 py-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Search kit templates..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && fetchPublicTemplates()}
-                    className="flex-1 px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={fetchPublicTemplates}
-                      className="px-3 py-2 text-sm font-medium bg-zinc-600 hover:bg-zinc-700 text-white rounded-lg"
-                    >
-                      Search
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         }
         fab={
@@ -424,7 +424,9 @@ function KitPageContent() {
                 primary={template.title}
                 secondary={
                   activeTab === "public-gallery" && template.owner
-                    ? template.owner.displayName || "Unknown"
+                    ? `by ${template.owner.displayName || "Unknown"}`
+                    : template.createdInTripName
+                    ? `from ${template.createdInTripName}`
                     : undefined
                 }
                 trailing={template.kitItems?.length ?? true}

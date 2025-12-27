@@ -5,6 +5,8 @@ import { ReactNode, useRef, useState, useEffect } from "react";
 export interface TopEndListPageProps {
   /** Page title (e.g., "Kit", "Checklists") */
   title: string;
+  /** Content to display to the right of the title */
+  titleRight?: ReactNode;
   /** Whether title should collapse on scroll. Default: true */
   collapsibleTitle?: boolean;
   /** Sticky content below title (e.g., SegmentedControl, filters) */
@@ -29,6 +31,7 @@ export interface TopEndListPageProps {
  */
 export function TopEndListPage({
   title,
+  titleRight,
   collapsibleTitle = true,
   stickyContent,
   children,
@@ -63,9 +66,12 @@ export function TopEndListPage({
               : "pt-4 pb-2"
           }`}
         >
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
-            {title}
-          </h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
+              {title}
+            </h1>
+            {titleRight}
+          </div>
         </div>
 
         {/* Compact title when collapsed */}
