@@ -726,7 +726,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                 className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden"
               >
                 {/* List Header */}
-                <div className="flex items-center">
+                <div className="flex items-center min-w-0 overflow-hidden">
                   <button
                     onClick={() => {
                       if (shouldExpandInline) {
@@ -735,13 +735,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         onOpenList(list.id, list.title);
                       }
                     }}
-                    className="flex-1 p-4 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
+                    className="flex-1 min-w-0 p-4 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{getTypeIcon(list.type)}</span>
-                      <div className="text-left">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-zinc-900 dark:text-white">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xl shrink-0">{getTypeIcon(list.type)}</span>
+                      <div className="text-left min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-medium text-zinc-900 dark:text-white truncate">
                             {list.title}
                           </h3>
                           {list.hasTemplateUpdated && (
@@ -756,12 +756,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5 shrink-0">
                       {/* Personal Progress Bar */}
                       {personalTotal > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12 text-right">You</span>
-                          <div className="w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                          <div className="w-16 sm:w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
                             <div
                               className="h-1.5 rounded-full transition-all bg-blue-600"
                               style={{ width: `${personalPercentage}%` }}
@@ -774,7 +774,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                       {sharedTotal > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12 text-right">Shared</span>
-                          <div className="w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                          <div className="w-16 sm:w-24 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
                             <div
                               className="h-1.5 rounded-full transition-all bg-green-600"
                               style={{ width: `${sharedPercentage}%` }}
@@ -792,7 +792,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     e.stopPropagation();
                     setReportListId(list.id);
                   }}
-                  className="p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                  className="shrink-0 p-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
                   title="View report"
                 >
                   <svg
@@ -817,7 +817,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                       e.stopPropagation();
                       setDeleteConfirmation({ listId: list.id, listTitle: list.title });
                     }}
-                    className="p-4 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group"
+                    className="shrink-0 p-4 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors group"
                     title="Delete list"
                   >
                     <svg
@@ -844,7 +844,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                       setEditingListId(list.id);
                       setEditingListType(list.type);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
                     title="Edit list"
                   >
                     <svg
@@ -867,12 +867,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
 
                 {/* Expanded Items - only in workflow mode */}
                 {isExpanded && shouldExpandInline && (
-                  <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50">
+                  <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50 overflow-hidden">
                     {/* Quick Add Item */}
                     {isOrganizer && (
                       <div className="mb-4">
                         {quickAddListId === list.id ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
                             <input
                               type="text"
                               value={quickAddValue}
@@ -886,13 +886,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                                 }
                               }}
                               placeholder={list.type === "TODO" ? "New task..." : "New item..."}
-                              className="flex-1 px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="flex-1 min-w-0 px-3 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               autoFocus
                             />
                             <button
                               onClick={() => handleQuickAddItem(list.id, list.type)}
                               disabled={!quickAddValue.trim()}
-                              className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                              className="shrink-0 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-lg transition-colors"
                             >
                               Add
                             </button>
@@ -901,9 +901,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                                 setQuickAddListId(null);
                                 setQuickAddValue("");
                               }}
-                              className="px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                              className="shrink-0 p-2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+                              title="Cancel"
                             >
-                              Cancel
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
                             </button>
                           </div>
                         ) : (

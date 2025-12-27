@@ -92,14 +92,14 @@ export default function QuickAddTodoItemSheet({
       />
 
       {/* Sheet */}
-      <div className="relative w-full max-w-md bg-white dark:bg-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-xl p-6 animate-in slide-in-from-bottom duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+      <div className="relative w-full max-w-md mx-4 sm:mx-auto bg-white dark:bg-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-xl p-6 animate-in slide-in-from-bottom duration-200 overflow-hidden">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white truncate min-w-0">
             Add Item to "{templateTitle}"
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            className="shrink-0 p-2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

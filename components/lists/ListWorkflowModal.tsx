@@ -132,22 +132,22 @@ export function ListWorkflowModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-hidden box-border">
+      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" style={{ maxWidth: 'min(56rem, calc(100vw - 2rem))' }}>
         {/* Header */}
-        <div className="p-6 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white">
+        <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between min-w-0 overflow-hidden">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-white truncate">
               {title}
             </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 truncate">
               {description}
             </p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 min-w-0">
           <TripListsPanel
             key={refreshKey}
             tripId={tripId}
@@ -169,7 +169,7 @@ export function ListWorkflowModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
+        <div className="p-4 sm:p-6 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
           <div className="flex justify-between items-center">
             
             <Button
