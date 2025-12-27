@@ -2831,142 +2831,163 @@ export default function TripDetailPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-start gap-4 p-4 rounded-lg border ${
+                    className={`px-4 py-3 rounded-lg border ${
                       item.isCompleted
                         ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
                         : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700"
                     }`}
                   >
-                    {canInvite && !isViewer ? (
-                      <button
-                        onClick={() => handleToggleTimelineItem(item.id)}
-                        disabled={togglingTimelineItemId === item.id}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                          item.isCompleted
-                            ? "bg-green-500 text-white hover:bg-green-600"
-                            : "bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400 dark:hover:bg-zinc-500"
-                        }`}
-                        title={item.isCompleted ? "Mark as incomplete" : "Mark as complete"}
-                      >
-                        {togglingTimelineItemId === item.id ? (
-                          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        ) : item.isCompleted ? (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : null}
-                      </button>
-                    ) : (
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          item.isCompleted
-                            ? "bg-green-500 text-white"
-                            : "bg-zinc-300 dark:bg-zinc-600"
-                        }`}
-                      >
-                        {item.isCompleted && (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium text-zinc-900 dark:text-zinc-100">{item.title}</p>
-                      {!isEditing && item.date && (
-                        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mt-1">
-                          {formatDate(item.date)}
-                        </p>
-                      )}
-                      {item.isCompleted && item.triggerType && (
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                          {item.triggerType === 'MANUAL' ? '✓ Closed manually' : '⏰ Closed automatically (deadline reached)'}
-                        </p>
-                      )}
-                      {isEditing && (
-                        <div className="mt-3 space-y-2">
-                          <input
-                            type="datetime-local"
-                            value={editingTimelineDate}
-                            onChange={(e) => setEditingTimelineDate(e.target.value)}
-                            className="w-full max-w-[220px] px-3 py-2 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditTimelineDate(item.id, editingTimelineDate)}
-                              className="tap-target flex-1 px-3 py-2 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingTimelineItemId(null);
-                                setEditingTimelineDate("");
-                              }}
-                              className="tap-target flex-1 px-3 py-2 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      {item.description && (
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{item.description}</p>
-                      )}
-                    </div>
-                    {!isEditing && canEdit && (
-                      <div className="flex gap-1 self-start">
-                        <button
-                          onClick={() => {
-                            setEditingTimelineItemId(item.id);
-                            // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
-                            if (item.date) {
-                              const d = new Date(item.date);
-                              const year = d.getFullYear();
-                              const month = String(d.getMonth() + 1).padStart(2, '0');
-                              const day = String(d.getDate()).padStart(2, '0');
-                              const hours = String(d.getHours()).padStart(2, '0');
-                              const minutes = String(d.getMinutes()).padStart(2, '0');
-                              setEditingTimelineDate(`${year}-${month}-${day}T${hours}:${minutes}`);
-                            } else {
-                              setEditingTimelineDate("");
-                            }
-                          }}
-                          className="tap-target p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-                          title="Edit milestone date"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        {!isSystemMilestone && (
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox */}
+                      <div className="pt-0.5">
+                        {canInvite && !isViewer ? (
                           <button
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete the milestone "${item.title}"?`)) {
-                                handleDeleteTimelineItem(item.id);
-                              }
-                            }}
-                            disabled={deletingTimelineItemId === item.id}
-                            className="tap-target p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Delete milestone"
+                            onClick={() => handleToggleTimelineItem(item.id)}
+                            disabled={togglingTimelineItemId === item.id}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                              item.isCompleted
+                                ? "bg-green-500 text-white hover:bg-green-600"
+                                : "bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400 dark:hover:bg-zinc-500"
+                            }`}
+                            title={item.isCompleted ? "Mark as incomplete" : "Mark as complete"}
                           >
-                            {deletingTimelineItemId === item.id ? (
-                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            {togglingTimelineItemId === item.id ? (
+                              <svg className="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                               </svg>
-                            ) : (
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            ) : item.isCompleted ? (
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : null}
+                          </button>
+                        ) : (
+                          <div
+                            className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              item.isCompleted
+                                ? "bg-green-500 text-white"
+                                : "bg-zinc-300 dark:bg-zinc-600"
+                            }`}
+                          >
+                            {item.isCompleted && (
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                               </svg>
                             )}
-                          </button>
+                          </div>
                         )}
                       </div>
-                    )}
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        {!isEditing ? (
+                          <>
+                            {/* Title row with actions */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`font-medium text-sm ${item.isCompleted ? "text-green-800 dark:text-green-200" : "text-zinc-900 dark:text-zinc-100"}`}>
+                                  {item.title}
+                                </span>
+                                {item.isCompleted && item.triggerType && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-green-200 dark:bg-green-800 text-green-700 dark:text-green-300">
+                                    {item.triggerType === 'MANUAL' ? 'manual' : 'auto'}
+                                  </span>
+                                )}
+                              </div>
+                              {/* Actions - inline with title */}
+                              {canEdit && (
+                                <div className="flex gap-0.5 flex-shrink-0">
+                                  <button
+                                    onClick={() => {
+                                      setEditingTimelineItemId(item.id);
+                                      if (item.date) {
+                                        const d = new Date(item.date);
+                                        const year = d.getFullYear();
+                                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                                        const day = String(d.getDate()).padStart(2, '0');
+                                        const hours = String(d.getHours()).padStart(2, '0');
+                                        const minutes = String(d.getMinutes()).padStart(2, '0');
+                                        setEditingTimelineDate(`${year}-${month}-${day}T${hours}:${minutes}`);
+                                      } else {
+                                        setEditingTimelineDate("");
+                                      }
+                                    }}
+                                    className="p-1.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                    title="Edit milestone date"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  {!isSystemMilestone && (
+                                    <button
+                                      onClick={() => {
+                                        if (confirm(`Are you sure you want to delete the milestone "${item.title}"?`)) {
+                                          handleDeleteTimelineItem(item.id);
+                                        }
+                                      }}
+                                      disabled={deletingTimelineItemId === item.id}
+                                      className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-zinc-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Delete milestone"
+                                    >
+                                      {deletingTimelineItemId === item.id ? (
+                                        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                      ) : (
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            {/* Description row */}
+                            {item.description && (
+                              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+                                {item.description}
+                              </p>
+                            )}
+                            {/* Date row */}
+                            {item.date && (
+                              <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+                                {formatDate(item.date)}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <div className="space-y-2">
+                            <input
+                              type="datetime-local"
+                              value={editingTimelineDate}
+                              onChange={(e) => setEditingTimelineDate(e.target.value)}
+                              className="w-full max-w-[220px] px-2 py-1.5 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEditTimelineDate(item.id, editingTimelineDate)}
+                                className="tap-target px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingTimelineItemId(null);
+                                  setEditingTimelineDate("");
+                                }}
+                                className="tap-target px-3 py-1.5 text-sm rounded bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-700 dark:text-zinc-300 font-medium transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 );
               })}
