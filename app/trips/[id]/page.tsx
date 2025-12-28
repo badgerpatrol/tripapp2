@@ -2715,13 +2715,7 @@ export default function TripDetailPage() {
                   <button
                     onClick={() => handleToggleTripSpendStatus()}
                     disabled={isTogglingSpendStatus}
-                    className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
-                      (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
-                        ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                        : (trip.totalUnassigned || 0) > 0.00
-                        ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400"
-                        : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                    }`}
+                    className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isTogglingSpendStatus ? "Working..." : `${(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending`}
                   </button>
@@ -2763,12 +2757,36 @@ export default function TripDetailPage() {
                         }, 0).toFixed(2)}
                       </p>
                     </div>
-                    <div className="p-2 sm:p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Unassigned</p>
-                      <p className="text-sm sm:text-lg font-bold text-amber-700 dark:text-amber-300">
-                        {trip.baseCurrency} {(trip.totalUnassigned || 0).toFixed(2)}
-                      </p>
-                    </div>
+                    {(() => {
+                      const unassigned = trip.totalUnassigned || 0;
+                      const totalSpent = trip.totalSpent || 0;
+                      const isFullyAssigned = unassigned < 0.01;
+                      const isPartiallyAssigned = !isFullyAssigned && totalSpent > 0 && unassigned < totalSpent;
+                      // Green if fully assigned, amber if partially assigned, red if nothing assigned
+                      const colorClasses = isFullyAssigned
+                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                        : isPartiallyAssigned
+                        ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
+                      const textColorClasses = isFullyAssigned
+                        ? "text-green-600 dark:text-green-400"
+                        : isPartiallyAssigned
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-red-600 dark:text-red-400";
+                      const valueColorClasses = isFullyAssigned
+                        ? "text-green-700 dark:text-green-300"
+                        : isPartiallyAssigned
+                        ? "text-amber-700 dark:text-amber-300"
+                        : "text-red-700 dark:text-red-300";
+                      return (
+                        <div className={`p-2 sm:p-3 rounded-lg border ${colorClasses}`}>
+                          <p className={`text-xs font-medium ${textColorClasses}`}>Unassigned</p>
+                          <p className={`text-sm sm:text-lg font-bold ${valueColorClasses}`}>
+                            {trip.baseCurrency} {unassigned.toFixed(2)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
