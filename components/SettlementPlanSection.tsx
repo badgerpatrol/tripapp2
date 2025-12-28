@@ -244,21 +244,19 @@ export default function SettlementPlanSection({
       <div className="space-y-6">
         {/* Settlement Plan with Payment Tracking */}
         <div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-            {getFilteredSettlements().length > 0
-              ? `${getFilteredSettlements().length} ${
-                  getFilteredSettlements().length === 1 ? "transfer" : "transfers"
-                } needed to settle all balances`
-              : "All balanced!"}
-          </p>
-
           {getFilteredSettlements().length === 0 ? (
             <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center">
               <p className="text-green-600 dark:text-green-400 font-medium">
-                All balanced! No settlements needed.
+                {balanceData.totalSpent === 0 ? "Nothing to settle." : "All balanced!"}
               </p>
             </div>
           ) : (
+            <>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                {getFilteredSettlements().length}{" "}
+                {getFilteredSettlements().length === 1 ? "transfer" : "transfers"} needed to
+                settle all balances
+              </p>
             <div className="space-y-3">
               {getFilteredSettlements().map((settlement, index) => {
                 // Find matching persisted settlement for this calculated settlement
@@ -421,6 +419,7 @@ export default function SettlementPlanSection({
                 );
               })}
             </div>
+            </>
           )}
         </div>
 

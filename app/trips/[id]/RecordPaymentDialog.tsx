@@ -293,7 +293,7 @@ export default function RecordPaymentDialog({
                 full
                 size="lg"
               >
-                {isSubmitting ? "Recording..." : "Record Payment"}
+                {isSubmitting ? "Recording..." : "Save"}
               </Button>
             </div>
           </form>

@@ -412,6 +412,11 @@ export default function TripDetailPage() {
       }
 
       setTrip(tripData);
+
+      // Set initial costs tab based on spend status
+      if (tripData.spendStatus === SpendStatus.CLOSED) {
+        setCostsTab("settlement");
+      }
     } catch (err) {
       console.error("Error fetching trip:", err);
       setError(err instanceof Error ? err.message : "Failed to load trip. Please try again.");
@@ -1542,6 +1547,9 @@ export default function TripDetailPage() {
           const tripData = await tripResponse.json();
           setTrip(tripData.trip);
 
+          // Switch to appropriate tab based on new status
+          setCostsTab(isClosing ? "settlement" : "spends");
+
           // Show success message
           if (data.message) {
             alert(data.message);
@@ -2572,8 +2580,8 @@ export default function TripDetailPage() {
           />
         )}
 
-        {/* Balance Summary (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined || trip.totalUnassigned !== undefined) && (
+        {/* Balance Summary (for accepted members) - Hidden for now */}
+        {false && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
             {/* Header row with title and toggle */}
             <div className="flex items-center justify-between gap-3">
@@ -2653,14 +2661,7 @@ export default function TripDetailPage() {
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
             {/* Header row with title, close/reopen button, and collapse toggle */}
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Costs</h2>
-                {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
-                    Spending Closed
-                  </span>
-                )}
-              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Costs</h2>
               <div className="flex items-center gap-2">
                 {/* Close/Reopen Spending button */}
                 {canInvite && !isViewer && !collapsedSections.costs && (
@@ -2735,7 +2736,7 @@ export default function TripDetailPage() {
                             onClick={() => setIsAddSpendDialogOpen(true)}
                             className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
                           >
-                            + Add Spend
+                            + Add
                           </button>
                         </div>
                       )}
