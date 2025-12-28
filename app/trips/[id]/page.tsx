@@ -2745,6 +2745,33 @@ export default function TripDetailPage() {
 
             {!collapsedSections.costs && (
               <>
+                {/* User Cost Summary */}
+                {trip.spends && user && (
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-4">
+                    <div className="p-2 sm:p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">You Paid</p>
+                      <p className="text-sm sm:text-lg font-bold text-purple-700 dark:text-purple-300">
+                        {trip.baseCurrency} {trip.spends.filter(s => s.paidBy.id === user.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="p-2 sm:p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Your Share</p>
+                      <p className="text-sm sm:text-lg font-bold text-blue-700 dark:text-blue-300">
+                        {trip.baseCurrency} {trip.spends.reduce((sum, spend) => {
+                          const userAssignment = spend.assignments?.find(a => a.userId === user.uid);
+                          return sum + (userAssignment?.normalizedShareAmount || 0);
+                        }, 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="p-2 sm:p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Unassigned</p>
+                      <p className="text-sm sm:text-lg font-bold text-amber-700 dark:text-amber-300">
+                        {trip.baseCurrency} {(trip.totalUnassigned || 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Tabs */}
                 <div className="mt-3 flex border-b border-zinc-200 dark:border-zinc-700">
                   <button
