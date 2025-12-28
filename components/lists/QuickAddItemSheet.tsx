@@ -10,6 +10,7 @@ interface QuickAddItemSheetProps {
   templateId: string;
   templateTitle: string;
   onItemAdded: () => void;
+  isInventory?: boolean;
 }
 
 export default function QuickAddItemSheet({
@@ -18,12 +19,24 @@ export default function QuickAddItemSheet({
   templateId,
   templateTitle,
   onItemAdded,
+  isInventory = false,
 }: QuickAddItemSheetProps) {
   const { user } = useAuth();
   const [label, setLabel] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [required, setRequired] = useState(true);
   const [perPerson, setPerPerson] = useState(false);
+  // Inventory-specific fields
+  const [category, setCategory] = useState("");
+  const [weightGrams, setWeightGrams] = useState("");
+  const [cost, setCost] = useState("");
+  const [url, setUrl] = useState("");
+  const [date, setDate] = useState("");
+  const [needsRepair, setNeedsRepair] = useState(false);
+  const [conditionNotes, setConditionNotes] = useState("");
+  const [lost, setLost] = useState(false);
+  const [lastSeenText, setLastSeenText] = useState("");
+  const [lastSeenDate, setLastSeenDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +57,16 @@ export default function QuickAddItemSheet({
       setQuantity(1);
       setRequired(true);
       setPerPerson(false);
+      setCategory("");
+      setWeightGrams("");
+      setCost("");
+      setUrl("");
+      setDate("");
+      setNeedsRepair(false);
+      setConditionNotes("");
+      setLost(false);
+      setLastSeenText("");
+      setLastSeenDate("");
       setError(null);
     }
   }, [isOpen]);
@@ -58,18 +81,40 @@ export default function QuickAddItemSheet({
 
     try {
       const token = await user.getIdToken();
+
+      // Build the payload based on whether this is an inventory list
+      const payload: Record<string, unknown> = {
+        label: label.trim(),
+        quantity,
+      };
+
+      if (isInventory) {
+        // Inventory-specific fields
+        if (category.trim()) payload.category = category.trim();
+        if (weightGrams) payload.weightGrams = parseInt(weightGrams);
+        if (cost) payload.cost = parseFloat(cost);
+        if (url.trim()) payload.url = url.trim();
+        if (date) payload.date = new Date(date).toISOString();
+        payload.needsRepair = needsRepair;
+        if (needsRepair && conditionNotes.trim()) payload.conditionNotes = conditionNotes.trim();
+        payload.lost = lost;
+        if (lost) {
+          if (lastSeenText.trim()) payload.lastSeenText = lastSeenText.trim();
+          if (lastSeenDate) payload.lastSeenDate = new Date(lastSeenDate).toISOString();
+        }
+      } else {
+        // Kit list fields
+        payload.required = required;
+        payload.perPerson = perPerson;
+      }
+
       const response = await fetch(`/api/lists/templates/${templateId}/kit-items`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          label: label.trim(),
-          quantity,
-          required,
-          perPerson,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -151,61 +196,224 @@ export default function QuickAddItemSheet({
             />
           </div>
 
-          {/* Mandatory/Optional toggle */}
-          <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setRequired(true)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                required
-                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-              disabled={saving}
-            >
-              Mandatory
-            </button>
-            <button
-              type="button"
-              onClick={() => setRequired(false)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                !required
-                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-              disabled={saving}
-            >
-              Optional
-            </button>
-          </div>
+          {/* Kit list fields - hide for inventory */}
+          {!isInventory && (
+            <>
+              {/* Mandatory/Optional toggle */}
+              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setRequired(true)}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    required
+                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                  disabled={saving}
+                >
+                  Mandatory
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequired(false)}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    !required
+                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                  disabled={saving}
+                >
+                  Optional
+                </button>
+              </div>
 
-          {/* Shared/Per Person toggle */}
-          <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-            <button
-              type="button"
-              onClick={() => setPerPerson(false)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                !perPerson
-                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-              disabled={saving}
-            >
-              Shared
-            </button>
-            <button
-              type="button"
-              onClick={() => setPerPerson(true)}
-              className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
-                perPerson
-                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-              }`}
-              disabled={saving}
-            >
-              Per Person
-            </button>
-          </div>
+              {/* Shared/Per Person toggle */}
+              <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setPerPerson(false)}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    !perPerson
+                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                  disabled={saving}
+                >
+                  Shared
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPerPerson(true)}
+                  className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                    perPerson
+                      ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                  disabled={saving}
+                >
+                  Per Person
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Inventory-specific fields */}
+          {isInventory && (
+            <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+              {/* Category and Weight */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="e.g., Shelter"
+                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Weight (g)
+                  </label>
+                  <input
+                    type="number"
+                    value={weightGrams}
+                    onChange={(e) => setWeightGrams(e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              {/* Cost and Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Cost
+                  </label>
+                  <input
+                    type="number"
+                    value={cost}
+                    onChange={(e) => setCost(e.target.value)}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Date Acquired
+                  </label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              {/* URL */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  URL
+                </label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  disabled={saving}
+                />
+              </div>
+
+              {/* Needs Repair */}
+              <div>
+                <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={needsRepair}
+                    onChange={(e) => setNeedsRepair(e.target.checked)}
+                    className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
+                    disabled={saving}
+                  />
+                  Needs Repair
+                </label>
+              </div>
+
+              {/* Condition Notes - only show when needsRepair is checked */}
+              {needsRepair && (
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Condition Notes
+                  </label>
+                  <textarea
+                    value={conditionNotes}
+                    onChange={(e) => setConditionNotes(e.target.value)}
+                    placeholder="Describe the repair needed..."
+                    rows={2}
+                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                </div>
+              )}
+
+              {/* Lost */}
+              <div>
+                <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={lost}
+                    onChange={(e) => setLost(e.target.checked)}
+                    className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
+                    disabled={saving}
+                  />
+                  Lost
+                </label>
+              </div>
+
+              {/* Last Seen fields - only show when lost is checked */}
+              {lost && (
+                <div className="space-y-3 pl-4 border-l-2 border-red-300 dark:border-red-700">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Last Seen Location
+                    </label>
+                    <input
+                      type="text"
+                      value={lastSeenText}
+                      onChange={(e) => setLastSeenText(e.target.value)}
+                      placeholder="e.g., Left at campsite"
+                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      disabled={saving}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Last Seen Date
+                    </label>
+                    <input
+                      type="date"
+                      value={lastSeenDate}
+                      onChange={(e) => setLastSeenDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button

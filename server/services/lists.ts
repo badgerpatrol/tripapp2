@@ -90,17 +90,25 @@ export async function createTemplate(
 
 export interface ListMyTemplatesQuery {
   createdInTrip?: boolean; // Filter by createdInTrip flag (true = only trip-created, false = only directly created, undefined = all)
+  inventory?: boolean; // Filter by inventory flag (true = only inventory, false = only non-inventory, undefined = all)
 }
 
 /**
- * List my templates (private + my public), excluding inventory lists and trip copies
+ * List my templates (private + my public), excluding trip copies
+ * By default excludes inventory lists unless inventory filter is specified
  */
 export async function listMyTemplates(ownerId: string, query?: ListMyTemplatesQuery) {
   const where: any = {
     ownerId,
-    inventory: false,
     tripId: null, // Exclude trip-specific copies
   };
+
+  // Apply inventory filter if specified, otherwise default to non-inventory
+  if (query?.inventory !== undefined) {
+    where.inventory = query.inventory;
+  } else {
+    where.inventory = false;
+  }
 
   // Apply createdInTrip filter if specified
   if (query?.createdInTrip !== undefined) {

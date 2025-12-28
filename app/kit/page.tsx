@@ -115,11 +115,12 @@ function KitPageContent() {
     try {
       const token = await user.getIdToken();
       const params = new URLSearchParams();
+      params.set("inventory", "false"); // Explicitly exclude inventory lists
       if (isAdminMode) params.set("adminMode", "true");
       // By default hide trip-created lists unless checkbox is checked
       if (!showTripCreated) params.set("createdInTrip", "false");
 
-      const url = `/api/lists/templates${params.toString() ? `?${params}` : ""}`;
+      const url = `/api/lists/templates?${params}`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -131,8 +132,8 @@ function KitPageContent() {
       }
 
       const data = await response.json();
-      // Filter to only KIT type and not inventory
-      const kitTemplates = (data.templates || []).filter((t: ListTemplate) => t.type === "KIT" && !t.inventory);
+      // Filter to only KIT type (inventory filter already applied on server)
+      const kitTemplates = (data.templates || []).filter((t: ListTemplate) => t.type === "KIT");
       setMyTemplates(kitTemplates);
     } catch (err: any) {
       console.error("Error fetching my templates:", err);
@@ -150,7 +151,11 @@ function KitPageContent() {
 
     try {
       const token = await user.getIdToken();
-      const url = isAdminMode ? "/api/lists/templates?adminMode=true" : "/api/lists/templates";
+      const params = new URLSearchParams();
+      params.set("inventory", "true");
+      if (isAdminMode) params.set("adminMode", "true");
+
+      const url = `/api/lists/templates?${params}`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -162,8 +167,8 @@ function KitPageContent() {
       }
 
       const data = await response.json();
-      // Filter to only KIT type and inventory mode
-      const inventoryKits = (data.templates || []).filter((t: ListTemplate) => t.type === "KIT" && t.inventory);
+      // Filter to only KIT type (inventory filter already applied on server)
+      const inventoryKits = (data.templates || []).filter((t: ListTemplate) => t.type === "KIT");
       setInventoryTemplates(inventoryKits);
     } catch (err: any) {
       console.error("Error fetching inventory templates:", err);
@@ -393,6 +398,7 @@ function KitPageContent() {
         onClose={() => setQuickAddSheet({ ...quickAddSheet, isOpen: false })}
         templateId={quickAddSheet.template?.id || ""}
         templateTitle={quickAddSheet.template?.title || ""}
+        isInventory={quickAddSheet.template?.inventory || false}
         onItemAdded={() => {
           // Refresh the templates list
           if (activeTab === "my-templates") {
