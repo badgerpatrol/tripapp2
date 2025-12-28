@@ -460,6 +460,7 @@ function ViewListPageContent() {
           onClose={() => setAddItemSheetOpen(false)}
           templateId={template.id}
           templateTitle={template.title}
+          isInventory={template.inventory || false}
           onItemAdded={() => {
             // Refresh the template data
             const fetchTemplate = async () => {

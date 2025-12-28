@@ -12,6 +12,7 @@ import { UserRole } from "@/lib/generated/prisma";
  * Query params:
  * - adminMode: "true" to get all templates (admin only)
  * - createdInTrip: "true" for trip-created lists only, "false" for directly-created only, omit for all
+ * - inventory: "true" for inventory lists only, "false" for non-inventory only, omit for non-inventory (default)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -31,11 +32,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const adminMode = searchParams.get("adminMode") === "true";
     const createdInTripParam = searchParams.get("createdInTrip");
+    const inventoryParam = searchParams.get("inventory");
 
     // Parse createdInTrip filter
     const createdInTrip = createdInTripParam === "true"
       ? true
       : createdInTripParam === "false"
+        ? false
+        : undefined;
+
+    // Parse inventory filter
+    const inventory = inventoryParam === "true"
+      ? true
+      : inventoryParam === "false"
         ? false
         : undefined;
 
@@ -52,8 +61,8 @@ export async function GET(request: NextRequest) {
       // Get all templates
       templates = await getAllTemplates();
     } else {
-      // Get user's templates with optional filter
-      templates = await listMyTemplates(auth.uid, { createdInTrip });
+      // Get user's templates with optional filters
+      templates = await listMyTemplates(auth.uid, { createdInTrip, inventory });
     }
 
     return NextResponse.json(

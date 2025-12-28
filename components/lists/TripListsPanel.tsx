@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
 import { ListReportDialog } from "./ListReportDialog";
-import { EditTodoListForm } from "./EditTodoListForm";
-import { EditKitListForm } from "./EditKitListForm";
 
 interface ItemTick {
   id: string;
@@ -76,12 +75,14 @@ interface TripListsPanelProps {
   isOrganizer?: boolean; // If false and no lists exist, component will not render
   hideContainer?: boolean; // If true, will not render the outer container wrapper (for use when wrapped externally)
   onListsLoaded?: (count: number) => void; // Callback when lists are loaded, reports the count
+  onListsData?: (listIds: string[], sourceTemplateIds: string[]) => void; // Callback with list IDs for deduplication
   listTypeFilter?: ListType; // If set, only show lists of this type (TODO or KIT)
   hideAddButton?: boolean; // If true, hides the main +Add button (for when parent controls it)
   onAddClick?: () => void; // Callback when add is triggered (allows parent to control the dialog)
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, listTypeFilter, hideAddButton = false, onAddClick }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, onListsData, listTypeFilter, hideAddButton = false, onAddClick }: TripListsPanelProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +97,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [deleting, setDeleting] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [reportListId, setReportListId] = useState<string | null>(null);
-  const [editingListId, setEditingListId] = useState<string | null>(null);
-  const [editingListType, setEditingListType] = useState<ListType | null>(null);
   const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
   const [quickAddValue, setQuickAddValue] = useState("");
 
@@ -142,6 +141,15 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         onListsLoaded(fetchedLists.length);
       }
 
+      // Notify parent of list IDs for deduplication
+      if (onListsData) {
+        const listIds = fetchedLists.map((l: ListInstance) => l.id);
+        const sourceTemplateIds = fetchedLists
+          .filter((l: ListInstance) => l.sourceTemplateId)
+          .map((l: ListInstance) => l.sourceTemplateId!);
+        onListsData(listIds, sourceTemplateIds);
+      }
+
       // In workflow mode, expand the selected list or the first list by default
       if (inWorkflowMode && fetchedLists.length > 0 && !expandedListId) {
         if (selectedListId) {
@@ -156,6 +164,9 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       // Notify parent that loading is complete (with 0 lists) even on error
       if (onListsLoaded) {
         onListsLoaded(0);
+      }
+      if (onListsData) {
+        onListsData([], []);
       }
     } finally {
       setLoading(false);
@@ -604,8 +615,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         </div>
       )}
 
-      {/* Filter dropdowns - collapsible */}
-      {!inWorkflowMode && shouldShowFilters && (
+      {/* Filter dropdowns - collapsible (hidden for Kit Lists section) */}
+      {!inWorkflowMode && shouldShowFilters && listTypeFilter !== "KIT" && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-zinc-600 dark:text-zinc-400">Filters & Sort</span>
@@ -784,8 +795,11 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setEditingListId(list.id);
-                      setEditingListType(list.type);
+                      if (list.type === "KIT") {
+                        router.push(`/lists/edit-kit/${list.id}?returnTo=/trips/${tripId}`);
+                      } else {
+                        router.push(`/lists/edit/${list.id}?returnTo=/trips/${tripId}`);
+                      }
                     }}
                     className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
                     title="Edit list"
@@ -1091,6 +1105,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           fetchLists(); // Refresh the lists after adding
         }}
         listTypeFilter={listTypeFilter}
+        existingListIds={lists.map(l => l.id)}
+        existingSourceTemplateIds={lists.filter(l => l.sourceTemplateId).map(l => l.sourceTemplateId!)}
       />
 
       {/* List Report Dialog */}
@@ -1109,53 +1125,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           />
         );
       })()}
-
-      {/* Edit List Dialog */}
-      {editingListId && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 overflow-hidden">
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-3xl w-full h-auto max-h-[calc(100vh-2rem)] flex flex-col p-6 overflow-hidden">
-            {editingListType === "TODO" ? (
-              <EditTodoListForm
-                listId={editingListId}
-                onClose={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                }}
-                onSaved={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after editing
-                }}
-                onDeleted={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after deleting
-                }}
-                isTripList={true}
-              />
-            ) : (
-              <EditKitListForm
-                listId={editingListId}
-                onClose={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                }}
-                onSaved={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after editing
-                }}
-                onDeleted={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after deleting
-                }}
-                isTripList={true}
-              />
-            )}
-          </div>
-        </div>
-      )}
     </>
   );
 

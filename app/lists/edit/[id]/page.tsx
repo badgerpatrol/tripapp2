@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import Header from "@/components/Header";
@@ -40,6 +40,7 @@ function EditListPageContent() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const newItemInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -94,7 +95,7 @@ function EditListPageContent() {
   const addItem = () => {
     setItems([
       {
-        id: `new-${crypto.randomUUID()}`, // Prefix new items with 'new-'
+        id: `new-${crypto.randomUUID()}`,
         label: "",
         notes: "",
         perPerson: false,
@@ -105,6 +106,10 @@ function EditListPageContent() {
       },
       ...items,
     ]);
+    // Focus the new item's input after render
+    setTimeout(() => {
+      newItemInputRef.current?.focus();
+    }, 50);
   };
 
   const removeItem = (id: string) => {
@@ -121,19 +126,16 @@ function EditListPageContent() {
         // When actionType changes, initialize or clear parameters
         if (field === 'actionType') {
           if (value === 'SET_MILESTONE') {
-            // Initialize with milestoneName parameter if not present
             updated.parameters = updated.parameters || {};
             if (!updated.parameters.milestoneName) {
               updated.parameters.milestoneName = '';
             }
           } else if (value === 'CREATE_CHOICE') {
-            // Initialize with choiceName parameter if not present
             updated.parameters = updated.parameters || {};
             if (!updated.parameters.choiceName) {
               updated.parameters.choiceName = '';
             }
           } else if (value === null || value === '') {
-            // Clear parameters when action is removed
             updated.parameters = null;
           }
         }
@@ -189,7 +191,7 @@ function EditListPageContent() {
         visibility,
         tags: tagsArray.length > 0 ? tagsArray : [],
         todoItems: validItems.map((item, idx) => ({
-          id: item.id.startsWith('new-') ? undefined : item.id, // Don't send ID for new items
+          id: item.id.startsWith('new-') ? undefined : item.id,
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
           perPerson: item.perPerson,
@@ -243,8 +245,9 @@ function EditListPageContent() {
         throw new Error("Failed to delete list");
       }
 
-      // Navigate to lists page after deletion
-      router.push("/lists");
+      // Navigate back - if we came from a trip, go back there; otherwise go to lists
+      const tripMatch = returnTo.match(/^\/trips\/[^/]+/);
+      router.push(tripMatch ? tripMatch[0] : "/lists");
     } catch (err: any) {
       console.error("Error deleting list:", err);
       setError(err.message);
@@ -253,13 +256,13 @@ function EditListPageContent() {
     }
   };
 
-  if (authLoading || !user) {
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading...</p>
           </div>
         </div>
@@ -267,30 +270,21 @@ function EditListPageContent() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
-        <Header />
-        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading template...</p>
-          </div>
-        </div>
-      </div>
-    );
+  if (!user) {
+    router.push("/login");
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50 dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 overflow-x-hidden">
       <Header />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <button
-              onClick={() => router.push(`/lists/${templateId}`)}
+              onClick={() => router.push(returnTo)}
               className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,7 +321,7 @@ function EditListPageContent() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Pre-Trip Planning Tasks"
-                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   disabled={saving}
                   required
                 />
@@ -340,9 +334,9 @@ function EditListPageContent() {
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Brief description of this TODO list"
+                  placeholder="Brief description of this checklist"
                   rows={3}
-                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   disabled={saving}
                 />
               </div>
@@ -356,100 +350,103 @@ function EditListPageContent() {
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
                   placeholder="e.g., planning, essentials"
-                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   disabled={saving}
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="visibility-public"
-                  checked={visibility === "PUBLIC"}
-                  onChange={(e) => setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")}
-                  className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-zinc-300 dark:border-zinc-600 rounded focus:ring-blue-500"
-                  disabled={saving}
-                />
-                <label htmlFor="visibility-public" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Public
+              <div>
+                <label className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={visibility === "PUBLIC"}
+                    onChange={(e) => setVisibility(e.target.checked ? "PUBLIC" : "PRIVATE")}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                    disabled={saving}
+                  />
+                  <span className="font-medium">Public</span>
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                    (Make this list visible to others)
+                  </span>
                 </label>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-4 justify-between pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700">
-              <Button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                disabled={saving || deleting}
-              >
-                Delete
-              </Button>
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  onClick={() => router.push(`/lists/${templateId}`)}
-                  className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-100 font-medium"
-                  disabled={saving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : "Save"}
-                </Button>
               </div>
             </div>
           </div>
 
+          {/* Actions */}
+          <div className="grid grid-cols-3 gap-2 w-full">
+            <Button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full text-xs sm:text-sm px-1 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center"
+              disabled={saving || deleting}
+            >
+              Delete
+            </Button>
+            <Button
+              type="button"
+              onClick={() => router.push(returnTo)}
+              className="w-full text-xs sm:text-sm px-1 sm:px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200 flex items-center justify-center"
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="w-full text-xs sm:text-sm px-1 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+
           {/* Tasks Card */}
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-                Tasks ({items.filter((i) => i.label.trim()).length})
-              </h2>
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 overflow-hidden">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
+              Tasks ({items.filter((i) => i.label.trim()).length})
+            </h2>
+
+            <div className="flex flex-wrap gap-2 mb-4">
               <Button
                 type="button"
                 onClick={addItem}
-                className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 sm:gap-2"
                 disabled={saving}
               >
-                + Add Task
+                <span>+ Add Task</span>
               </Button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {items.map((item, index) => (
                 <div
                   key={item.id}
-                  className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                  className="p-3 sm:p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors overflow-hidden"
                 >
-                  {/* Task Header */}
-                  <div className="flex items-start gap-3 mb-3">
-                    {/* Drag Handle / Number */}
-                    <div className="flex flex-col gap-1 pt-2">
+                  {/* Item Header - Controls Row */}
+                  <div className="flex items-center justify-between mb-3">
+                    {/* Left side: Position controls */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400 w-6 text-center">
+                        {index + 1}
+                      </span>
                       <button
                         type="button"
                         onClick={() => moveItem(item.id, "up")}
                         disabled={index === 0 || saving}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move up"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                         </svg>
                       </button>
-                      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center">
-                        {index + 1}
-                      </span>
                       <button
                         type="button"
                         onClick={() => moveItem(item.id, "down")}
                         disabled={index === items.length - 1 || saving}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move down"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -457,32 +454,50 @@ function EditListPageContent() {
                       </button>
                     </div>
 
-                    {/* Task Input */}
-                    <div className="flex-1 space-y-2">
-                      <input
-                        type="text"
-                        value={item.label}
-                        onChange={(e) => updateItem(item.id, "label", e.target.value)}
-                        placeholder="Task description"
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                        disabled={saving}
-                      />
+                    {/* Right side: Delete button */}
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="p-1.5 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                      disabled={saving}
+                      title="Delete task"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
 
-                      <textarea
-                        value={item.notes}
-                        onChange={(e) => updateItem(item.id, "notes", e.target.value)}
-                        placeholder="Optional notes or details"
-                        rows={2}
-                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-                        disabled={saving}
-                      />
+                  {/* Item Input Fields - Full Width */}
+                  <div className="space-y-3">
+                    {/* Task Name */}
+                    <input
+                      type="text"
+                      ref={index === 0 ? newItemInputRef : undefined}
+                      value={item.label}
+                      onChange={(e) => updateItem(item.id, "label", e.target.value)}
+                      placeholder="Task description *"
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      disabled={saving}
+                    />
 
-                      {/* Shared/Per Person Toggle */}
-                      <div className="flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                    {/* Notes */}
+                    <textarea
+                      value={item.notes}
+                      onChange={(e) => updateItem(item.id, "notes", e.target.value)}
+                      placeholder="Notes (optional)"
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                      disabled={saving}
+                    />
+
+                    {/* Shared/Per Person Toggle */}
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                      <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
                         <button
                           type="button"
                           onClick={() => updateItem(item.id, "perPerson", false)}
-                          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+                          className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
                             !item.perPerson
                               ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
                               : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -494,7 +509,7 @@ function EditListPageContent() {
                         <button
                           type="button"
                           onClick={() => updateItem(item.id, "perPerson", true)}
-                          className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-md transition-colors ${
+                          className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
                             item.perPerson
                               ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
                               : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -504,24 +519,16 @@ function EditListPageContent() {
                           Per Person
                         </button>
                       </div>
-
                     </div>
-
-                    {/* Delete Button */}
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                      disabled={saving}
-                      title="Delete task"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
               ))}
+
+              {items.length === 0 && (
+                <p className="text-center text-zinc-500 dark:text-zinc-400 py-8">
+                  No tasks yet. Click "+ Add Task" to add one.
+                </p>
+              )}
             </div>
           </div>
         </form>

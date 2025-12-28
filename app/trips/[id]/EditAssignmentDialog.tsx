@@ -362,7 +362,7 @@ export default function EditAssignmentDialog({
                       disabled={isSubmitting || !amount || parseFloat(amount) < 0 || !canEdit}
                       className="tap-target flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? "Updating..." : "Update Amount"}
+                      {isSubmitting ? "Updating..." : "Save"}
                     </button>
                   </div>
 

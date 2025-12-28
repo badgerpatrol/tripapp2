@@ -199,9 +199,13 @@ export default function TripDetailPage() {
   const [kitListsCount, setKitListsCount] = useState<number | null>(null); // null = not yet loaded
   const [isAddChecklistDialogOpen, setIsAddChecklistDialogOpen] = useState(false);
   const [isAddKitListDialogOpen, setIsAddKitListDialogOpen] = useState(false);
+  const [checklistIds, setChecklistIds] = useState<string[]>([]);
+  const [checklistSourceTemplateIds, setChecklistSourceTemplateIds] = useState<string[]>([]);
+  const [kitListIds, setKitListIds] = useState<string[]>([]);
+  const [kitListSourceTemplateIds, setKitListSourceTemplateIds] = useState<string[]>([]);
 
   // Toggle state for showing spends when spending is closed
-  const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
+  const [costsTab, setCostsTab] = useState<"spends" | "settlement">("spends");
 
   // Spend filtering and sorting state
   const [statusFilter, setStatusFilter] = useState<SpendStatus | "all">("all");
@@ -217,8 +221,7 @@ export default function TripDetailPage() {
     rsvp: boolean;
     balance: boolean;
     choices: boolean;
-    spends: boolean;
-    settlement: boolean;
+    costs: boolean;
     members: boolean;
     timeline: boolean;
     checklists: boolean;
@@ -228,8 +231,7 @@ export default function TripDetailPage() {
     rsvp: false,
     balance: false,
     choices: false,
-    spends: false,
-    settlement: false,
+    costs: false,
     members: false,
     timeline: false,
     checklists: false,
@@ -255,8 +257,7 @@ export default function TripDetailPage() {
       rsvp: false,
       balance: false,
       choices: false,
-      spends: false,
-      settlement: false,
+      costs: false,
       members: false,
       timeline: false,
       checklists: false,
@@ -270,8 +271,7 @@ export default function TripDetailPage() {
       rsvp: true,
       balance: true,
       choices: true,
-      spends: true,
-      settlement: true,
+      costs: true,
       members: true,
       timeline: true,
       checklists: true,
@@ -412,6 +412,11 @@ export default function TripDetailPage() {
       }
 
       setTrip(tripData);
+
+      // Set initial costs tab based on spend status
+      if (tripData.spendStatus === SpendStatus.CLOSED) {
+        setCostsTab("settlement");
+      }
     } catch (err) {
       console.error("Error fetching trip:", err);
       setError(err instanceof Error ? err.message : "Failed to load trip. Please try again.");
@@ -733,6 +738,53 @@ export default function TripDetailPage() {
   const handleSplitRemainderSpend = (spendId: string) => {
     setSelectedSpendId(spendId);
     setIsSplitRemainderDialogOpen(true);
+  };
+
+  const handleClearAssignments = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    const spend = trip.spends?.find((s) => s.id === spendId);
+    if (!spend || !spend.assignments || spend.assignments.length === 0) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to clear all assignment amounts? The people will remain on the spend but their amounts will be set to zero."
+    );
+    if (!confirmed) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Set all existing assignments to zero
+      const zeroedAssignments = spend.assignments.map((a) => ({
+        userId: a.userId,
+        shareAmount: 0,
+        normalizedShareAmount: 0,
+        splitType: "AMOUNT" as const,
+      }));
+
+      const response = await fetch(`/api/spends/${spendId}/assignments`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assignments: zeroedAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to clear assignments");
+      }
+
+      // Refresh trip data
+      await fetchTrip();
+    } catch (err) {
+      console.error("Error clearing assignments:", err);
+      alert(err instanceof Error ? err.message : "Failed to clear assignments");
+    }
   };
 
   const handleEditAssignment = async (assignmentId: string) => {
@@ -1542,6 +1594,9 @@ export default function TripDetailPage() {
           const tripData = await tripResponse.json();
           setTrip(tripData.trip);
 
+          // Switch to appropriate tab based on new status
+          setCostsTab(isClosing ? "settlement" : "spends");
+
           // Show success message
           if (data.message) {
             alert(data.message);
@@ -1866,7 +1921,116 @@ export default function TripDetailPage() {
             </div>
           </div>
         </div>
-        
+
+        {/* Current RSVP Status (for users who have responded) */}
+        {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
+          <div className={`rounded-xl shadow-sm border p-6 mb-6 relative ${
+            trip.userRsvpStatus === "ACCEPTED"
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+              : trip.userRsvpStatus === "DECLINED"
+              ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+              : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
+          }`}>
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('rsvp')}
+              className={`absolute top-2 right-2 tap-target p-2 rounded-lg transition-colors ${
+                trip.userRsvpStatus === "ACCEPTED"
+                  ? "hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
+                  : trip.userRsvpStatus === "DECLINED"
+                  ? "hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
+                  : "hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"
+              }`}
+              aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.rsvp ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            <div className="flex items-center gap-4 pr-10">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                trip.userRsvpStatus === "ACCEPTED"
+                  ? "bg-green-100 dark:bg-green-900/50"
+                  : trip.userRsvpStatus === "DECLINED"
+                  ? "bg-red-100 dark:bg-red-900/50"
+                  : "bg-yellow-100 dark:bg-yellow-900/50"
+              }`}>
+                <svg className={`w-6 h-6 ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "text-green-600 dark:text-green-400"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-yellow-600 dark:text-yellow-400"
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {trip.userRsvpStatus === "ACCEPTED" ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  ) : trip.userRsvpStatus === "DECLINED" ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  )}
+                </svg>
+              </div>
+              <div>
+                <h3 className={`text-lg font-bold ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "text-green-900 dark:text-green-100"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "text-red-900 dark:text-red-100"
+                    : "text-yellow-900 dark:text-yellow-100"
+                }`}>
+                  {trip.userRsvpStatus === "ACCEPTED" && "Accepted"}
+                  {trip.userRsvpStatus === "DECLINED" && "Declined"}
+                  {trip.userRsvpStatus === "MAYBE" && "Faffing"}
+                </h3>
+              </div>
+            </div>
+
+            {!collapsedSections.rsvp && (
+              <>
+                {/* Quick change buttons */}
+                {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
+                  <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-current/20">
+                    <button
+                      onClick={() => handleRsvpResponse("ACCEPTED")}
+                      disabled={trip.userRsvpStatus === "ACCEPTED" || isRsvpResponding !== null}
+                      className="tap-target px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isRsvpResponding === "ACCEPTED" ? "Working..." : "Accept"}
+                    </button>
+                    <button
+                      onClick={() => handleRsvpResponse("MAYBE")}
+                      disabled={trip.userRsvpStatus === "MAYBE" || isRsvpResponding !== null}
+                      className="tap-target px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-500 hover:bg-amber-600 text-white"
+                    >
+                      {isRsvpResponding === "MAYBE" ? "Working..." : "Maybe"}
+                    </button>
+                    <button
+                      onClick={() => handleRsvpResponse("DECLINED")}
+                      disabled={trip.userRsvpStatus === "DECLINED" || isRsvpResponding !== null}
+                      className="tap-target px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {isRsvpResponding === "DECLINED" ? "Working..." : "Decline"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4 pt-4 border-t border-current/20">
+                    <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                      <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+                        RSVP is closed. Contact the organizer if you need to change your response.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Checklists Section (for accepted members) - only show for organizers or when checklists exist */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (checklistsCount !== null && checklistsCount > 0)) ? (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
@@ -1922,6 +2086,10 @@ export default function TripDetailPage() {
                     setIsListWorkflowModalOpen(true);
                   }}
                   onListsLoaded={setChecklistsCount}
+                  onListsData={(ids, sourceIds) => {
+                    setChecklistIds(ids);
+                    setChecklistSourceTemplateIds(sourceIds);
+                  }}
                 />
               </div>
             )}
@@ -2025,6 +2193,10 @@ export default function TripDetailPage() {
                     setIsListWorkflowModalOpen(true);
                   }}
                   onListsLoaded={setKitListsCount}
+                  onListsData={(ids, sourceIds) => {
+                    setKitListIds(ids);
+                    setKitListSourceTemplateIds(sourceIds);
+                  }}
                 />
               </div>
             )}
@@ -2151,123 +2323,6 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Current RSVP Status (for users who have responded) */}
-        {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
-          <div className={`rounded-xl shadow-sm border p-6 md:p-8 mb-6 relative ${
-            trip.userRsvpStatus === "ACCEPTED"
-              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-              : trip.userRsvpStatus === "DECLINED"
-              ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-              : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
-          }`}>
-            {/* Toggle button - absolute positioned top right */}
-            <button
-              onClick={() => toggleSection('rsvp')}
-              className={`absolute top-2 right-2 tap-target p-2 rounded-lg transition-colors ${
-                trip.userRsvpStatus === "ACCEPTED"
-                  ? "hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
-                  : trip.userRsvpStatus === "DECLINED"
-                  ? "hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
-                  : "hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"
-              }`}
-              aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {collapsedSections.rsvp ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                )}
-              </svg>
-            </button>
-            <div className="flex items-start gap-4 pr-10">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                trip.userRsvpStatus === "ACCEPTED"
-                  ? "bg-green-100 dark:bg-green-900/50"
-                  : trip.userRsvpStatus === "DECLINED"
-                  ? "bg-red-100 dark:bg-red-900/50"
-                  : "bg-yellow-100 dark:bg-yellow-900/50"
-              }`}>
-                <svg className={`w-6 h-6 ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "text-green-600 dark:text-green-400"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-yellow-600 dark:text-yellow-400"
-                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {trip.userRsvpStatus === "ACCEPTED" ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  ) : trip.userRsvpStatus === "DECLINED" ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  )}
-                </svg>
-              </div>
-              <div>
-                <h3 className={`text-lg font-bold mb-1 ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "text-green-900 dark:text-green-100"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "text-red-900 dark:text-red-100"
-                    : "text-yellow-900 dark:text-yellow-100"
-                }`}>
-                  You {trip.userRsvpStatus === "ACCEPTED" ? "accepted" : trip.userRsvpStatus === "DECLINED" ? "declined" : "might attend"} this invitation
-                </h3>
-                <p className={`text-sm ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "text-green-700 dark:text-green-300"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "text-red-700 dark:text-red-300"
-                    : "text-yellow-700 dark:text-yellow-300"
-                }`}>
-                  {trip.userRsvpStatus === "ACCEPTED" && "Of course you're in!"}
-                  {trip.userRsvpStatus === "DECLINED" && "Shunning it."}
-                  {trip.userRsvpStatus === "MAYBE" && "Faffing at the moment but will make your mind up later."}
-                </p>
-              </div>
-            </div>
-
-            {!collapsedSections.rsvp && (
-              <>
-                {/* Quick change buttons */}
-                {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-current/20">
-                <button
-                  onClick={() => handleRsvpResponse("ACCEPTED")}
-                  disabled={trip.userRsvpStatus === "ACCEPTED" || isRsvpResponding !== null}
-                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                >
-                  {isRsvpResponding === "ACCEPTED" ? "Working..." : "Accept"}
-                </button>
-                <button
-                  onClick={() => handleRsvpResponse("MAYBE")}
-                  disabled={trip.userRsvpStatus === "MAYBE" || isRsvpResponding !== null}
-                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                >
-                  {isRsvpResponding === "MAYBE" ? "Working..." : "Maybe"}
-                </button>
-                <button
-                  onClick={() => handleRsvpResponse("DECLINED")}
-                  disabled={trip.userRsvpStatus === "DECLINED" || isRsvpResponding !== null}
-                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                >
-                  {isRsvpResponding === "DECLINED" ? "Working..." : "Decline"}
-                </button>
-              </div>
-            ) : (
-              <div className="mt-4 pt-4 border-t border-current/20">
-                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">
-                    RSVP is closed. Contact the organizer if you need to change your response.
-                  </p>
-                </div>
-              </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
         {/* Members */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
           {/* Header row with title, +Add button, and toggle */}
@@ -2564,8 +2619,8 @@ export default function TripDetailPage() {
           />
         )}
 
-        {/* Balance Summary (for accepted members) */}
-        {trip.userRsvpStatus === "ACCEPTED" && (trip.userOwes !== undefined || trip.userIsOwed !== undefined || trip.totalSpent !== undefined || trip.totalUnassigned !== undefined) && (
+        {/* Balance Summary (for accepted members) - Hidden for now */}
+        {false && (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
             {/* Header row with title and toggle */}
             <div className="flex items-center justify-between gap-3">
@@ -2588,50 +2643,50 @@ export default function TripDetailPage() {
             {!collapsedSections.balance && (
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Trip Spend - Always show */}
-              {trip.totalSpent !== undefined && (
+              {trip?.totalSpent !== undefined && (
                 <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
                   <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Total Trip Spend</p>
                   <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    {trip.baseCurrency} {trip.totalSpent.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.totalSpent?.toFixed(2)}
                   </p>
                 </div>
               )}
 
               {/* Your Spend - Calculate from spends where user is the payer */}
-              {trip.spends !== undefined && user && (
+              {trip?.spends !== undefined && user && (
                 <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800">
                   <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mb-1">Your Spend</p>
                   <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-                    {trip.baseCurrency} {trip.spends.filter(s => s.paidBy.id === user.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
+                    {trip?.baseCurrency} {trip?.spends?.filter(s => s.paidBy.id === user?.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
                   </p>
                 </div>
               )}
 
               {/* Show You Owe / You Are Owed only when spend is CLOSED */}
-              {trip.spendStatus === SpendStatus.CLOSED && trip.userOwes !== undefined && trip.userOwes > 0 && (
+              {trip?.spendStatus === SpendStatus.CLOSED && (trip?.userOwes ?? 0) > 0 && (
                 <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800">
                   <p className="text-sm text-red-600 dark:text-red-400 font-medium mb-1">You Owe</p>
                   <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                    {trip.baseCurrency} {trip.userOwes.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.userOwes?.toFixed(2)}
                   </p>
                 </div>
               )}
 
-              {trip.spendStatus === SpendStatus.CLOSED && trip.userIsOwed !== undefined && trip.userIsOwed > 0 && (
+              {trip?.spendStatus === SpendStatus.CLOSED && (trip?.userIsOwed ?? 0) > 0 && (
                 <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
                   <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">You Are Owed</p>
                   <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                    {trip.baseCurrency} {trip.userIsOwed.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.userIsOwed?.toFixed(2)}
                   </p>
                 </div>
               )}
 
               {/* Unassigned Spend - Show when spend is OPEN */}
-              {trip.spendStatus === SpendStatus.OPEN && trip.totalUnassigned !== undefined && (
+              {trip?.spendStatus === SpendStatus.OPEN && trip?.totalUnassigned !== undefined && (
                 <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
                   <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-1">Unassigned Spend</p>
                   <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                    {trip.baseCurrency} {trip.totalUnassigned.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.totalUnassigned?.toFixed(2)}
                   </p>
                 </div>
               )}
@@ -2640,169 +2695,223 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Spends or Settlement Plan (for accepted members) */}
+        {/* Costs Section (for accepted members) */}
         {trip.userRsvpStatus === "ACCEPTED" && (
-          <>
-            {/* Show Settlement Plan when spending is closed and not toggled to show spends */}
-            {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && !showSpendsWhenClosed ? (
-              <SettlementPlanSection
-                tripId={trip.id}
-                baseCurrency={trip.baseCurrency}
-                tripRsvpStatus={trip.rsvpStatus}
-                participants={trip.participants}
-                onToggleSpends={() => setShowSpendsWhenClosed(true)}
-                onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
-                canReopenSpending={canInvite}
-                isReopeningSpending={isTogglingSpendStatus}
-                collapsed={collapsedSections.settlement}
-                onToggleCollapse={() => toggleSection('settlement')}
-              />
-            ) : (
-              /* Show Spends section when spending is open OR when toggled to show spends */
-              <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
-                {/* Header row with title, +Add button, and toggle */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Spends</h2>
-                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 whitespace-nowrap">
-                        Spending Closed
-                      </span>
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
+            {/* Header row with title, close/reopen button, and collapse toggle */}
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Costs</h2>
+              <div className="flex items-center gap-2">
+                {/* Close/Reopen Spending button */}
+                {canInvite && !isViewer && !collapsedSections.costs && (
+                  <button
+                    onClick={() => handleToggleTripSpendStatus()}
+                    disabled={isTogglingSpendStatus}
+                    className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isTogglingSpendStatus ? "Working..." : `${(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending`}
+                  </button>
+                )}
+                {/* Collapse toggle */}
+                <button
+                  onClick={() => toggleSection('costs')}
+                  className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+                  aria-label={collapsedSections.costs ? "Expand section" : "Collapse section"}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {collapsedSections.costs ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                     )}
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {!collapsedSections.costs && (
+              <>
+                {/* User Cost Summary */}
+                {trip.spends && user && (
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-4">
+                    <div className="p-2 sm:p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">You Paid</p>
+                      <p className="text-sm sm:text-lg font-bold text-purple-700 dark:text-purple-300">
+                        {trip?.baseCurrency} {trip?.spends?.filter(s => s.paidBy.id === user?.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="p-2 sm:p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Your Share</p>
+                      <p className="text-sm sm:text-lg font-bold text-blue-700 dark:text-blue-300">
+                        {trip.baseCurrency} {trip.spends.reduce((sum, spend) => {
+                          const userAssignment = spend.assignments?.find(a => a.userId === user.uid);
+                          return sum + (userAssignment?.normalizedShareAmount || 0);
+                        }, 0).toFixed(2)}
+                      </p>
+                    </div>
+                    {(() => {
+                      const unassigned = trip.totalUnassigned || 0;
+                      const totalSpent = trip.totalSpent || 0;
+                      const isFullyAssigned = unassigned < 0.01;
+                      const isPartiallyAssigned = !isFullyAssigned && totalSpent > 0 && unassigned < totalSpent;
+                      // Green if fully assigned, amber if partially assigned, red if nothing assigned
+                      const colorClasses = isFullyAssigned
+                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                        : isPartiallyAssigned
+                        ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
+                      const textColorClasses = isFullyAssigned
+                        ? "text-green-600 dark:text-green-400"
+                        : isPartiallyAssigned
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-red-600 dark:text-red-400";
+                      const valueColorClasses = isFullyAssigned
+                        ? "text-green-700 dark:text-green-300"
+                        : isPartiallyAssigned
+                        ? "text-amber-700 dark:text-amber-300"
+                        : "text-red-700 dark:text-red-300";
+                      return (
+                        <div className={`p-2 sm:p-3 rounded-lg border ${colorClasses}`}>
+                          <p className={`text-xs font-medium ${textColorClasses}`}>Unassigned</p>
+                          <p className={`text-sm sm:text-lg font-bold ${valueColorClasses}`}>
+                            {trip.baseCurrency} {unassigned.toFixed(2)}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {!collapsedSections.spends && (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && !isViewer && (
-                      <button
-                        onClick={() => setIsAddSpendDialogOpen(true)}
-                        className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
-                      >
-                        + Add
-                      </button>
-                    )}
-                    <button
-                      onClick={() => toggleSection('spends')}
-                      className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
-                      aria-label={collapsedSections.spends ? "Expand section" : "Collapse section"}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        {collapsedSections.spends ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        ) : (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                        )}
-                      </svg>
-                    </button>
-                  </div>
+                )}
+
+                {/* Tabs */}
+                <div className="mt-3 flex border-b border-zinc-200 dark:border-zinc-700">
+                  <button
+                    onClick={() => setCostsTab("spends")}
+                    className={`tap-target px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                      costsTab === "spends"
+                        ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                        : "border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    }`}
+                  >
+                    Spends
+                  </button>
+                  <button
+                    onClick={() => (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && setCostsTab("settlement")}
+                    disabled={(trip.spendStatus || SpendStatus.OPEN) !== SpendStatus.CLOSED}
+                    className={`tap-target px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                      costsTab === "settlement"
+                        ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                        : (trip.spendStatus || SpendStatus.OPEN) !== SpendStatus.CLOSED
+                        ? "border-transparent text-zinc-300 dark:text-zinc-600 cursor-not-allowed"
+                        : "border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    }`}
+                  >
+                    Settlement
+                  </button>
                 </div>
 
-                {/* Action buttons row */}
-                {!collapsedSections.spends && (
-                  <div className="mt-3 flex items-center gap-2 flex-wrap mb-4">
-                    {/* Show View Settlement button when spending is closed and spends are visible */}
-                    {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED && showSpendsWhenClosed && (
-                    <button
-                      onClick={() => setShowSpendsWhenClosed(false)}
-                      className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium transition-colors flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      <svg className="w-3 h-3 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                      <span className="hidden sm:inline">View Settlement</span>
-                      <span className="sm:hidden">Settlement</span>
-                    </button>
-                  )}
-                  {canInvite && !isViewer && (
-                    <button
-                      onClick={() => handleToggleTripSpendStatus()}
-                      disabled={isTogglingSpendStatus}
-                      className={`tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium transition-colors text-xs sm:text-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
-                        (trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED
-                          ? "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                          : (trip.totalUnassigned || 0) > 0.00
-                          ? "bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400"
-                          : "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 text-green-700 dark:text-green-400"
-                      }`}
-                    >
-                      {isTogglingSpendStatus ? "Working..." : `${(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED ? "Reopen" : "Close"} Spending`}
-                    </button>
-                  )}
-                  </div>
-                )}
+                {/* Tab Content */}
+                <div className="mt-4">
+                  {costsTab === "spends" ? (
+                    <>
+                      {/* Header row with Add button and Filters toggle */}
+                      <div className="flex items-center justify-between mb-3">
+                        {/* Add button for spends */}
+                        {(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.OPEN && !isViewer ? (
+                          <button
+                            onClick={() => setIsAddSpendDialogOpen(true)}
+                            className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                          >
+                            + Add
+                          </button>
+                        ) : (
+                          <div />
+                        )}
 
-                {!collapsedSections.spends && (
-                  <>
-                    {trip.spends && trip.spends.length > 0 ? (
-                      <>
-                        {/* Filters */}
-                        <div className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-zinc-600 dark:text-zinc-400">Filters & Sort</span>
-                            <button
-                              onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                              className="tap-target p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
-                              aria-label={filtersCollapsed ? "Expand filters" : "Collapse filters"}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                {filtersCollapsed ? (
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                ) : (
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                                )}
-                              </svg>
-                            </button>
-                          </div>
-                          {!filtersCollapsed && (
-                            <SpendFilters
-                              statusFilter={statusFilter}
-                              onStatusFilterChange={setStatusFilter}
-                              involvementFilter={involvementFilter}
-                              onInvolvementFilterChange={setInvolvementFilter}
-                              sortBy={sortBy}
-                              onSortByChange={setSortBy}
-                              sortOrder={sortOrder}
-                              onSortOrderChange={setSortOrder}
-                            />
-                          )}
-                        </div>
-
-                        {/* Spend List */}
-                        <SpendListView
-                          spends={getFilteredAndSortedSpends().map((spend) => ({
-                            ...spend,
-                            date: new Date(spend.date),
-                          }))}
-                          currentUserId={user?.uid}
-                          tripSpendingClosed={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
-                          canUserFinalize={canUserFinalizeSpend}
-                          canUserDelete={canUserDeleteSpend}
-                          canUserEdit={canUserDeleteSpend}
-                          onView={handleViewSpend}
-                          onEdit={handleEditSpend}
-                          onAssign={handleAssignSpend}
-                          onSelfAssign={handleSelfAssignSpend}
-                          onJoin={handleJoinSpend}
-                          onLeave={handleLeaveSpend}
-                          onFinalize={handleFinalizeSpend}
-                          onDelete={handleDeleteSpend}
-                        />
-                      </>
-                    ) : (
-                      <div className="text-center py-8">
-                        <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
+                        {/* Filters toggle - only show if there are spends */}
+                        {trip.spends && trip.spends.length > 0 && (
+                          <button
+                            onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+                            className="tap-target flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors text-xs"
+                            aria-label={filtersCollapsed ? "Expand filters" : "Collapse filters"}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
+                            <span>Filters</span>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              {filtersCollapsed ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              )}
+                            </svg>
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
+
+                      {trip.spends && trip.spends.length > 0 ? (
+                        <>
+                          {/* Filters panel */}
+                          {!filtersCollapsed && (
+                            <div className="mb-3">
+                              <SpendFilters
+                                statusFilter={statusFilter}
+                                onStatusFilterChange={setStatusFilter}
+                                involvementFilter={involvementFilter}
+                                onInvolvementFilterChange={setInvolvementFilter}
+                                sortBy={sortBy}
+                                onSortByChange={setSortBy}
+                                sortOrder={sortOrder}
+                                onSortOrderChange={setSortOrder}
+                              />
+                            </div>
+                          )}
+
+                          {/* Spend List */}
+                          <SpendListView
+                            spends={getFilteredAndSortedSpends().map((spend) => ({
+                              ...spend,
+                              date: new Date(spend.date),
+                            }))}
+                            currentUserId={user?.uid}
+                            tripSpendingClosed={(trip.spendStatus || SpendStatus.OPEN) === SpendStatus.CLOSED}
+                            canUserFinalize={canUserFinalizeSpend}
+                            canUserDelete={canUserDeleteSpend}
+                            canUserEdit={canUserDeleteSpend}
+                            onView={handleViewSpend}
+                            onEdit={handleEditSpend}
+                            onAssign={handleAssignSpend}
+                            onSelfAssign={handleSelfAssignSpend}
+                            onJoin={handleJoinSpend}
+                            onLeave={handleLeaveSpend}
+                            onFinalize={handleFinalizeSpend}
+                            onDelete={handleDeleteSpend}
+                          />
+                        </>
+                      ) : (
+                        <div className="text-center py-8">
+                          <svg className="w-16 h-16 mx-auto text-zinc-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
+                          <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "+ Add Spend" to record your first expense</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* Settlement Tab */
+                    <SettlementPlanSection
+                      tripId={trip.id}
+                      baseCurrency={trip.baseCurrency}
+                    />
+                  )}
+                </div>
+              </>
             )}
-          </>
+          </div>
         )}
 
-        
+
 
         {/* Timeline (if available) */}
         {trip.timeline && trip.timeline.length > 0 && (
@@ -3070,6 +3179,7 @@ export default function TripDetailPage() {
           onAssign={handleAssignSpend}
           onSelfAssign={handleSelfAssignSpend}
           onSplitRemainder={handleSplitRemainderSpend}
+          onClearAssignments={handleClearAssignments}
           onEditAssignment={handleEditAssignment}
           onJoin={handleJoinSpend}
           onLeave={handleLeaveSpend}
@@ -3167,11 +3277,14 @@ export default function TripDetailPage() {
       {/* Split Remainder Dialog */}
       {trip && selectedSpendId && user && (() => {
         const selectedSpend = trip.spends?.find((s) => s.id === selectedSpendId);
-        const allParticipants = trip.participants.map(p => ({
-          id: p.user.id,
-          email: p.user.email,
-          displayName: p.user.displayName,
-        }));
+        // Filter out VIEWER users - they cannot be assigned to spends
+        const allParticipants = trip.participants
+          .filter(p => p.role !== "VIEWER")
+          .map(p => ({
+            id: p.user.id,
+            email: p.user.email,
+            displayName: p.user.displayName,
+          }));
 
         return (
           <SplitRemainderDialog
@@ -3445,6 +3558,8 @@ export default function TripDetailPage() {
           setListsRefreshKey(prev => prev + 1);
         }}
         listTypeFilter="TODO"
+        existingListIds={checklistIds}
+        existingSourceTemplateIds={checklistSourceTemplateIds}
       />
 
       {/* Add Kit List Dialog */}
@@ -3457,6 +3572,8 @@ export default function TripDetailPage() {
           setListsRefreshKey(prev => prev + 1);
         }}
         listTypeFilter="KIT"
+        existingListIds={kitListIds}
+        existingSourceTemplateIds={kitListSourceTemplateIds}
       />
     </div>
   );

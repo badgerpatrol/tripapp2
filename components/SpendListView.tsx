@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { SpendStatus } from "@/lib/generated/prisma";
-import { useLongPress } from "@/hooks/useLongPress";
-import { ContextMenu, ContextMenuItem } from "./ContextMenu";
 
 interface SpendCardProps {
   spend: SpendWithAssignments;
@@ -11,7 +8,6 @@ interface SpendCardProps {
   isUserInvolved: (spend: SpendWithAssignments) => boolean;
   getStatusBadge: (status: SpendStatus) => React.ReactElement;
   getAssignmentBadge: (percentage: number) => React.ReactElement;
-  onLongPress: (e: React.Touch | React.MouseEvent) => void;
   onClick?: (spendId: string) => void;
   onFinalize?: (spendId: string) => void;
   canUserFinalize?: (spend: SpendWithAssignments) => boolean;
@@ -23,15 +19,10 @@ function SpendCard({
   isUserInvolved,
   getStatusBadge,
   getAssignmentBadge,
-  onLongPress,
   onClick,
   onFinalize,
   canUserFinalize,
 }: SpendCardProps) {
-  const longPressHandlers = useLongPress({
-    onLongPress,
-  });
-
   const handleClick = () => {
     if (onClick) {
       onClick(spend.id);
@@ -40,7 +31,6 @@ function SpendCard({
 
   return (
     <div
-      {...longPressHandlers}
       onClick={handleClick}
       className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
     >
@@ -252,11 +242,6 @@ export function SpendListView({
   onFinalize,
   onDelete,
 }: SpendListViewProps) {
-  const [contextMenu, setContextMenu] = useState<{
-    spendId: string;
-    position: { x: number; y: number };
-  } | null>(null);
-
   const isUserInvolved = (spend: SpendWithAssignments): boolean => {
     if (!currentUserId) return false;
 
@@ -265,13 +250,6 @@ export function SpendListView({
     if (spend.assignments?.some(a => a.userId === currentUserId)) return true;
 
     return false;
-  };
-
-  const handleLongPress = (spendId: string) => (e: React.Touch | React.MouseEvent) => {
-    // Get position from either mouse or touch event
-    const x = (e as React.MouseEvent).clientX || (e as React.Touch).pageX;
-    const y = (e as React.MouseEvent).clientY || (e as React.Touch).pageY;
-    setContextMenu({ spendId, position: { x, y } });
   };
 
   const getStatusBadge = (status: SpendStatus) => {
@@ -310,90 +288,9 @@ export function SpendListView({
 
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${className}`}>
-        {percentage.toFixed(1)}% assigned
+        {percentage.toFixed(1)}%
       </span>
     );
-  };
-
-  const getContextMenuItems = (spendId: string, spend: SpendWithAssignments): ContextMenuItem[] => {
-    const items: ContextMenuItem[] = [];
-
-    if (onEdit && canUserEdit && canUserEdit(spend) && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
-      items.push({
-        label: "Edit",
-        onClick: () => onEdit(spendId),
-      });
-    }
-
-    // Show "Join" if user is NOT the spender and NOT already involved
-    // Show "Assign" if user IS the spender
-    // Show "Leave" if user is already involved (but not the spender)
-    const isSpender = currentUserId && spend.paidBy.id === currentUserId;
-    const isAlreadyInvolved = isUserInvolved(spend);
-
-    if (isSpender) {
-      // User is the spender - show full Assign functionality
-      if (onAssign && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
-        items.push({
-          label: "Add People",
-          onClick: () => onAssign(spendId),
-        });
-      }
-      // Also show self-assign for spender
-      if (onSelfAssign && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
-        items.push({
-          label: "Assign My Share",
-          onClick: () => onSelfAssign(spendId),
-        });
-      }
-    } else if (!isAlreadyInvolved && currentUserId) {
-      // User is not the spender and not involved - show Join
-      if (onJoin && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
-        items.push({
-          label: "Join",
-          onClick: () => onJoin(spendId),
-        });
-      }
-    } else if (isAlreadyInvolved) {
-      // User is already involved - show self-assign option
-      if (onSelfAssign && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
-        items.push({
-          label: "Assign My Share",
-          onClick: () => onSelfAssign(spendId),
-        });
-      }
-      // User is already involved (but not spender) - show Leave so they can remove themselves
-      if (onLeave && spend.status !== SpendStatus.CLOSED && !tripSpendingClosed) {
-        items.push({
-          label: "Leave",
-          onClick: () => onLeave(spendId),
-        });
-      }
-    }
-
-    if (onFinalize && canUserFinalize && canUserFinalize(spend)) {
-      if (spend.status === SpendStatus.CLOSED) {
-        items.push({
-          label: "Unlock",
-          onClick: () => onFinalize(spendId),
-        });
-      } else {
-        items.push({
-          label: "Lock",
-          onClick: () => onFinalize(spendId),
-        });
-      }
-    }
-
-    if (onDelete && canUserDelete && canUserDelete(spend)) {
-      items.push({
-        label: "Delete",
-        onClick: () => onDelete(spendId),
-        variant: "danger",
-      });
-    }
-
-    return items;
   };
 
   if (spends.length === 0) {
@@ -405,36 +302,20 @@ export function SpendListView({
   }
 
   return (
-    <>
-      <div className="space-y-2">
-        {spends.map((spend) => (
-          <SpendCard
-            key={spend.id}
-            spend={spend}
-            currentUserId={currentUserId}
-            isUserInvolved={isUserInvolved}
-            getStatusBadge={getStatusBadge}
-            getAssignmentBadge={getAssignmentBadge}
-            onLongPress={handleLongPress(spend.id)}
-            onClick={onView}
-            onFinalize={onFinalize}
-            canUserFinalize={canUserFinalize}
-          />
-        ))}
-      </div>
-
-      {/* Context Menu */}
-      {contextMenu && (
-        <ContextMenu
-          isOpen={true}
-          onClose={() => setContextMenu(null)}
-          position={contextMenu.position}
-          items={getContextMenuItems(
-            contextMenu.spendId,
-            spends.find((s) => s.id === contextMenu.spendId)!
-          )}
+    <div className="space-y-2">
+      {spends.map((spend) => (
+        <SpendCard
+          key={spend.id}
+          spend={spend}
+          currentUserId={currentUserId}
+          isUserInvolved={isUserInvolved}
+          getStatusBadge={getStatusBadge}
+          getAssignmentBadge={getAssignmentBadge}
+          onClick={onView}
+          onFinalize={onFinalize}
+          canUserFinalize={canUserFinalize}
         />
-      )}
-    </>
+      ))}
+    </div>
   );
 }

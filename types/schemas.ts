@@ -363,7 +363,6 @@ export const GetSpendItemsResponseSchema = z.object({
 export const PersonBalanceSchema = z.object({
   userId: z.string(),
   userName: z.string(),
-  userEmail: z.string(),
   userPhotoURL: z.string().nullable(),
   totalPaid: z.number(),
   totalOwed: z.number(),

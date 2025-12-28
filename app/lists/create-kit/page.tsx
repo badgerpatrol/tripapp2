@@ -245,7 +245,7 @@ function CreateKitListPageContent() {
               </svg>
             </button>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-              {inventoryFromUrl ? "Create Inventory List" : "Create Kit List"}
+              {inventoryFromUrl ? "Create" : "Create"}
             </h1>
           </div>
           <p className="text-zinc-600 dark:text-zinc-400 ml-14">
@@ -366,7 +366,7 @@ function CreateKitListPageContent() {
               className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
               disabled={loading}
             >
-              {loading ? "Creating..." : inventoryFromUrl ? "Create Inventory List" : "Create Kit List"}
+              {loading ? "Creating..." : inventoryFromUrl ? "Create" : "Create"}
             </Button>
           </div>
 
