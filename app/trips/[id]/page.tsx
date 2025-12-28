@@ -2660,8 +2660,6 @@ export default function TripDetailPage() {
               <SettlementPlanSection
                 tripId={trip.id}
                 baseCurrency={trip.baseCurrency}
-                tripRsvpStatus={trip.rsvpStatus}
-                participants={trip.participants}
                 onToggleSpends={() => setShowSpendsWhenClosed(true)}
                 onReopenSpending={canInvite ? () => handleToggleTripSpendStatus() : undefined}
                 canReopenSpending={canInvite}
@@ -2804,7 +2802,7 @@ export default function TripDetailPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <p className="text-zinc-600 dark:text-zinc-400">No spends recorded yet</p>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "Add Spend" to record your first expense</p>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-1">Click "+Add" to record your first expense</p>
                       </div>
                     )}
                   </>
