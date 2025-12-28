@@ -17,6 +17,10 @@ interface ListTemplate {
   tags?: string[];
   todoItems?: any[];
   kitItems?: any[];
+  owner?: {
+    id: string;
+    displayName: string | null;
+  };
 }
 
 interface AddListDialogProps {
@@ -550,10 +554,8 @@ export function AddListDialog({
                           ? `${template.todoItems?.length || 0} tasks`
                           : `${template.kitItems?.length || 0} items`}
                       </span>
-                      {template.visibility === "PUBLIC" && (
-                        <span className="flex items-center gap-1">
-                          <span>🌐</span> Public
-                        </span>
+                      {template.owner?.displayName && (
+                        <span>by {template.owner.displayName}</span>
                       )}
                     </div>
                     {template.tags && template.tags.length > 0 && (
