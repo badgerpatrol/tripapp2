@@ -740,6 +740,53 @@ export default function TripDetailPage() {
     setIsSplitRemainderDialogOpen(true);
   };
 
+  const handleClearAssignments = async (spendId: string) => {
+    if (!user || !trip) return;
+
+    const spend = trip.spends?.find((s) => s.id === spendId);
+    if (!spend || !spend.assignments || spend.assignments.length === 0) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to clear all assignment amounts? The people will remain on the spend but their amounts will be set to zero."
+    );
+    if (!confirmed) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      // Set all existing assignments to zero
+      const zeroedAssignments = spend.assignments.map((a) => ({
+        userId: a.userId,
+        shareAmount: 0,
+        normalizedShareAmount: 0,
+        splitType: "AMOUNT" as const,
+      }));
+
+      const response = await fetch(`/api/spends/${spendId}/assignments`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assignments: zeroedAssignments,
+          replaceAll: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(errorData.error || "Failed to clear assignments");
+      }
+
+      // Refresh trip data
+      await fetchTrip();
+    } catch (err) {
+      console.error("Error clearing assignments:", err);
+      alert(err instanceof Error ? err.message : "Failed to clear assignments");
+    }
+  };
+
   const handleEditAssignment = async (assignmentId: string) => {
     if (!user) return;
 
@@ -3087,6 +3134,7 @@ export default function TripDetailPage() {
           onAssign={handleAssignSpend}
           onSelfAssign={handleSelfAssignSpend}
           onSplitRemainder={handleSplitRemainderSpend}
+          onClearAssignments={handleClearAssignments}
           onEditAssignment={handleEditAssignment}
           onJoin={handleJoinSpend}
           onLeave={handleLeaveSpend}
