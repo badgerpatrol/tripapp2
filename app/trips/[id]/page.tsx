@@ -1921,7 +1921,116 @@ export default function TripDetailPage() {
             </div>
           </div>
         </div>
-        
+
+        {/* Current RSVP Status (for users who have responded) */}
+        {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
+          <div className={`rounded-xl shadow-sm border p-6 mb-6 relative ${
+            trip.userRsvpStatus === "ACCEPTED"
+              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+              : trip.userRsvpStatus === "DECLINED"
+              ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+              : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
+          }`}>
+            {/* Toggle button - absolute positioned top right */}
+            <button
+              onClick={() => toggleSection('rsvp')}
+              className={`absolute top-2 right-2 tap-target p-2 rounded-lg transition-colors ${
+                trip.userRsvpStatus === "ACCEPTED"
+                  ? "hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
+                  : trip.userRsvpStatus === "DECLINED"
+                  ? "hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
+                  : "hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"
+              }`}
+              aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {collapsedSections.rsvp ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                )}
+              </svg>
+            </button>
+            <div className="flex items-center gap-4 pr-10">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                trip.userRsvpStatus === "ACCEPTED"
+                  ? "bg-green-100 dark:bg-green-900/50"
+                  : trip.userRsvpStatus === "DECLINED"
+                  ? "bg-red-100 dark:bg-red-900/50"
+                  : "bg-yellow-100 dark:bg-yellow-900/50"
+              }`}>
+                <svg className={`w-6 h-6 ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "text-green-600 dark:text-green-400"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-yellow-600 dark:text-yellow-400"
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {trip.userRsvpStatus === "ACCEPTED" ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  ) : trip.userRsvpStatus === "DECLINED" ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  )}
+                </svg>
+              </div>
+              <div>
+                <h3 className={`text-lg font-bold ${
+                  trip.userRsvpStatus === "ACCEPTED"
+                    ? "text-green-900 dark:text-green-100"
+                    : trip.userRsvpStatus === "DECLINED"
+                    ? "text-red-900 dark:text-red-100"
+                    : "text-yellow-900 dark:text-yellow-100"
+                }`}>
+                  {trip.userRsvpStatus === "ACCEPTED" && "Accepted"}
+                  {trip.userRsvpStatus === "DECLINED" && "Declined"}
+                  {trip.userRsvpStatus === "MAYBE" && "Faffing"}
+                </h3>
+              </div>
+            </div>
+
+            {!collapsedSections.rsvp && (
+              <>
+                {/* Quick change buttons */}
+                {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
+                  <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-current/20">
+                    <button
+                      onClick={() => handleRsvpResponse("ACCEPTED")}
+                      disabled={trip.userRsvpStatus === "ACCEPTED" || isRsvpResponding !== null}
+                      className="tap-target px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {isRsvpResponding === "ACCEPTED" ? "Working..." : "Accept"}
+                    </button>
+                    <button
+                      onClick={() => handleRsvpResponse("MAYBE")}
+                      disabled={trip.userRsvpStatus === "MAYBE" || isRsvpResponding !== null}
+                      className="tap-target px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-amber-500 hover:bg-amber-600 text-white"
+                    >
+                      {isRsvpResponding === "MAYBE" ? "Working..." : "Maybe"}
+                    </button>
+                    <button
+                      onClick={() => handleRsvpResponse("DECLINED")}
+                      disabled={trip.userRsvpStatus === "DECLINED" || isRsvpResponding !== null}
+                      className="tap-target px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {isRsvpResponding === "DECLINED" ? "Working..." : "Decline"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4 pt-4 border-t border-current/20">
+                    <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                      <p className="text-xs text-green-700 dark:text-green-300 font-medium">
+                        RSVP is closed. Contact the organizer if you need to change your response.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Checklists Section (for accepted members) - only show for organizers or when checklists exist */}
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (checklistsCount !== null && checklistsCount > 0)) ? (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
@@ -2214,123 +2323,6 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Current RSVP Status (for users who have responded) */}
-        {(trip.userRsvpStatus === "ACCEPTED" || trip.userRsvpStatus === "DECLINED" || trip.userRsvpStatus === "MAYBE") && (
-          <div className={`rounded-xl shadow-sm border p-6 md:p-8 mb-6 relative ${
-            trip.userRsvpStatus === "ACCEPTED"
-              ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-              : trip.userRsvpStatus === "DECLINED"
-              ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-              : "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800"
-          }`}>
-            {/* Toggle button - absolute positioned top right */}
-            <button
-              onClick={() => toggleSection('rsvp')}
-              className={`absolute top-2 right-2 tap-target p-2 rounded-lg transition-colors ${
-                trip.userRsvpStatus === "ACCEPTED"
-                  ? "hover:bg-green-100 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400"
-                  : trip.userRsvpStatus === "DECLINED"
-                  ? "hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400"
-                  : "hover:bg-yellow-100 dark:hover:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400"
-              }`}
-              aria-label={collapsedSections.rsvp ? "Expand section" : "Collapse section"}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {collapsedSections.rsvp ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                )}
-              </svg>
-            </button>
-            <div className="flex items-start gap-4 pr-10">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                trip.userRsvpStatus === "ACCEPTED"
-                  ? "bg-green-100 dark:bg-green-900/50"
-                  : trip.userRsvpStatus === "DECLINED"
-                  ? "bg-red-100 dark:bg-red-900/50"
-                  : "bg-yellow-100 dark:bg-yellow-900/50"
-              }`}>
-                <svg className={`w-6 h-6 ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "text-green-600 dark:text-green-400"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-yellow-600 dark:text-yellow-400"
-                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {trip.userRsvpStatus === "ACCEPTED" ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  ) : trip.userRsvpStatus === "DECLINED" ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  )}
-                </svg>
-              </div>
-              <div>
-                <h3 className={`text-lg font-bold mb-1 ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "text-green-900 dark:text-green-100"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "text-red-900 dark:text-red-100"
-                    : "text-yellow-900 dark:text-yellow-100"
-                }`}>
-                  You {trip.userRsvpStatus === "ACCEPTED" ? "accepted" : trip.userRsvpStatus === "DECLINED" ? "declined" : "might attend"} this invitation
-                </h3>
-                <p className={`text-sm ${
-                  trip.userRsvpStatus === "ACCEPTED"
-                    ? "text-green-700 dark:text-green-300"
-                    : trip.userRsvpStatus === "DECLINED"
-                    ? "text-red-700 dark:text-red-300"
-                    : "text-yellow-700 dark:text-yellow-300"
-                }`}>
-                  {trip.userRsvpStatus === "ACCEPTED" && "Of course you're in!"}
-                  {trip.userRsvpStatus === "DECLINED" && "Shunning it."}
-                  {trip.userRsvpStatus === "MAYBE" && "Faffing at the moment but will make your mind up later."}
-                </p>
-              </div>
-            </div>
-
-            {!collapsedSections.rsvp && (
-              <>
-                {/* Quick change buttons */}
-                {(!trip.rsvpStatus || trip.rsvpStatus === "OPEN") ? (
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-current/20">
-                <button
-                  onClick={() => handleRsvpResponse("ACCEPTED")}
-                  disabled={trip.userRsvpStatus === "ACCEPTED" || isRsvpResponding !== null}
-                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                >
-                  {isRsvpResponding === "ACCEPTED" ? "Working..." : "Accept"}
-                </button>
-                <button
-                  onClick={() => handleRsvpResponse("MAYBE")}
-                  disabled={trip.userRsvpStatus === "MAYBE" || isRsvpResponding !== null}
-                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                >
-                  {isRsvpResponding === "MAYBE" ? "Working..." : "Maybe"}
-                </button>
-                <button
-                  onClick={() => handleRsvpResponse("DECLINED")}
-                  disabled={trip.userRsvpStatus === "DECLINED" || isRsvpResponding !== null}
-                  className="tap-target px-4 py-2 rounded-lg bg-white/50 dark:bg-zinc-800/50 hover:bg-white dark:hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-                >
-                  {isRsvpResponding === "DECLINED" ? "Working..." : "Decline"}
-                </button>
-              </div>
-            ) : (
-              <div className="mt-4 pt-4 border-t border-current/20">
-                <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                  <p className="text-xs text-green-700 dark:text-green-300 font-medium">
-                    RSVP is closed. Contact the organizer if you need to change your response.
-                  </p>
-                </div>
-              </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
         {/* Members */}
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
           {/* Header row with title, +Add button, and toggle */}
