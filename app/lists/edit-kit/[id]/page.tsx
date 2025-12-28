@@ -494,8 +494,8 @@ function EditKitListPageContent() {
         throw new Error("Failed to delete list");
       }
 
-      // Navigate to lists page after deletion
-      router.push("/lists");
+      // Navigate to kit page after deletion
+      router.push("/kit");
     } catch (err: any) {
       console.error("Error deleting list:", err);
       setError(err.message);
