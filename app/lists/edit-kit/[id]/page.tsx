@@ -494,8 +494,9 @@ function EditKitListPageContent() {
         throw new Error("Failed to delete list");
       }
 
-      // Navigate to kit page after deletion
-      router.push("/kit");
+      // Navigate back - if we came from a trip, go back there; otherwise go to kit
+      const tripMatch = returnTo.match(/^\/trips\/[^/]+/);
+      router.push(tripMatch ? tripMatch[0] : "/kit");
     } catch (err: any) {
       console.error("Error deleting list:", err);
       setError(err.message);

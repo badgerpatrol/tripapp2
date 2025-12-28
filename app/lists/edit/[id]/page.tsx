@@ -245,8 +245,9 @@ function EditListPageContent() {
         throw new Error("Failed to delete list");
       }
 
-      // Navigate to lists page after deletion
-      router.push("/lists");
+      // Navigate back - if we came from a trip, go back there; otherwise go to lists
+      const tripMatch = returnTo.match(/^\/trips\/[^/]+/);
+      router.push(tripMatch ? tripMatch[0] : "/lists");
     } catch (err: any) {
       console.error("Error deleting list:", err);
       setError(err.message);
