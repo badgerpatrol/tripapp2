@@ -602,8 +602,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         </div>
       )}
 
-      {/* Filter dropdowns - collapsible */}
-      {!inWorkflowMode && shouldShowFilters && (
+      {/* Filter dropdowns - collapsible (hidden for Kit Lists section) */}
+      {!inWorkflowMode && shouldShowFilters && listTypeFilter !== "KIT" && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-zinc-600 dark:text-zinc-400">Filters & Sort</span>
