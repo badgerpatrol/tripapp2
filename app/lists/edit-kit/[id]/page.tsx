@@ -624,32 +624,30 @@ function EditKitListPageContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 justify-between">
+          <div className="flex flex-wrap gap-2 mb-4">
             <Button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+              className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center"
               disabled={saving || deleting}
             >
               Delete
             </Button>
-            <div className="flex gap-4">
-              <Button
-                type="button"
-                onClick={() => router.push(returnTo)}
-                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              onClick={() => router.push(returnTo)}
+              className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200 flex items-center justify-center"
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </div>
 
           {/* Items Card */}
