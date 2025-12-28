@@ -51,8 +51,7 @@ export function AddListDialog({
   const [activeTab, setActiveTab] = useState<Tab>("my-templates");
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
   const [publicTemplates, setPublicTemplates] = useState<ListTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
-  const [mergeMode, setMergeMode] = useState<MergeMode>("NEW_INSTANCE");
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [loadingMyTemplates, setLoadingMyTemplates] = useState(true);
@@ -62,8 +61,6 @@ export function AddListDialog({
   const [typeFilter, setTypeFilter] = useState<ListType | "ALL">(listTypeFilter || "ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [mySearchQuery, setMySearchQuery] = useState("");
-  const [hasConflict, setHasConflict] = useState(false);
-  const [checkingConflict, setCheckingConflict] = useState(false);
 
   // Create new list form state
   const [newListTitle, setNewListTitle] = useState("");
@@ -88,13 +85,7 @@ export function AddListDialog({
     }
   }, [activeTab, typeFilter, isOpen, user]);
 
-  useEffect(() => {
-    if (selectedTemplateId && user) {
-      checkForConflict();
-    } else {
-      setHasConflict(false);
-    }
-  }, [selectedTemplateId, user]);
+  // Conflict checking removed - multi-select always creates new instances
 
   const fetchMyTemplates = async () => {
     if (!user) return;
@@ -154,14 +145,12 @@ export function AddListDialog({
     }
   };
 
-  const checkForConflict = async () => {
-    if (!user || !selectedTemplateId) return;
+  const checkForConflict = async (templateId: string) => {
+    if (!user || !templateId) return;
 
     // Find the selected template
-    const template = templates.find((t) => t.id === selectedTemplateId);
+    const template = templates.find((t) => t.id === templateId);
     if (!template) return;
-
-    setCheckingConflict(true);
 
     try {
       const token = await user.getIdToken();
@@ -184,53 +173,56 @@ export function AddListDialog({
       }
 
       const data = await response.json();
-      setHasConflict(data.exists);
+      return data.exists;
     } catch (err) {
       console.error("Error checking for conflict:", err);
-      // In case of error, default to showing conflict options to be safe
-      setHasConflict(true);
-    } finally {
-      setCheckingConflict(false);
+      return false;
     }
   };
 
-  const handleAddList = async () => {
-    if (!user || !selectedTemplateId) return;
+  const handleAddLists = async () => {
+    if (!user || selectedTemplateIds.size === 0) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch(
-        `/api/lists/templates/${selectedTemplateId}/copy-to-trip`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            tripId,
-            mode: mergeMode,
-          }),
-        }
-      );
+      const templateIdsArray = Array.from(selectedTemplateIds);
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to add list to trip");
-      }
+      // Add all selected templates
+      const results = await Promise.all(
+        templateIdsArray.map(async (templateId) => {
+          const response = await fetch(
+            `/api/lists/templates/${templateId}/copy-to-trip`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                tripId,
+                mode: "NEW_INSTANCE", // Always create new instances for multi-select
+              }),
+            }
+          );
+
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || "Failed to add list to trip");
+          }
+          return response.json();
+        })
+      );
 
       onSuccess();
       onClose();
 
       // Reset form
-      setSelectedTemplateId("");
-      setMergeMode("NEW_INSTANCE");
-      setHasConflict(false);
+      setSelectedTemplateIds(new Set());
     } catch (err: any) {
-      console.error("Error adding list:", err);
+      console.error("Error adding lists:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -307,7 +299,8 @@ export function AddListDialog({
   const publicGalleryLabel = "Public";
 
   const isCreateNewTab = activeTab === "create-new";
-  const canSubmit = isCreateNewTab ? newListTitle.trim().length > 0 : !!selectedTemplateId;
+  const canSubmit = isCreateNewTab ? newListTitle.trim().length > 0 : selectedTemplateIds.size > 0;
+  const selectedCount = selectedTemplateIds.size;
 
   return (
     <Modal
@@ -325,11 +318,17 @@ export function AddListDialog({
             Cancel
           </Button>
           <Button
-            onClick={isCreateNewTab ? handleCreateNewList : handleAddList}
+            onClick={isCreateNewTab ? handleCreateNewList : handleAddLists}
             className="bg-blue-600 hover:bg-blue-700 text-white"
             disabled={loading || !canSubmit}
           >
-            {loading ? (isCreateNewTab ? "Creating..." : "Adding...") : (isCreateNewTab ? "Create List" : "Add List")}
+            {loading
+              ? (isCreateNewTab ? "Creating..." : "Adding...")
+              : (isCreateNewTab
+                  ? "Create List"
+                  : selectedCount === 1
+                    ? "Add List"
+                    : `Add ${selectedCount} Lists`)}
           </Button>
         </>
       }
@@ -340,7 +339,7 @@ export function AddListDialog({
           <button
             onClick={() => {
               setActiveTab("my-templates");
-              setSelectedTemplateId("");
+              setSelectedTemplateIds(new Set());
             }}
             className={`flex-1 px-3 py-2 font-medium border-b-2 transition-colors text-sm ${
               activeTab === "my-templates"
@@ -360,7 +359,7 @@ export function AddListDialog({
           <button
             onClick={() => {
               setActiveTab("public-gallery");
-              setSelectedTemplateId("");
+              setSelectedTemplateIds(new Set());
             }}
             className={`flex-1 px-3 py-2 font-medium border-b-2 transition-colors text-sm ${
               activeTab === "public-gallery"
@@ -380,7 +379,7 @@ export function AddListDialog({
           <button
             onClick={() => {
               setActiveTab("create-new");
-              setSelectedTemplateId("");
+              setSelectedTemplateIds(new Set());
             }}
             className={`flex-1 px-3 py-2 font-medium border-b-2 transition-colors text-sm ${
               activeTab === "create-new"
@@ -545,17 +544,24 @@ export function AddListDialog({
                     className={`flex items-start p-3 border-2 rounded-lg transition-colors ${
                       isAlreadyOnTrip
                         ? "opacity-50 cursor-not-allowed border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"
-                        : selectedTemplateId === template.id
+                        : selectedTemplateIds.has(template.id)
                           ? "border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800 cursor-pointer"
                           : "border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer"
                     }`}
                   >
                     <input
-                      type="radio"
-                      name="template"
+                      type="checkbox"
                       value={template.id}
-                      checked={selectedTemplateId === template.id}
-                      onChange={(e) => setSelectedTemplateId(e.target.value)}
+                      checked={selectedTemplateIds.has(template.id)}
+                      onChange={(e) => {
+                        const newSet = new Set(selectedTemplateIds);
+                        if (e.target.checked) {
+                          newSet.add(template.id);
+                        } else {
+                          newSet.delete(template.id);
+                        }
+                        setSelectedTemplateIds(newSet);
+                      }}
                       disabled={isAlreadyOnTrip}
                       className="mt-1 mr-3"
                     />
@@ -610,100 +616,6 @@ export function AddListDialog({
           )}
             </div>
 
-            {/* Merge Mode - only show when template is selected AND there's a conflict */}
-            {selectedTemplateId && checkingConflict && (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-zinc-600 dark:border-zinc-400"></div>
-                <span className="ml-2 text-sm text-zinc-600 dark:text-zinc-400">
-                  Checking for conflicts...
-                </span>
-              </div>
-            )}
-
-            {selectedTemplateId && !checkingConflict && hasConflict && (
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                  There's already a list with this name. How do you want to handle it?
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="mergeMode"
-                      value="NEW_INSTANCE"
-                      checked={mergeMode === "NEW_INSTANCE"}
-                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                      className="mt-1 mr-3"
-                    />
-                    <div>
-                      <div className="font-medium text-zinc-900 dark:text-white">
-                        Create New List
-                      </div>
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                        Add a new list (will add suffix if name exists)
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="mergeMode"
-                      value="MERGE_ADD"
-                      checked={mergeMode === "MERGE_ADD"}
-                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                      className="mt-1 mr-3"
-                    />
-                    <div>
-                      <div className="font-medium text-zinc-900 dark:text-white">
-                        Merge (Skip Duplicates)
-                      </div>
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                        Add new items, skip items with matching names
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="mergeMode"
-                      value="MERGE_ADD_ALLOW_DUPES"
-                      checked={mergeMode === "MERGE_ADD_ALLOW_DUPES"}
-                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                      className="mt-1 mr-3"
-                    />
-                    <div>
-                      <div className="font-medium text-zinc-900 dark:text-white">
-                        Merge (Allow Duplicates)
-                      </div>
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                        Add all items, even if some have matching names
-                      </div>
-                    </div>
-                  </label>
-
-                  <label className="flex items-start p-3 border border-zinc-300 dark:border-zinc-600 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="mergeMode"
-                      value="REPLACE"
-                      checked={mergeMode === "REPLACE"}
-                      onChange={(e) => setMergeMode(e.target.value as MergeMode)}
-                      className="mt-1 mr-3"
-                    />
-                    <div>
-                      <div className="font-medium text-red-600 dark:text-red-400">
-                        Replace Existing List
-                      </div>
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                        Delete the existing list and create a fresh copy
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            )}
             </>
           )}
         </div>
