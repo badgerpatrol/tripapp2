@@ -524,10 +524,10 @@ function EditKitListPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 overflow-x-hidden">
       <Header />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -624,36 +624,34 @@ function EditKitListPageContent() {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 justify-between">
+          <div className="flex flex-wrap gap-2 mb-4">
             <Button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+              className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white flex items-center justify-center"
               disabled={saving || deleting}
             >
               Delete
             </Button>
-            <div className="flex gap-4">
-              <Button
-                type="button"
-                onClick={() => router.push(returnTo)}
-                className="px-6 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
-                disabled={saving}
-              >
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </div>
+            <Button
+              type="button"
+              onClick={() => router.push(returnTo)}
+              className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200 flex items-center justify-center"
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save"}
+            </Button>
           </div>
 
           {/* Items Card */}
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-6">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-md border border-zinc-200 dark:border-zinc-700 p-4 sm:p-6 overflow-hidden">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">
               Items ({items.filter((i) => i.label.trim()).length})
             </h2>
@@ -661,34 +659,34 @@ function EditKitListPageContent() {
               <Button
                 type="button"
                 onClick={() => setIsPhotoScanOpen(true)}
-                className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 sm:gap-2"
                 disabled={saving}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 </svg>
-                Scan Photo
+                <span>Photo</span>
               </Button>
               {!inventory && (
                 <Button
                   type="button"
                   onClick={() => setIsInventorySheetOpen(true)}
-                  className="text-sm px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+                  className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-1 sm:gap-2"
                   disabled={saving}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
-                  From Inventory
+                  <span>Inventory</span>
                 </Button>
               )}
               <Button
                 type="button"
                 onClick={addItem}
-                className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+                className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-1 sm:gap-2"
                 disabled={saving}
               >
-                + Add Item
+                <span>+ Add</span>
               </Button>
             </div>
 
@@ -696,30 +694,32 @@ function EditKitListPageContent() {
               {items.map((item, index) => (
                 <div
                   key={item.id}
-                  className="p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-green-300 dark:hover:border-green-600 transition-colors"
+                  className="p-3 sm:p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:border-green-300 dark:hover:border-green-600 transition-colors overflow-hidden"
                 >
-                  {/* Item Header */}
-                  <div className="flex items-start gap-3">
-                    {/* Drag Handle / Number */}
-                    <div className="flex flex-col gap-1 pt-2">
+                  {/* Item Header - Controls Row */}
+                  <div className="flex items-center justify-between mb-3">
+                    {/* Left side: Position controls */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400 w-6 text-center">
+                        {index + 1}
+                      </span>
                       <button
                         type="button"
                         onClick={() => moveItem(item.id!, "up")}
                         disabled={index === 0 || saving}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move up"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                         </svg>
                       </button>
-                      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400 text-center">
-                        {index + 1}
-                      </span>
                       <button
                         type="button"
                         onClick={() => moveItem(item.id!, "down")}
                         disabled={index === items.length - 1 || saving}
-                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Move down"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -727,263 +727,24 @@ function EditKitListPageContent() {
                       </button>
                     </div>
 
-                    {/* Item Input Fields */}
-                    <div className="flex-1 space-y-3">
-                      {/* Item Name */}
-                      <input
-                        type="text"
-                        ref={index === 0 ? newItemInputRef : undefined}
-                        value={item.label}
-                        onChange={(e) => updateItem(item.id!, "label", e.target.value)}
-                        placeholder="Item name *"
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                        disabled={saving}
-                      />
-
-                      {/* Description */}
-                      <textarea
-                        value={item.notes}
-                        onChange={(e) => updateItem(item.id!, "notes", e.target.value)}
-                        placeholder="Description (optional)"
-                        rows={2}
-                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                        disabled={saving}
-                      />
-
-                      {/* Row 1: Quantity and Category */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateItem(item.id!, "quantity", parseFloat(e.target.value) || 1)}
-                          placeholder="Quantity"
-                          min="0"
-                          step="0.1"
-                          className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                          disabled={saving}
-                        />
-                        <input
-                          type="text"
-                          value={item.category}
-                          onChange={(e) => updateItem(item.id!, "category", e.target.value)}
-                          placeholder="Category (optional)"
-                          className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                          disabled={saving}
-                        />
-                      </div>
-
-                      {/* Row 2: Weight and Cost */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="number"
-                          value={item.weightGrams}
-                          onChange={(e) => updateItem(item.id!, "weightGrams", e.target.value)}
-                          placeholder="Weight (g)"
-                          min="0"
-                          className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                          disabled={saving}
-                        />
-                        <input
-                          type="number"
-                          value={item.cost}
-                          onChange={(e) => updateItem(item.id!, "cost", e.target.value)}
-                          placeholder="Cost"
-                          min="0"
-                          step="0.01"
-                          className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                          disabled={saving}
-                        />
-                      </div>
-
-                      {/* Row 3: URL */}
-                      <input
-                        type="text"
-                        value={item.url}
-                        onChange={(e) => updateItem(item.id!, "url", e.target.value)}
-                        placeholder="URL (optional)"
-                        className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                        disabled={saving}
-                      />
-
-                      {/* Toggles - hide for inventory lists */}
-                      {!inventory && (
-                        <div className="flex gap-3">
-                          {/* Mandatory/Optional toggle */}
-                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-                            <button
-                              type="button"
-                              onClick={() => updateItem(item.id!, "required", true)}
-                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
-                                item.required
-                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
-                              disabled={saving}
-                            >
-                              Mandatory
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateItem(item.id!, "required", false)}
-                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
-                                !item.required
-                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
-                              disabled={saving}
-                            >
-                              Optional
-                            </button>
-                          </div>
-
-                          {/* Shared/Per Person toggle */}
-                          <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
-                            <button
-                              type="button"
-                              onClick={() => updateItem(item.id!, "perPerson", false)}
-                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
-                                !item.perPerson
-                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
-                              disabled={saving}
-                            >
-                              Shared
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateItem(item.id!, "perPerson", true)}
-                              className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors ${
-                                item.perPerson
-                                  ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
-                                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                              }`}
-                              disabled={saving}
-                            >
-                              Per Person
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Inventory-specific fields - only show when inventory mode is enabled */}
-                      {inventory && (
-                        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700 space-y-3">
-                          <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Inventory Tracking
-                          </h4>
-
-                          {/* Date field */}
-                          <div>
-                            <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-                              Date
-                            </label>
-                            <input
-                              type="date"
-                              value={item.date}
-                              onChange={(e) => updateItem(item.id!, "date", e.target.value)}
-                              className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                              disabled={saving}
-                            />
-                          </div>
-
-                          {/* Needs Repair checkbox */}
-                          <div>
-                            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={item.needsRepair}
-                                onChange={(e) => updateItem(item.id!, "needsRepair", e.target.checked)}
-                                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
-                                disabled={saving}
-                              />
-                              Needs Repair
-                            </label>
-                          </div>
-
-                          {/* Condition Notes - only show when needsRepair is checked */}
-                          {item.needsRepair && (
-                            <div>
-                              <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-                                Condition Notes
-                              </label>
-                              <textarea
-                                value={item.conditionNotes}
-                                onChange={(e) => updateItem(item.id!, "conditionNotes", e.target.value)}
-                                placeholder="Describe the repair needed..."
-                                rows={2}
-                                className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                                disabled={saving}
-                              />
-                            </div>
-                          )}
-
-                          {/* Lost checkbox */}
-                          <div>
-                            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={item.lost}
-                                onChange={(e) => updateItem(item.id!, "lost", e.target.checked)}
-                                className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
-                                disabled={saving}
-                              />
-                              Lost
-                            </label>
-                          </div>
-
-                          {/* Last Seen fields - only show when lost is checked */}
-                          {item.lost && (
-                            <div className="space-y-3 pl-6 border-l-2 border-red-300 dark:border-red-700">
-                              <div>
-                                <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-                                  Last Seen (Location/Description)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={item.lastSeenText}
-                                  onChange={(e) => updateItem(item.id!, "lastSeenText", e.target.value)}
-                                  placeholder="e.g., Left at campsite near lake"
-                                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                                  disabled={saving}
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-                                  Last Seen Date
-                                </label>
-                                <input
-                                  type="date"
-                                  value={item.lastSeenDate}
-                                  onChange={(e) => updateItem(item.id!, "lastSeenDate", e.target.value)}
-                                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                                  disabled={saving}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-col gap-1">
+                    {/* Right side: Action buttons */}
+                    <div className="flex items-center gap-1">
                       {/* Save Button - only show if item is edited */}
                       {editedItemIds.has(item.id!) && item.label.trim() && (
                         <button
                           type="button"
                           onClick={() => saveItem(item.id!)}
-                          className="mt-2 p-2 text-green-600 hover:text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+                          className="p-1.5 text-green-600 hover:text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
                           disabled={saving || savingItemId === item.id}
                           title="Save item"
                         >
                           {savingItemId === item.id ? (
-                            <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                           ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           )}
@@ -995,16 +756,255 @@ function EditKitListPageContent() {
                         <button
                           type="button"
                           onClick={() => removeItem(item.id!)}
-                          className="mt-2 p-2 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                          className="p-1.5 text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
                           disabled={saving}
                           title="Delete item"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
                       )}
                     </div>
+                  </div>
+
+                  {/* Item Input Fields - Full Width */}
+                  <div className="space-y-3">
+                    {/* Item Name */}
+                    <input
+                      type="text"
+                      ref={index === 0 ? newItemInputRef : undefined}
+                      value={item.label}
+                      onChange={(e) => updateItem(item.id!, "label", e.target.value)}
+                      placeholder="Item name *"
+                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      disabled={saving}
+                    />
+
+                    {/* Description */}
+                    <textarea
+                      value={item.notes}
+                      onChange={(e) => updateItem(item.id!, "notes", e.target.value)}
+                      placeholder="Description (optional)"
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      disabled={saving}
+                    />
+
+                    {/* Row 1: Quantity and Category */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(item.id!, "quantity", parseFloat(e.target.value) || 1)}
+                        placeholder="Quantity"
+                        min="0"
+                        step="0.1"
+                        className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                        disabled={saving}
+                      />
+                      <input
+                        type="text"
+                        value={item.category}
+                        onChange={(e) => updateItem(item.id!, "category", e.target.value)}
+                        placeholder="Category (optional)"
+                        className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                        disabled={saving}
+                      />
+                    </div>
+
+                    {/* Row 2: Weight and Cost */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="number"
+                        value={item.weightGrams}
+                        onChange={(e) => updateItem(item.id!, "weightGrams", e.target.value)}
+                        placeholder="Weight (g)"
+                        min="0"
+                        className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                        disabled={saving}
+                      />
+                      <input
+                        type="number"
+                        value={item.cost}
+                        onChange={(e) => updateItem(item.id!, "cost", e.target.value)}
+                        placeholder="Cost"
+                        min="0"
+                        step="0.01"
+                        className="px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                        disabled={saving}
+                      />
+                    </div>
+
+                    {/* Row 3: URL */}
+                    <input
+                      type="text"
+                      value={item.url}
+                      onChange={(e) => updateItem(item.id!, "url", e.target.value)}
+                      placeholder="URL (optional)"
+                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      disabled={saving}
+                    />
+
+                    {/* Toggles - hide for inventory lists */}
+                    {!inventory && (
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                        {/* Mandatory/Optional toggle */}
+                        <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => updateItem(item.id!, "required", true)}
+                            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                              item.required
+                                ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                            disabled={saving}
+                          >
+                            Mandatory
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateItem(item.id!, "required", false)}
+                            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                              !item.required
+                                ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                            disabled={saving}
+                          >
+                            Optional
+                          </button>
+                        </div>
+
+                        {/* Shared/Per Person toggle */}
+                        <div className="flex-1 flex gap-1 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => updateItem(item.id!, "perPerson", false)}
+                            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                              !item.perPerson
+                                ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                            disabled={saving}
+                          >
+                            Shared
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateItem(item.id!, "perPerson", true)}
+                            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${
+                              item.perPerson
+                                ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                            disabled={saving}
+                          >
+                            Per Person
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Inventory-specific fields - only show when inventory mode is enabled */}
+                    {inventory && (
+                      <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700 space-y-3">
+                        <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                          Inventory Tracking
+                        </h4>
+
+                        {/* Date field */}
+                        <div>
+                          <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            value={item.date}
+                            onChange={(e) => updateItem(item.id!, "date", e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                            disabled={saving}
+                          />
+                        </div>
+
+                        {/* Needs Repair checkbox */}
+                        <div>
+                          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.needsRepair}
+                              onChange={(e) => updateItem(item.id!, "needsRepair", e.target.checked)}
+                              className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
+                              disabled={saving}
+                            />
+                            Needs Repair
+                          </label>
+                        </div>
+
+                        {/* Condition Notes - only show when needsRepair is checked */}
+                        {item.needsRepair && (
+                          <div>
+                            <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                              Condition Notes
+                            </label>
+                            <textarea
+                              value={item.conditionNotes}
+                              onChange={(e) => updateItem(item.id!, "conditionNotes", e.target.value)}
+                              placeholder="Describe the repair needed..."
+                              rows={2}
+                              className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                              disabled={saving}
+                            />
+                          </div>
+                        )}
+
+                        {/* Lost checkbox */}
+                        <div>
+                          <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={item.lost}
+                              onChange={(e) => updateItem(item.id!, "lost", e.target.checked)}
+                              className="w-4 h-4 rounded text-red-600 focus:ring-red-500"
+                              disabled={saving}
+                            />
+                            Lost
+                          </label>
+                        </div>
+
+                        {/* Last Seen fields - only show when lost is checked */}
+                        {item.lost && (
+                          <div className="space-y-3 pl-6 border-l-2 border-red-300 dark:border-red-700">
+                            <div>
+                              <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                                Last Seen (Location/Description)
+                              </label>
+                              <input
+                                type="text"
+                                value={item.lastSeenText}
+                                onChange={(e) => updateItem(item.id!, "lastSeenText", e.target.value)}
+                                placeholder="e.g., Left at campsite near lake"
+                                className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                disabled={saving}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                                Last Seen Date
+                              </label>
+                              <input
+                                type="date"
+                                value={item.lastSeenDate}
+                                onChange={(e) => updateItem(item.id!, "lastSeenDate", e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                                disabled={saving}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
