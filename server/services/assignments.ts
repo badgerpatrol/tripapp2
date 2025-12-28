@@ -25,7 +25,14 @@ export async function createAssignments(
     where: { id: spendId, deletedAt: null },
     include: {
       trip: {
-        select: { spendStatus: true },
+        include: {
+          members: {
+            select: {
+              userId: true,
+              role: true,
+            },
+          },
+        },
       },
     },
   });
@@ -44,9 +51,23 @@ export async function createAssignments(
     throw new Error("Cannot add assignments to closed spend. Spend is locked.");
   }
 
+  // Filter out VIEWER users - they cannot be assigned to spends
+  const viewerUserIds = new Set(
+    spend.trip.members
+      .filter((m) => m.role === "VIEWER")
+      .map((m) => m.userId)
+  );
+  const filteredAssignments = assignments.filter(
+    (a) => !viewerUserIds.has(a.userId)
+  );
+
+  if (filteredAssignments.length === 0) {
+    throw new Error("No valid users to assign. Viewer users cannot be assigned to spends.");
+  }
+
   // Create assignments
   const created = await prisma.$transaction(
-    assignments.map((assignment) =>
+    filteredAssignments.map((assignment) =>
       prisma.spendAssignment.create({
         data: {
           spendId,
@@ -231,6 +252,16 @@ export async function replaceAssignments(
     where: { id: spendId, deletedAt: null },
     include: {
       assignments: true,
+      trip: {
+        include: {
+          members: {
+            select: {
+              userId: true,
+              role: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -238,16 +269,30 @@ export async function replaceAssignments(
     throw new Error("Spend not found");
   }
 
+  // Filter out VIEWER users - they cannot be assigned to spends
+  const viewerUserIds = new Set(
+    spend.trip.members
+      .filter((m) => m.role === "VIEWER")
+      .map((m) => m.userId)
+  );
+  const filteredAssignments = assignments.filter(
+    (a) => !viewerUserIds.has(a.userId)
+  );
+
   // Build a map of existing assignments by userId
   const existingAssignmentsMap = new Map(
     spend.assignments.map((a) => [a.userId, a])
   );
 
-  // Build a set of new user IDs
-  const newUserIds = new Set(assignments.map((a) => a.userId));
+  // Build a set of new user IDs (excluding viewers)
+  const newUserIds = new Set(filteredAssignments.map((a) => a.userId));
 
-  // Build a set of existing user IDs
-  const existingUserIds = new Set(spend.assignments.map((a) => a.userId));
+  // Build a set of existing user IDs (excluding viewers for comparison)
+  const existingUserIds = new Set(
+    spend.assignments
+      .filter((a) => !viewerUserIds.has(a.userId))
+      .map((a) => a.userId)
+  );
 
   // Check if the list of people involved has changed
   const usersAdded = [...newUserIds].filter((id) => !existingUserIds.has(id));
@@ -261,9 +306,9 @@ export async function replaceAssignments(
 
   // Delete existing assignments and create new ones in a transaction
   const created = await prisma.$transaction(async (tx) => {
-    // Delete assignments for users who are no longer in the spend
+    // Delete assignments for users who are no longer in the spend (including any existing viewer assignments)
     const userIdsToDelete = spend.assignments
-      .filter((a) => !newUserIds.has(a.userId))
+      .filter((a) => !newUserIds.has(a.userId) || viewerUserIds.has(a.userId))
       .map((a) => a.id);
 
     if (userIdsToDelete.length > 0) {
@@ -274,7 +319,7 @@ export async function replaceAssignments(
 
     // Process assignments: update existing or create new
     const processedAssignments = await Promise.all(
-      assignments.map(async (assignment) => {
+      filteredAssignments.map(async (assignment) => {
         const existing = existingAssignmentsMap.get(assignment.userId);
 
         if (existing) {
