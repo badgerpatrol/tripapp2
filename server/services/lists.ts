@@ -301,7 +301,10 @@ export async function getTemplate(actorId: string, templateId: string) {
     throw new Error("Template not found");
   }
 
-  if (!canViewTemplate(actorId, template)) {
+  // For trip lists, verify trip membership instead of template ownership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else if (!canViewTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot view this template");
   }
 
@@ -309,7 +312,7 @@ export async function getTemplate(actorId: string, templateId: string) {
 }
 
 /**
- * Update a template (owner only)
+ * Update a template (owner or trip member for trip lists)
  */
 export async function updateTemplate(
   actorId: string,
@@ -324,7 +327,10 @@ export async function updateTemplate(
     throw new Error("Template not found");
   }
 
-  if (!canEditTemplate(actorId, template)) {
+  // For trip lists, verify trip membership; otherwise require ownership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot edit this template");
   }
 
@@ -532,7 +538,7 @@ export async function forkPublicTemplate(
 }
 
 /**
- * Delete a template (owner only)
+ * Delete a template (owner or trip member for trip lists)
  */
 export async function deleteTemplate(actorId: string, templateId: string) {
   const template = await prisma.listTemplate.findUnique({
@@ -543,7 +549,10 @@ export async function deleteTemplate(actorId: string, templateId: string) {
     throw new Error("Template not found");
   }
 
-  if (!canEditTemplate(actorId, template)) {
+  // For trip lists, verify trip membership; otherwise require ownership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot delete this template");
   }
 
