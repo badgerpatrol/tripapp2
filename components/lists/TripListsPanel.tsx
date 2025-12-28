@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
@@ -82,6 +83,7 @@ interface TripListsPanelProps {
 }
 
 export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, listTypeFilter, hideAddButton = false, onAddClick }: TripListsPanelProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -784,8 +786,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setEditingListId(list.id);
-                      setEditingListType(list.type);
+                      if (list.type === "KIT") {
+                        router.push(`/lists/edit-kit/${list.id}?returnTo=/trips/${tripId}`);
+                      } else {
+                        setEditingListId(list.id);
+                        setEditingListType(list.type);
+                      }
                     }}
                     className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
                     title="Edit list"

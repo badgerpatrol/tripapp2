@@ -289,7 +289,7 @@ export function AddListDialog({
       : "Add List to Trip";
 
   const myTemplatesLabel = listTypeFilter === "TODO"
-    ? "My Checklists"
+    ? "Mine"
     : listTypeFilter === "KIT"
       ? "Mine"
       : "My Lists";
