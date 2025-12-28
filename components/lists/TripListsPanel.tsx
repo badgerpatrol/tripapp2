@@ -1,12 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
 import { ListReportDialog } from "./ListReportDialog";
+import QuickAddItemSheet from "./QuickAddItemSheet";
+import QuickAddTodoItemSheet from "./QuickAddTodoItemSheet";
+import { useLongPress } from "@/hooks/useLongPress";
+
+// Wrapper component for list header with long press support
+interface ListHeaderButtonProps {
+  list: ListInstance;
+  onClick: () => void;
+  onLongPress: (list: ListInstance) => void;
+  children: React.ReactNode;
+}
+
+function ListHeaderButton({ list, onClick, onLongPress, children }: ListHeaderButtonProps) {
+  const longPressHandlers = useLongPress({
+    onLongPress: () => onLongPress(list),
+    onClick: () => onClick(),
+  });
+
+  return (
+    <button
+      {...longPressHandlers}
+      className="flex-1 min-w-0 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors text-left"
+    >
+      {children}
+    </button>
+  );
+}
 
 interface ItemTick {
   id: string;
@@ -99,6 +126,20 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [reportListId, setReportListId] = useState<string | null>(null);
   const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
   const [quickAddValue, setQuickAddValue] = useState("");
+
+  // Quick add sheet state (for long press on list headers)
+  const [quickAddSheet, setQuickAddSheet] = useState<{
+    isOpen: boolean;
+    list: ListInstance | null;
+  }>({ isOpen: false, list: null });
+
+  // Handler for long press on list headers to open quick add sheet
+  const handleListLongPress = useCallback((list: ListInstance) => {
+    setQuickAddSheet({
+      isOpen: true,
+      list,
+    });
+  }, []);
 
   // In workflow mode, lists are always expanded. In normal mode, they open the workflow modal
   const shouldExpandInline = inWorkflowMode;
@@ -732,7 +773,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
               >
                 {/* List Header */}
                 <div className="flex items-center min-w-0 overflow-hidden">
-                  <button
+                  <ListHeaderButton
+                    list={list}
                     onClick={() => {
                       if (shouldExpandInline) {
                         setExpandedListId(isExpanded ? null : list.id);
@@ -740,7 +782,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         onOpenList(list.id, list.title);
                       }
                     }}
-                    className="flex-1 min-w-0 p-4 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors"
+                    onLongPress={handleListLongPress}
                   >
                     <div className="flex flex-col gap-2">
                       {/* Title at top */}
@@ -788,7 +830,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         )}
                       </div>
                     </div>
-                  </button>
+                  </ListHeaderButton>
 
                 {/* Edit Button - styled as a visible button */}
                 {isOrganizer && (
@@ -1125,6 +1167,33 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           />
         );
       })()}
+
+      {/* Quick Add Kit Item Sheet (for long press on KIT lists) */}
+      {quickAddSheet.list?.type === "KIT" && (
+        <QuickAddItemSheet
+          isOpen={quickAddSheet.isOpen}
+          onClose={() => setQuickAddSheet({ isOpen: false, list: null })}
+          templateId={quickAddSheet.list.sourceTemplateId || quickAddSheet.list.id}
+          templateTitle={quickAddSheet.list.title}
+          isInventory={false}
+          onItemAdded={() => {
+            fetchLists();
+          }}
+        />
+      )}
+
+      {/* Quick Add Todo Item Sheet (for long press on TODO lists) */}
+      {quickAddSheet.list?.type === "TODO" && (
+        <QuickAddTodoItemSheet
+          isOpen={quickAddSheet.isOpen}
+          onClose={() => setQuickAddSheet({ isOpen: false, list: null })}
+          templateId={quickAddSheet.list.sourceTemplateId || quickAddSheet.list.id}
+          templateTitle={quickAddSheet.list.title}
+          onItemAdded={() => {
+            fetchLists();
+          }}
+        />
+      )}
     </>
   );
 
