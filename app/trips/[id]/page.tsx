@@ -199,6 +199,10 @@ export default function TripDetailPage() {
   const [kitListsCount, setKitListsCount] = useState<number | null>(null); // null = not yet loaded
   const [isAddChecklistDialogOpen, setIsAddChecklistDialogOpen] = useState(false);
   const [isAddKitListDialogOpen, setIsAddKitListDialogOpen] = useState(false);
+  const [checklistIds, setChecklistIds] = useState<string[]>([]);
+  const [checklistSourceTemplateIds, setChecklistSourceTemplateIds] = useState<string[]>([]);
+  const [kitListIds, setKitListIds] = useState<string[]>([]);
+  const [kitListSourceTemplateIds, setKitListSourceTemplateIds] = useState<string[]>([]);
 
   // Toggle state for showing spends when spending is closed
   const [showSpendsWhenClosed, setShowSpendsWhenClosed] = useState(false);
@@ -1922,6 +1926,10 @@ export default function TripDetailPage() {
                     setIsListWorkflowModalOpen(true);
                   }}
                   onListsLoaded={setChecklistsCount}
+                  onListsData={(ids, sourceIds) => {
+                    setChecklistIds(ids);
+                    setChecklistSourceTemplateIds(sourceIds);
+                  }}
                 />
               </div>
             )}
@@ -2025,6 +2033,10 @@ export default function TripDetailPage() {
                     setIsListWorkflowModalOpen(true);
                   }}
                   onListsLoaded={setKitListsCount}
+                  onListsData={(ids, sourceIds) => {
+                    setKitListIds(ids);
+                    setKitListSourceTemplateIds(sourceIds);
+                  }}
                 />
               </div>
             )}
@@ -3445,6 +3457,8 @@ export default function TripDetailPage() {
           setListsRefreshKey(prev => prev + 1);
         }}
         listTypeFilter="TODO"
+        existingListIds={checklistIds}
+        existingSourceTemplateIds={checklistSourceTemplateIds}
       />
 
       {/* Add Kit List Dialog */}
@@ -3457,6 +3471,8 @@ export default function TripDetailPage() {
           setListsRefreshKey(prev => prev + 1);
         }}
         listTypeFilter="KIT"
+        existingListIds={kitListIds}
+        existingSourceTemplateIds={kitListSourceTemplateIds}
       />
     </div>
   );

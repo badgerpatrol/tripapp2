@@ -29,6 +29,8 @@ interface AddListDialogProps {
   tripId: string;
   onSuccess: () => void;
   listTypeFilter?: ListType; // If set, only show lists of this type
+  existingListIds?: string[]; // IDs of list instances already on the trip
+  existingSourceTemplateIds?: string[]; // Source template IDs of lists already on the trip
 }
 
 type MergeMode = "NEW_INSTANCE" | "REPLACE" | "MERGE_ADD" | "MERGE_ADD_ALLOW_DUPES";
@@ -40,7 +42,11 @@ export function AddListDialog({
   tripId,
   onSuccess,
   listTypeFilter,
+  existingListIds,
+  existingSourceTemplateIds,
 }: AddListDialogProps) {
+  console.log("AddListDialog - existingListIds:", existingListIds);
+  console.log("AddListDialog - existingSourceTemplateIds:", existingSourceTemplateIds);
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("my-templates");
   const [myTemplates, setMyTemplates] = useState<ListTemplate[]>([]);
@@ -522,62 +528,84 @@ export function AddListDialog({
             </p>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {templates.map((template) => (
-                <label
-                  key={template.id}
-                  className={`flex items-start p-3 border-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer transition-colors ${
-                    selectedTemplateId === template.id
-                      ? "border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800"
-                      : "border-zinc-300 dark:border-zinc-600"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="template"
-                    value={template.id}
-                    checked={selectedTemplateId === template.id}
-                    onChange={(e) => setSelectedTemplateId(e.target.value)}
-                    className="mt-1 mr-3"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-zinc-900 dark:text-white truncate mb-1">
-                      {template.title}
-                    </div>
-                    {template.description && (
-                      <div className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
-                        {template.description}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-500 mt-1">
-                      <span>
-                        {template.listType === "TODO"
-                          ? `${template.todoItems?.length || 0} tasks`
-                          : `${template.kitItems?.length || 0} items`}
-                      </span>
-                      {template.owner?.displayName && (
-                        <span>by {template.owner.displayName}</span>
-                      )}
-                    </div>
-                    {template.tags && template.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {template.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-2 py-0.5 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                        {template.tags.length > 3 && (
-                          <span className="px-2 py-0.5 text-xs text-zinc-500">
-                            +{template.tags.length - 3}
+              {templates.map((template) => {
+                const inListIds = existingListIds?.includes(template.id);
+                const inSourceIds = existingSourceTemplateIds?.includes(template.id);
+                const isAlreadyOnTrip = inListIds || inSourceIds || false;
+                console.log(`Template "${template.title}" (id: ${template.id}) - inListIds: ${inListIds}, inSourceIds: ${inSourceIds}, isAlreadyOnTrip: ${isAlreadyOnTrip}`);
+                console.log(`  template.id type: ${typeof template.id}, value: "${template.id}"`);
+                if (existingSourceTemplateIds && existingSourceTemplateIds.length > 0) {
+                  console.log(`  existingSourceTemplateIds[0] type: ${typeof existingSourceTemplateIds[0]}, value: "${existingSourceTemplateIds[0]}"`);
+                  console.log(`  Are they equal? ${template.id === existingSourceTemplateIds[0]}`);
+                }
+
+                return (
+                  <label
+                    key={template.id}
+                    className={`flex items-start p-3 border-2 rounded-lg transition-colors ${
+                      isAlreadyOnTrip
+                        ? "opacity-50 cursor-not-allowed border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/50"
+                        : selectedTemplateId === template.id
+                          ? "border-zinc-900 bg-zinc-50 dark:border-zinc-100 dark:bg-zinc-800 cursor-pointer"
+                          : "border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 cursor-pointer"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="template"
+                      value={template.id}
+                      checked={selectedTemplateId === template.id}
+                      onChange={(e) => setSelectedTemplateId(e.target.value)}
+                      disabled={isAlreadyOnTrip}
+                      className="mt-1 mr-3"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className={`font-medium truncate mb-1 ${isAlreadyOnTrip ? "text-zinc-500 dark:text-zinc-500" : "text-zinc-900 dark:text-white"}`}>
+                          {template.title}
+                        </div>
+                        {isAlreadyOnTrip && (
+                          <span className="text-xs px-2 py-0.5 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded whitespace-nowrap">
+                            Already added
                           </span>
                         )}
                       </div>
-                    )}
-                  </div>
-                </label>
-              ))}
+                      {template.description && (
+                        <div className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                          {template.description}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-500 mt-1">
+                        <span>
+                          {template.listType === "TODO"
+                            ? `${template.todoItems?.length || 0} tasks`
+                            : `${template.kitItems?.length || 0} items`}
+                        </span>
+                        {template.owner?.displayName && (
+                          <span>by {template.owner.displayName}</span>
+                        )}
+                      </div>
+                      {template.tags && template.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {template.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 text-xs bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                          {template.tags.length > 3 && (
+                            <span className="px-2 py-0.5 text-xs text-zinc-500">
+                              +{template.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           )}
             </div>

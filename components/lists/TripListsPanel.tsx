@@ -75,12 +75,13 @@ interface TripListsPanelProps {
   isOrganizer?: boolean; // If false and no lists exist, component will not render
   hideContainer?: boolean; // If true, will not render the outer container wrapper (for use when wrapped externally)
   onListsLoaded?: (count: number) => void; // Callback when lists are loaded, reports the count
+  onListsData?: (listIds: string[], sourceTemplateIds: string[]) => void; // Callback with list IDs for deduplication
   listTypeFilter?: ListType; // If set, only show lists of this type (TODO or KIT)
   hideAddButton?: boolean; // If true, hides the main +Add button (for when parent controls it)
   onAddClick?: () => void; // Callback when add is triggered (allows parent to control the dialog)
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, listTypeFilter, hideAddButton = false, onAddClick }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, onListsData, listTypeFilter, hideAddButton = false, onAddClick }: TripListsPanelProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
@@ -140,6 +141,15 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         onListsLoaded(fetchedLists.length);
       }
 
+      // Notify parent of list IDs for deduplication
+      if (onListsData) {
+        const listIds = fetchedLists.map((l: ListInstance) => l.id);
+        const sourceTemplateIds = fetchedLists
+          .filter((l: ListInstance) => l.sourceTemplateId)
+          .map((l: ListInstance) => l.sourceTemplateId!);
+        onListsData(listIds, sourceTemplateIds);
+      }
+
       // In workflow mode, expand the selected list or the first list by default
       if (inWorkflowMode && fetchedLists.length > 0 && !expandedListId) {
         if (selectedListId) {
@@ -154,6 +164,9 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       // Notify parent that loading is complete (with 0 lists) even on error
       if (onListsLoaded) {
         onListsLoaded(0);
+      }
+      if (onListsData) {
+        onListsData([], []);
       }
     } finally {
       setLoading(false);
@@ -1092,6 +1105,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
           fetchLists(); // Refresh the lists after adding
         }}
         listTypeFilter={listTypeFilter}
+        existingListIds={lists.map(l => l.id)}
+        existingSourceTemplateIds={lists.filter(l => l.sourceTemplateId).map(l => l.sourceTemplateId!)}
       />
 
       {/* List Report Dialog */}
