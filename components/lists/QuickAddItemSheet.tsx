@@ -135,16 +135,17 @@ export default function QuickAddItemSheet({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-50 flex flex-col">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
 
-      {/* Sheet */}
-      <div className="relative w-full max-w-md mx-4 sm:mx-auto bg-white dark:bg-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-xl p-6 animate-in slide-in-from-bottom duration-200 overflow-hidden">
-        <div className="flex items-center justify-between gap-3 mb-4">
+      {/* Sheet - full width on mobile for inventory */}
+      <div className={`relative mt-auto w-full bg-white dark:bg-zinc-800 rounded-t-2xl shadow-xl flex flex-col max-h-[85vh] ${isInventory ? "" : "sm:max-w-md sm:mx-auto sm:rounded-2xl sm:my-auto"}`}>
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 p-4 border-b border-zinc-200 dark:border-zinc-700 shrink-0">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-white truncate min-w-0">
             Add Item to "{templateTitle}"
           </h2>
@@ -158,7 +159,8 @@ export default function QuickAddItemSheet({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Scrollable form content */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4">
           {error && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
@@ -175,7 +177,7 @@ export default function QuickAddItemSheet({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g., Sleeping bag"
-              className="w-full px-4 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
               disabled={saving}
               required
             />
@@ -191,7 +193,7 @@ export default function QuickAddItemSheet({
               onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
               min="0"
               step="0.1"
-              className="w-full px-4 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
               disabled={saving}
             />
           </div>
@@ -259,22 +261,24 @@ export default function QuickAddItemSheet({
 
           {/* Inventory-specific fields */}
           {isInventory && (
-            <div className="space-y-3 max-h-[40vh] overflow-y-auto">
-              {/* Category and Weight */}
+            <>
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="e.g., Shelter"
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  disabled={saving}
+                />
+              </div>
+
+              {/* Weight and Cost - 2 column grid */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Category
-                  </label>
-                  <input
-                    type="text"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    placeholder="e.g., Shelter"
-                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                    disabled={saving}
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     Weight (g)
@@ -289,10 +293,6 @@ export default function QuickAddItemSheet({
                     disabled={saving}
                   />
                 </div>
-              </div>
-
-              {/* Cost and Date */}
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     Cost
@@ -301,25 +301,27 @@ export default function QuickAddItemSheet({
                     type="number"
                     value={cost}
                     onChange={(e) => setCost(e.target.value)}
-                    placeholder="0.00"
+                    placeholder="0"
                     min="0"
                     step="0.01"
                     className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
                     disabled={saving}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Date Acquired
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                    disabled={saving}
-                  />
-                </div>
+              </div>
+
+              {/* Date Acquired - full width */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Date Acquired
+                </label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full min-w-0 appearance-none box-border px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  disabled={saving}
+                />
               </div>
 
               {/* URL */}
@@ -332,13 +334,13 @@ export default function QuickAddItemSheet({
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  className="w-full min-w-0 box-border px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
                   disabled={saving}
                 />
               </div>
 
-              {/* Needs Repair */}
-              <div>
+              {/* Needs Repair section */}
+              <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
                   <input
                     type="checkbox"
@@ -349,27 +351,22 @@ export default function QuickAddItemSheet({
                   />
                   Needs Repair
                 </label>
+                {needsRepair && (
+                  <div className="pl-6">
+                    <textarea
+                      value={conditionNotes}
+                      onChange={(e) => setConditionNotes(e.target.value)}
+                      placeholder="Describe the repair needed..."
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      disabled={saving}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Condition Notes - only show when needsRepair is checked */}
-              {needsRepair && (
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Condition Notes
-                  </label>
-                  <textarea
-                    value={conditionNotes}
-                    onChange={(e) => setConditionNotes(e.target.value)}
-                    placeholder="Describe the repair needed..."
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
-                    disabled={saving}
-                  />
-                </div>
-              )}
-
-              {/* Lost */}
-              <div>
+              {/* Lost section */}
+              <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
                   <input
                     type="checkbox"
@@ -380,59 +377,49 @@ export default function QuickAddItemSheet({
                   />
                   Lost
                 </label>
-              </div>
-
-              {/* Last Seen fields - only show when lost is checked */}
-              {lost && (
-                <div className="space-y-3 pl-4 border-l-2 border-red-300 dark:border-red-700">
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Last Seen Location
-                    </label>
+                {lost && (
+                  <div className="pl-6 space-y-2">
                     <input
                       type="text"
                       value={lastSeenText}
                       onChange={(e) => setLastSeenText(e.target.value)}
-                      placeholder="e.g., Left at campsite"
-                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      placeholder="Last seen location..."
+                      className="w-full min-w-0 box-border px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
                       disabled={saving}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Last Seen Date
-                    </label>
                     <input
                       type="date"
                       value={lastSeenDate}
                       onChange={(e) => setLastSeenDate(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                      className="w-full min-w-0 appearance-none box-border px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
                       disabled={saving}
                     />
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </>
           )}
+        </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
-              disabled={saving || !label.trim()}
-            >
-              {saving ? "Adding..." : "Add Item"}
-            </Button>
-          </div>
-        </form>
+        {/* Fixed footer buttons */}
+        <div className="flex gap-3 p-4 border-t border-zinc-200 dark:border-zinc-700 shrink-0">
+          <Button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500 dark:text-zinc-200"
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+            disabled={saving || !label.trim()}
+          >
+            {saving ? "Adding..." : "Add Item"}
+          </Button>
+        </div>
       </div>
     </div>
   );
