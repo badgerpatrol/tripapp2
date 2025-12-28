@@ -23,6 +23,7 @@ interface EditKitItemDialogProps {
   item: KitItem;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted: () => void;
 }
 
 export function EditKitItemDialog({
@@ -31,9 +32,12 @@ export function EditKitItemDialog({
   item,
   onClose,
   onSaved,
+  onDeleted,
 }: EditKitItemDialogProps) {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -100,6 +104,47 @@ export function EditKitItemDialog({
       setError(err instanceof Error ? err.message : "Failed to update item");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+
+      const response = await fetch(
+        `/api/lists/templates/${templateId}/items/${item.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        let errorMessage = "Failed to delete item";
+        try {
+          const data = JSON.parse(text);
+          errorMessage = data.error || errorMessage;
+        } catch {
+          // Response wasn't JSON, use default message
+        }
+        throw new Error(errorMessage);
+      }
+
+      onDeleted();
+    } catch (err: unknown) {
+      console.error("Error deleting item:", err);
+      setError(err instanceof Error ? err.message : "Failed to delete item");
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -259,24 +304,66 @@ export function EditKitItemDialog({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-700">
+          <div className="flex gap-3 justify-between pt-4 border-t border-zinc-200 dark:border-zinc-700">
             <Button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
-              disabled={saving}
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
+              disabled={saving || deleting}
             >
-              Cancel
+              Delete
             </Button>
-            <Button
-              type="submit"
-              className="px-4 py-2 text-sm bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900"
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save"}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+                disabled={saving || deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={saving || deleting}
+              >
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </div>
         </form>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl p-6 m-4 max-w-sm">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                Delete Item?
+              </h3>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                Are you sure you want to delete "{item.label}"? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

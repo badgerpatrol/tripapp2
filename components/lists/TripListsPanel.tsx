@@ -1173,7 +1173,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         <QuickAddItemSheet
           isOpen={quickAddSheet.isOpen}
           onClose={() => setQuickAddSheet({ isOpen: false, list: null })}
-          templateId={quickAddSheet.list.sourceTemplateId || quickAddSheet.list.id}
+          templateId={quickAddSheet.list.id}
           templateTitle={quickAddSheet.list.title}
           isInventory={false}
           onItemAdded={() => {
@@ -1187,7 +1187,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         <QuickAddTodoItemSheet
           isOpen={quickAddSheet.isOpen}
           onClose={() => setQuickAddSheet({ isOpen: false, list: null })}
-          templateId={quickAddSheet.list.sourceTemplateId || quickAddSheet.list.id}
+          templateId={quickAddSheet.list.id}
           templateTitle={quickAddSheet.list.title}
           onItemAdded={() => {
             fetchLists();
