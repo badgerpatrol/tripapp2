@@ -8,7 +8,6 @@ import { ListType, TodoActionType } from "@/lib/generated/prisma";
 import { AddListDialog } from "./AddListDialog";
 import { ListReportDialog } from "./ListReportDialog";
 import { EditTodoListForm } from "./EditTodoListForm";
-import { EditKitListForm } from "./EditKitListForm";
 
 interface ItemTick {
   id: string;
@@ -99,7 +98,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [reportListId, setReportListId] = useState<string | null>(null);
   const [editingListId, setEditingListId] = useState<string | null>(null);
-  const [editingListType, setEditingListType] = useState<ListType | null>(null);
   const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
   const [quickAddValue, setQuickAddValue] = useState("");
 
@@ -790,7 +788,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         router.push(`/lists/edit-kit/${list.id}?returnTo=/trips/${tripId}`);
                       } else {
                         setEditingListId(list.id);
-                        setEditingListType(list.type);
                       }
                     }}
                     className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
@@ -1116,49 +1113,25 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
         );
       })()}
 
-      {/* Edit List Dialog */}
+      {/* Edit List Dialog - only used for TODO lists (KIT lists navigate to full page) */}
       {editingListId && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 overflow-hidden">
           <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-3xl w-full h-auto max-h-[calc(100vh-2rem)] flex flex-col p-6 overflow-hidden">
-            {editingListType === "TODO" ? (
-              <EditTodoListForm
-                listId={editingListId}
-                onClose={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                }}
-                onSaved={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after editing
-                }}
-                onDeleted={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after deleting
-                }}
-                isTripList={true}
-              />
-            ) : (
-              <EditKitListForm
-                listId={editingListId}
-                onClose={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                }}
-                onSaved={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after editing
-                }}
-                onDeleted={() => {
-                  setEditingListId(null);
-                  setEditingListType(null);
-                  fetchLists(); // Refresh the lists after deleting
-                }}
-                isTripList={true}
-              />
-            )}
+            <EditTodoListForm
+              listId={editingListId}
+              onClose={() => {
+                setEditingListId(null);
+              }}
+              onSaved={() => {
+                setEditingListId(null);
+                fetchLists(); // Refresh the lists after editing
+              }}
+              onDeleted={() => {
+                setEditingListId(null);
+                fetchLists(); // Refresh the lists after deleting
+              }}
+              isTripList={true}
+            />
           </div>
         </div>
       )}
