@@ -2643,50 +2643,50 @@ export default function TripDetailPage() {
             {!collapsedSections.balance && (
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Trip Spend - Always show */}
-              {trip.totalSpent !== undefined && (
+              {trip?.totalSpent !== undefined && (
                 <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
                   <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">Total Trip Spend</p>
                   <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    {trip.baseCurrency} {trip.totalSpent.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.totalSpent?.toFixed(2)}
                   </p>
                 </div>
               )}
 
               {/* Your Spend - Calculate from spends where user is the payer */}
-              {trip.spends !== undefined && user && (
+              {trip?.spends !== undefined && user && (
                 <div className="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800">
                   <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mb-1">Your Spend</p>
                   <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
-                    {trip.baseCurrency} {trip.spends.filter(s => s.paidBy.id === user.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
+                    {trip?.baseCurrency} {trip?.spends?.filter(s => s.paidBy.id === user?.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
                   </p>
                 </div>
               )}
 
               {/* Show You Owe / You Are Owed only when spend is CLOSED */}
-              {trip.spendStatus === SpendStatus.CLOSED && trip.userOwes !== undefined && trip.userOwes > 0 && (
+              {trip?.spendStatus === SpendStatus.CLOSED && (trip?.userOwes ?? 0) > 0 && (
                 <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800">
                   <p className="text-sm text-red-600 dark:text-red-400 font-medium mb-1">You Owe</p>
                   <p className="text-2xl font-bold text-red-700 dark:text-red-300">
-                    {trip.baseCurrency} {trip.userOwes.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.userOwes?.toFixed(2)}
                   </p>
                 </div>
               )}
 
-              {trip.spendStatus === SpendStatus.CLOSED && trip.userIsOwed !== undefined && trip.userIsOwed > 0 && (
+              {trip?.spendStatus === SpendStatus.CLOSED && (trip?.userIsOwed ?? 0) > 0 && (
                 <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
                   <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">You Are Owed</p>
                   <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                    {trip.baseCurrency} {trip.userIsOwed.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.userIsOwed?.toFixed(2)}
                   </p>
                 </div>
               )}
 
               {/* Unassigned Spend - Show when spend is OPEN */}
-              {trip.spendStatus === SpendStatus.OPEN && trip.totalUnassigned !== undefined && (
+              {trip?.spendStatus === SpendStatus.OPEN && trip?.totalUnassigned !== undefined && (
                 <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
                   <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mb-1">Unassigned Spend</p>
                   <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                    {trip.baseCurrency} {trip.totalUnassigned.toFixed(2)}
+                    {trip?.baseCurrency} {trip?.totalUnassigned?.toFixed(2)}
                   </p>
                 </div>
               )}
@@ -2737,7 +2737,7 @@ export default function TripDetailPage() {
                     <div className="p-2 sm:p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
                       <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">You Paid</p>
                       <p className="text-sm sm:text-lg font-bold text-purple-700 dark:text-purple-300">
-                        {trip.baseCurrency} {trip.spends.filter(s => s.paidBy.id === user.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
+                        {trip?.baseCurrency} {trip?.spends?.filter(s => s.paidBy.id === user?.uid).reduce((sum, spend) => sum + spend.normalizedAmount, 0).toFixed(2)}
                       </p>
                     </div>
                     <div className="p-2 sm:p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
