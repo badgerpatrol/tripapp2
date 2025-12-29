@@ -369,7 +369,7 @@ export default function AdminLogsPage() {
             </Button>
             <Button
               onClick={handleClearFilters}
-              className="bg-zinc-600 hover:bg-zinc-700 text-white"
+              className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
             >
               Clear Filters
             </Button>
@@ -380,7 +380,7 @@ export default function AdminLogsPage() {
         <div className="flex gap-4 mb-6">
           <Button
             onClick={handleSelectAll}
-            className="bg-zinc-600 hover:bg-zinc-700 text-white"
+            className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
           >
             {selectAll ? "Deselect All" : "Select All"}
           </Button>
@@ -509,7 +509,7 @@ export default function AdminLogsPage() {
                     setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
                   }
                   disabled={pagination.page === 1}
-                  className="bg-zinc-600 hover:bg-zinc-700 text-white disabled:bg-zinc-400 disabled:cursor-not-allowed"
+                  className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </Button>
@@ -521,7 +521,7 @@ export default function AdminLogsPage() {
                     setPagination((prev) => ({ ...prev, page: prev.page + 1 }))
                   }
                   disabled={pagination.page >= pagination.totalPages}
-                  className="bg-zinc-600 hover:bg-zinc-700 text-white disabled:bg-zinc-400 disabled:cursor-not-allowed"
+                  className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </Button>
@@ -640,7 +640,7 @@ export default function AdminLogsPage() {
               <div className="sticky bottom-0 bg-zinc-50 dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-700 px-6 py-4 flex justify-end">
                 <Button
                   onClick={() => setViewingLog(null)}
-                  className="bg-zinc-600 hover:bg-zinc-700 text-white"
+                  className="bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
                 >
                   Close
                 </Button>

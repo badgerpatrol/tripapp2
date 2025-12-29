@@ -417,7 +417,7 @@ export default function QuickAddItemSheet({
             className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
             disabled={saving || !label.trim()}
           >
-            {saving ? "Adding..." : "Add Item"}
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>

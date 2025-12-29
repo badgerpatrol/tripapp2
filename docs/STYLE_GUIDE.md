@@ -23,7 +23,7 @@ This document defines the canonical UI styling patterns for TripApp. All new scr
 11. [Accessibility](#11-accessibility)
 12. [Dark Mode](#12-dark-mode)
 13. [Responsive Design](#13-responsive-design)
-14. [Button Labels](#14-button-labels)
+14. [Button Labels & Colors](#14-button-labels--colors)
 
 ---
 
@@ -118,7 +118,9 @@ All styling values are defined in `styles/tokens.css`. **Never use hardcoded val
 ### Semantic Colors
 | Token | Hex | Tailwind | Use Case |
 |-------|-----|----------|----------|
-| `--color-success` | #22c55e | `green-500` | Success states |
+| `--color-action` | #16a34a | `green-600` | In-progress action buttons |
+| `--color-action-hover` | #15803d | `green-700` | Action button hover |
+| `--color-success` | #22c55e | `green-500` | Success states (toasts, badges) |
 | `--color-warning` | #f59e0b | `amber-500` | Warning states |
 | `--color-error` | #ef4444 | `red-500` | Error states, destructive |
 | `--color-info` | #3b82f6 | `blue-500` | Informational |
@@ -223,8 +225,9 @@ Import: `import { Button } from "@/components/ui/button"`
 #### Variants
 | Variant | Use Case | Appearance |
 |---------|----------|------------|
-| `primary` | Main actions | Blue background, white text |
-| `secondary` | Secondary actions | Gray background |
+| `primary` | Concluding actions (Save, Next, Create) | Blue background, white text |
+| `action` | In-progress actions (Split, Pay, Assign) | Green background, white text |
+| `secondary` | Secondary actions (Cancel, Back) | Gray background |
 | `outline` | Tertiary actions | Transparent with border |
 | `ghost` | Subtle actions | Transparent, text only |
 | `destructive` | Delete/remove | Red background |
@@ -638,17 +641,84 @@ Use `.minw0` utility on flex/grid children:
 
 ---
 
-## 14. Button Labels
+## 14. Button Labels & Colors
 
 ### Standard Action Labels
 Use consistent, generic labels for all action buttons:
 
-| Action | Label | NOT |
-|--------|-------|-----|
-| Start creation | **+ Add** | "Add Task", "Create Checklist", "New Item" |
-| Complete/save | **Save** | "Save Trip", "Create", "Submit" |
-| Dismiss | **Cancel** | "Close", "Dismiss" |
-| Remove | **Delete** | "Remove Item", "Delete Trip" |
+| Action | Label | Variant | Color | NOT |
+|--------|-------|---------|-------|-----|
+| Start creation | **+ Add** | `primary` | Blue | "Add Task", "Create Checklist" |
+| Proceed/save | **Save**, **Next** | `primary` | Blue | "Save Trip", "Submit" |
+| Dismiss | **Cancel** | `secondary` | Gray | "Close", "Dismiss" |
+| Remove | **Delete** | `destructive` | Red | "Remove Item", "Delete Trip" |
+| Bulk remove | **Delete Selected** | `destructive` | Red | "Delete Items" |
+
+### Button Color Rules
+
+| Action Type | Variant | Background | Text |
+|-------------|---------|------------|------|
+| **Concluding action** (Save, Next, Add, Submit) | `primary` | `blue-600` | white |
+| **In-progress action** (Split, Pay, Assign, Apply) | `action` | `green-600` | white |
+| **Secondary action** (Cancel, Back) | `secondary` | `zinc-100` / `zinc-800` | `zinc-700` / `zinc-300` |
+| **Destructive action** (Delete, Remove) | `destructive` | `red-600` | white |
+
+#### Blue vs Green: When to Use Each
+
+**Blue (`primary`)** - Concluding actions that complete/save the current form or flow:
+- Save, Submit, Create, Update - persists data and typically closes the form
+- Next, Continue - moves to the next step in a wizard
+- Add (when adding a new entity) - creates something new
+- Confirm (when finalizing) - completes a transaction
+
+**Green (`action`)** - In-progress actions that perform an operation but keep you on the current form:
+- Split - divides a spend but stays on the spend dialog
+- Pay - records a payment but stays on the balances view
+- Assign - assigns an item but stays on the current view
+- Apply - applies a filter/setting without leaving
+- Create Spend (from within another dialog) - creates related data while staying in context
+- Add Users (in invite dialog) - adds users but stays in the invite dialog for more actions
+- Share Trip - shares but stays in the edit dialog
+
+```jsx
+// Concluding/Save - always blue
+<Button variant="primary">Save</Button>
+<Button variant="primary">Next</Button>
+<Button variant="primary">Create Trip</Button>
+
+// In-progress action - always green
+<Button variant="action">Split</Button>
+<Button variant="action">Pay</Button>
+<Button variant="action">Assign</Button>
+
+// Cancel/Back - always gray
+<Button variant="secondary">Cancel</Button>
+<Button variant="secondary">Back</Button>
+
+// Delete - always red
+<Button variant="destructive">Delete</Button>
+<Button variant="destructive">Delete Selected</Button>
+```
+
+### Button Pairing in Dialogs
+When pairing buttons, order them: secondary (left), primary/destructive (right)
+
+```jsx
+// Save dialog
+<div className="flex gap-3">
+  <Button variant="secondary">Cancel</Button>
+  <Button variant="primary">Save</Button>
+</div>
+
+// Delete confirmation
+<div className="flex gap-3">
+  <Button variant="secondary">Cancel</Button>
+  <Button variant="destructive">Delete</Button>
+</div>
+```
+
+### Exceptions
+- **Delete Selected**: When users have selected multiple items via checkboxes, use "Delete Selected" to clarify the bulk action scope. Optionally include a count: "Delete Selected (3)".
 
 ### Why Generic Labels?
 - Consistent muscle memory across the app

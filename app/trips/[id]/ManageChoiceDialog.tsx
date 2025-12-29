@@ -765,7 +765,7 @@ export default function ManageChoiceDialog({
                             disabled={!newItem.name || saving}
                             className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 text-white rounded-lg"
                           >
-                            Add Item
+                            + Add
                           </button>
                         </div>
                       </div>
@@ -774,7 +774,7 @@ export default function ManageChoiceDialog({
                         onClick={() => setShowAddItem(true)}
                         className="w-full px-4 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-blue-500 hover:text-blue-600 transition-colors"
                       >
-                        + Add Menu Item
+                        + Add
                       </button>
                     )}
                   </div>

@@ -300,7 +300,6 @@ export function AddListDialog({
 
   const isCreateNewTab = activeTab === "create-new";
   const canSubmit = isCreateNewTab ? newListTitle.trim().length > 0 : selectedTemplateIds.size > 0;
-  const selectedCount = selectedTemplateIds.size;
 
   return (
     <Modal
@@ -323,12 +322,10 @@ export function AddListDialog({
             disabled={loading || !canSubmit}
           >
             {loading
-              ? (isCreateNewTab ? "Creating..." : "Adding...")
+              ? (isCreateNewTab ? "Saving..." : "Adding...")
               : (isCreateNewTab
-                  ? "Create List"
-                  : selectedCount === 1
-                    ? "Add List"
-                    : `Add ${selectedCount} Lists`)}
+                  ? "Save"
+                  : "+ Add")}
           </Button>
         </>
       }

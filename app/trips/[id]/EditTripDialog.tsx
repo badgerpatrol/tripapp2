@@ -795,7 +795,7 @@ export default function EditTripDialog({
                 disabled={isSubmitting || isDeleting || showDeleteConfirm}
                 className="tap-target w-full px-6 py-3 rounded-lg border-2 border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Delete Trip
+                Delete
               </button>
             </div>
           </form>

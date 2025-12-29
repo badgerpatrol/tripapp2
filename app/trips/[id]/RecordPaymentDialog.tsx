@@ -220,7 +220,7 @@ export default function RecordPaymentDialog({
                   variant="primary"
                   className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 whitespace-nowrap"
                 >
-                  Pay Full
+                  Pay in Full
                 </Button>
               </div>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">

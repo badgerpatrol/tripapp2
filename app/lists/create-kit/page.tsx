@@ -363,7 +363,7 @@ function CreateKitListPageContent() {
             </Button>
             <Button
               type="submit"
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
               disabled={loading}
             >
               {loading ? "Creating..." : inventoryFromUrl ? "Create" : "Create"}
@@ -392,7 +392,7 @@ function CreateKitListPageContent() {
                   <Button
                     type="button"
                     onClick={() => setIsInventorySheetOpen(true)}
-                    className="text-sm px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+                    className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
                     disabled={loading}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,7 +404,7 @@ function CreateKitListPageContent() {
                 <Button
                   type="button"
                   onClick={addItem}
-                  className="text-sm px-4 py-2 bg-green-600 hover:bg-green-700 text-white"
+                  className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
                   disabled={loading}
                 >
                   + Add Item

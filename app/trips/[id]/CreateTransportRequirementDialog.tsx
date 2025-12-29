@@ -238,7 +238,7 @@ export default function CreateTransportRequirementDialog({
               <button
                 type="submit"
                 disabled={loading || !formData.fromLocation || !formData.toLocation}
-                className="flex-1 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
               >
                 {loading ? "Creating..." : "Request Lift"}
               </button>

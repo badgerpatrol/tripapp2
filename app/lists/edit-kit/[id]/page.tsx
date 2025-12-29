@@ -654,7 +654,7 @@ function EditKitListPageContent() {
                 <Button
                   type="button"
                   onClick={() => setIsInventorySheetOpen(true)}
-                  className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-1 sm:gap-2"
+                  className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-1 sm:gap-2"
                   disabled={saving}
                 >
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -666,7 +666,7 @@ function EditKitListPageContent() {
               <Button
                 type="button"
                 onClick={addItem}
-                className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-1 sm:gap-2"
+                className="min-w-[80px] flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 sm:gap-2"
                 disabled={saving}
               >
                 <span>+ Add</span>
