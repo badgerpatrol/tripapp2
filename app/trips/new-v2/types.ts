@@ -28,6 +28,11 @@ export interface WizardState {
   endDate: string;
   description: string;
 
+  // Original values from when trip was created (for change detection)
+  originalName: string | null;
+  originalStartDate: string | null;
+  originalEndDate: string | null;
+
   // Step 2 - Details
   location: string;
   baseCurrency: string;
@@ -71,6 +76,9 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   startDate: getCurrentDateTimeLocal(),
   endDate: getCurrentDateTimeLocal(),
   description: '',
+  originalName: null,
+  originalStartDate: null,
+  originalEndDate: null,
   location: '',
   baseCurrency: 'GBP',
   allowNamedPeople: false,

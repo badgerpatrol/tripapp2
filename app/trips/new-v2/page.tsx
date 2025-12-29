@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import Link from "next/link";
 import WizardFooterNav from "./WizardFooterNav";
 import Step1Basics from "./steps/Step1Basics";
 import Step2Details from "./steps/Step2Details";
@@ -75,7 +74,7 @@ function WizardContent() {
     setError(null);
 
     if (currentStep === 1) {
-      await createTrip();
+      await handleStep1Next();
     } else if (currentStep === 2) {
       await updateTripDetails();
     } else if (currentStep === 3) {
@@ -147,8 +146,8 @@ function WizardContent() {
     }
   };
 
-  // API calls
-  const createTrip = async () => {
+  // Handle Step 1 Next - either create new trip or update existing if changed
+  const handleStep1Next = async () => {
     if (!user) return;
 
     // Validate
@@ -165,6 +164,71 @@ function WizardContent() {
       return;
     }
 
+    // If trip already exists, check if we need to update it
+    if (state.tripId) {
+      const nameChanged = state.name.trim() !== state.originalName;
+      const startChanged = state.startDate !== state.originalStartDate;
+      const endChanged = state.endDate !== state.originalEndDate;
+
+      if (nameChanged || startChanged || endChanged) {
+        // Update the existing trip
+        await updateTripBasics();
+      } else {
+        // No changes, just go to step 2
+        goToStep(2);
+      }
+      return;
+    }
+
+    // No trip exists yet, create one
+    await createTrip();
+  };
+
+  // Update trip basics (name, dates) for existing trip
+  const updateTripBasics = async () => {
+    if (!user || !state.tripId) return;
+
+    setIsLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/trips/${state.tripId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: state.name.trim(),
+          startDate: new Date(state.startDate),
+          endDate: new Date(state.endDate),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update trip");
+      }
+
+      // Update original values to reflect the new saved state
+      updateState({
+        originalName: state.name.trim(),
+        originalStartDate: state.startDate,
+        originalEndDate: state.endDate,
+      });
+      goToStep(2);
+    } catch (err) {
+      console.error("Error updating trip:", err);
+      setError(err instanceof Error ? err.message : "Failed to update trip");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // API calls
+  const createTrip = async () => {
+    if (!user) return;
+
+    // Note: Validation is done in handleStep1Next before calling this
     setIsLoading(true);
     try {
       const token = await user.getIdToken();
@@ -188,7 +252,13 @@ function WizardContent() {
         throw new Error(data.error || "Failed to create trip");
       }
 
-      updateState({ tripId: data.trip.id });
+      // Save tripId and original values for change detection
+      updateState({
+        tripId: data.trip.id,
+        originalName: state.name.trim(),
+        originalStartDate: state.startDate,
+        originalEndDate: state.endDate,
+      });
       goToStep(2);
     } catch (err) {
       console.error("Error creating trip:", err);
