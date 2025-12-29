@@ -184,7 +184,7 @@ export default function CreateChoiceDialog({
                 disabled={loading || !formData.name}
                 className="flex-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-600 text-white font-medium transition-colors disabled:cursor-not-allowed"
               >
-                {loading ? "Creating..." : "Create Choice"}
+                {loading ? "Saving..." : "Save"}
               </button>
             </div>
           </form>

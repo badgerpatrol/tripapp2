@@ -649,6 +649,10 @@ Use consistent, generic labels for all action buttons:
 | Complete/save | **Save** | "Save Trip", "Create", "Submit" |
 | Dismiss | **Cancel** | "Close", "Dismiss" |
 | Remove | **Delete** | "Remove Item", "Delete Trip" |
+| Bulk remove | **Delete Selected** | "Delete Items", "Remove Selected Items" |
+
+### Exceptions
+- **Delete Selected**: When users have selected multiple items via checkboxes, use "Delete Selected" to clarify the bulk action scope. Optionally include a count: "Delete Selected (3)".
 
 ### Why Generic Labels?
 - Consistent muscle memory across the app
