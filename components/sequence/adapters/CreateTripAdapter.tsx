@@ -13,8 +13,8 @@ export default function CreateTripAdapter({ run, step }: CreateTripAdapterProps)
   const router = useRouter();
 
   const handleCreateTrip = () => {
-    // Navigate to create trip page with runId to redirect back
-    router.push(`/trips/new?runId=${run.id}`);
+    // Navigate to create trip page
+    router.push("/trips/new-v2");
   };
 
   return (

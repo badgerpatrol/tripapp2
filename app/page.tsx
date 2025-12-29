@@ -145,7 +145,7 @@ function HomeContent() {
     });
   };
 
-  // Compute display status - show "LIVE" if current date is within trip dates
+  // Compute display status - show "LIVE" if current date is within trip dates, "FINISHED" if past
   const getDisplayStatus = (trip: Trip) => {
     if (trip.startDate && trip.endDate) {
       const now = new Date();
@@ -155,6 +155,9 @@ function HomeContent() {
       now.setHours(0, 0, 0, 0);
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
+      if (now > end) {
+        return "FINISHED";
+      }
       if (now >= start && now <= end) {
         return "LIVE";
       }
@@ -336,6 +339,8 @@ function HomeContent() {
                               className={`px-2 py-1 text-xs font-medium rounded ${
                                 displayStatus === "LIVE"
                                   ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                                  : displayStatus === "FINISHED"
+                                  ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
                                   : displayStatus === "PLANNING"
                                   ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
                                   : displayStatus === "ACTIVE"

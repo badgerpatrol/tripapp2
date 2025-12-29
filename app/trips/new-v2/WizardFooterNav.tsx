@@ -11,7 +11,6 @@ interface WizardFooterNavProps {
   isLastStep: boolean;
   canProceed: boolean;
   onBack: () => void;
-  onSkip: () => void;
   onNext: () => void;
   onCancel: () => void;
   onDelete: () => void;
@@ -27,7 +26,6 @@ export default function WizardFooterNav({
   isLastStep,
   canProceed,
   onBack,
-  onSkip,
   onNext,
   onCancel,
   onDelete,
@@ -35,7 +33,6 @@ export default function WizardFooterNav({
   nextLabel,
 }: WizardFooterNavProps) {
   const showBack = currentStep > 1;
-  const showSkip = currentStep > 1 && !isLastStep;
   const isStep1 = currentStep === 1;
 
   return (
@@ -56,10 +53,10 @@ export default function WizardFooterNav({
         ))}
       </div>
 
-      {/* Navigation buttons */}
-      <div className="flex items-center justify-between gap-2 max-w-lg mx-auto">
+      {/* Navigation buttons - fixed 3-column layout */}
+      <div className="grid grid-cols-3 items-center max-w-lg mx-auto">
         {/* Left side: Cancel or Delete */}
-        <div className="w-20">
+        <div className="flex justify-start">
           {isStep1 && !tripCreated ? (
             <Button
               variant="ghost"
@@ -83,8 +80,8 @@ export default function WizardFooterNav({
           )}
         </div>
 
-        {/* Center: Back and Skip */}
-        <div className="flex items-center gap-2">
+        {/* Center: Back */}
+        <div className="flex items-center justify-center">
           {showBack && (
             <Button
               variant="secondary"
@@ -100,21 +97,10 @@ export default function WizardFooterNav({
               Back
             </Button>
           )}
-          {showSkip && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSkip}
-              disabled={isLoading}
-              className="text-zinc-500 dark:text-zinc-400"
-            >
-              Skip
-            </Button>
-          )}
         </div>
 
-        {/* Right side: Next or Finish */}
-        <div className="w-24 flex justify-end">
+        {/* Right side: Next or Finish - fixed width for consistent positioning */}
+        <div className="flex justify-end">
           {isLastStep ? (
             <Button
               variant="primary"
@@ -122,6 +108,7 @@ export default function WizardFooterNav({
               onClick={onFinish}
               disabled={isLoading}
               loading={isLoading}
+              className="w-20"
             >
               Finish
             </Button>
@@ -132,13 +119,9 @@ export default function WizardFooterNav({
               onClick={onNext}
               disabled={!canProceed || isLoading}
               loading={isLoading}
-              rightIcon={
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              }
+              className="w-20"
             >
-              {nextLabel || "Next"}
+              {nextLabel || "Next >"}
             </Button>
           )}
         </div>

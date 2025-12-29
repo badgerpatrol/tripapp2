@@ -102,7 +102,7 @@ export default function TripTemplateCarousel() {
   };
 
   const handleBlankTrip = () => {
-    router.push("/trips/new");
+    router.push("/trips/new-v2");
   };
 
   if (loading) {
