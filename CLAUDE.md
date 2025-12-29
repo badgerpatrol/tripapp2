@@ -43,3 +43,44 @@ Always read `docs/UI-STRUCTURE.md` before making changes to the UI or adding new
 Follow `STYLE_GUIDE.md` for all UI styling decisions. This document defines the canonical patterns for typography, colors, spacing, components, forms, lists, and accessibility. Use the Kit list page and Create Trip form as reference implementations.
 32) ## Design Principles
 Always follow `docs/DESIGN_PRINCIPLES.md` for architectural and privacy decisions. This includes critical rules like email address handling and data separation between Firebase and PostgreSQL.
+
+---
+
+## Canonical Form Rules (NON-NEGOTIABLE)
+
+### 33) One Canonical Form Per Entity
+Every configurable entity MUST have exactly one canonical form component used for Create, Edit, and Wizard steps.
+
+✅ Correct:
+- `components/forms/TripForm.tsx` used by both `/trips/new` and `/trips/[id]/edit`
+
+❌ Incorrect:
+- `TripCreateForm.tsx` + `TripEditForm.tsx` (duplicates logic)
+- `Step1TripForm.tsx` (wizard duplicating fields)
+
+### 34) Wizard = Orchestrator Only
+Wizards control step order and navigation. They MUST NOT define fields, own validation, or duplicate submit handlers. All field logic lives in canonical forms.
+
+```tsx
+// Wizard orchestrates
+<WizardStep step={1}>
+  <TripForm mode="create" /> {/* Form owns fields */}
+</WizardStep>
+```
+
+### 35) Create vs Edit Consistency
+Create and Edit MUST render the same fields using the same form component. Differences controlled via `mode="create" | "edit"` prop. Field presence may NOT diverge silently.
+
+### 36) Single Source of Validation
+Zod schema is the source of truth. The same schema is used by form validation, server-side validation, and API request/response typing. No inline or ad-hoc validation.
+
+### 37) No Hidden State Transitions
+Any state transition that matters must be explicit, logged (EventLog), and reproducible.
+
+### 38) Refactors Must Preserve Behaviour
+No breaking changes to existing flows unless explicitly requested. New versions (v2, etc.) must coexist cleanly with v1.
+
+---
+
+## PR Checklist
+Before submitting code, verify `docs/PR_CHECKLIST.md` - all items must pass.
