@@ -23,6 +23,7 @@ This document defines the canonical UI styling patterns for TripApp. All new scr
 11. [Accessibility](#11-accessibility)
 12. [Dark Mode](#12-dark-mode)
 13. [Responsive Design](#13-responsive-design)
+14. [Button Labels](#14-button-labels)
 
 ---
 

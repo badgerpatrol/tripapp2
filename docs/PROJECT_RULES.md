@@ -20,9 +20,8 @@ Every configurable entity MUST have exactly one canonical form component.
 ✅ Correct:
 - components/forms/TripForm.tsx
 - Used by:
-  - app/trips/new/page.tsx
+  - app/trips/new-v2/page.tsx
   - app/trips/[id]/edit/page.tsx
-  - app/trips/create-v2/steps/StepTripDetails.tsx
 
 ❌ Incorrect:
 - TripCreateForm.tsx

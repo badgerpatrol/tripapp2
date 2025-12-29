@@ -146,9 +146,7 @@ Step 7: Cover Image
 /                                    Home (trip listing, pending invitations)
 ├── /trips
 │   ├── /trips/[id]                  Trip Detail (main complex page)
-│   ├── /trips/new                   Legacy trip creation
-│   │   └── /trips/new/step2         Legacy step 2
-│   └── /trips/new-v2                V2 Trip Wizard (7 steps)
+│   └── /trips/new-v2                Trip Wizard (7 steps)
 ├── /lists
 │   ├── /lists/[id]                  View list detail
 │   ├── /lists/create-todo           Create TODO checklist
