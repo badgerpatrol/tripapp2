@@ -464,7 +464,7 @@ function WizardContent() {
           onCancel={handleCancel}
           onDelete={handleDelete}
           onFinish={handleFinish}
-          nextLabel={currentStep === 1 ? "Create" : undefined}
+          nextLabel={currentStep === 1 && !state.tripId ? "Create" : undefined}
         />
       )}
     </div>
