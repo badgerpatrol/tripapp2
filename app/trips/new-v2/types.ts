@@ -102,7 +102,6 @@ export interface StepProps {
   updateState: (updates: Partial<WizardState>) => void;
   onNext: () => void;
   onBack: () => void;
-  onSkip: () => void;
   onFinish: () => void;
   onCancel: () => void;
   onDelete: () => void;

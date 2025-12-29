@@ -97,15 +97,6 @@ function WizardContent() {
     }
   };
 
-  const handleSkip = () => {
-    if (currentStep === 5 && !shouldShowStep5) {
-      goToStep(6);
-    } else if (currentStep < 7) {
-      const nextStep = currentStep === 4 && !shouldShowStep5 ? 6 : currentStep + 1;
-      goToStep(nextStep as WizardStep);
-    }
-  };
-
   const handleFinish = async () => {
     setIsLoading(true);
     try {
@@ -363,7 +354,6 @@ function WizardContent() {
     updateState,
     onNext: handleNext,
     onBack: handleBack,
-    onSkip: handleSkip,
     onFinish: handleFinish,
     onCancel: handleCancel,
     onDelete: handleDelete,
@@ -470,7 +460,6 @@ function WizardContent() {
           isLastStep={isLastStep}
           canProceed={canProceed}
           onBack={handleBack}
-          onSkip={handleSkip}
           onNext={handleNext}
           onCancel={handleCancel}
           onDelete={handleDelete}
