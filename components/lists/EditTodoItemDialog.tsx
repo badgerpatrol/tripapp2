@@ -17,6 +17,7 @@ interface EditTodoItemDialogProps {
   item: TodoItem;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted: () => void;
 }
 
 export function EditTodoItemDialog({
@@ -25,9 +26,12 @@ export function EditTodoItemDialog({
   item,
   onClose,
   onSaved,
+  onDeleted,
 }: EditTodoItemDialogProps) {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -85,12 +89,53 @@ export function EditTodoItemDialog({
     }
   };
 
+  const handleDelete = async () => {
+    if (!user) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const token = await user.getIdToken();
+
+      const response = await fetch(
+        `/api/lists/templates/${templateId}/todo-items/${item.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        let errorMessage = "Failed to delete task";
+        try {
+          const data = JSON.parse(text);
+          errorMessage = data.error || errorMessage;
+        } catch {
+          // Response wasn't JSON, use default message
+        }
+        throw new Error(errorMessage);
+      }
+
+      onDeleted();
+    } catch (err: unknown) {
+      console.error("Error deleting task:", err);
+      setError(err instanceof Error ? err.message : "Failed to delete task");
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-2">
+      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Header - Fixed */}
+          <div className="flex items-center justify-between p-6 pb-4 border-b border-zinc-200 dark:border-zinc-700">
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
               Edit Task
             </h2>
@@ -105,74 +150,119 @@ export function EditTodoItemDialog({
             </button>
           </div>
 
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-            </div>
-          )}
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              </div>
+            )}
 
-          {/* Task name */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-              Task name
-            </label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
-              disabled={saving}
-              autoFocus
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-              Notes
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
-              disabled={saving}
-            />
-          </div>
-
-          {/* Checkbox */}
-          <div>
-            <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+            {/* Task name */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Task name
+              </label>
               <input
-                type="checkbox"
-                checked={perPerson}
-                onChange={(e) => setPerPerson(e.target.checked)}
-                className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-zinc-600 focus:ring-zinc-500"
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
+                disabled={saving}
+                autoFocus
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
                 disabled={saving}
               />
-              Per person
-            </label>
+            </div>
+
+            {/* Checkbox */}
+            <div>
+              <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={perPerson}
+                  onChange={(e) => setPerPerson(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-zinc-600 focus:ring-zinc-500"
+                  disabled={saving}
+                />
+                Per person
+              </label>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 justify-end pt-4 border-t border-zinc-200 dark:border-zinc-700">
+          {/* Actions - Fixed Footer */}
+          <div className="flex gap-3 justify-between p-6 pt-4 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
             <Button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
-              disabled={saving}
+              onClick={() => setShowDeleteConfirm(true)}
+              className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
+              disabled={saving || deleting}
             >
-              Cancel
+              Delete
             </Button>
-            <Button
-              type="submit"
-              className="px-4 py-2 text-sm bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-900"
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save"}
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+                disabled={saving || deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={saving || deleting}
+              >
+                {saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </div>
         </form>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl p-6 m-4 max-w-sm">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                Delete Task?
+              </h3>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                Are you sure you want to delete "{item.label}"? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-sm bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-zinc-200"
+                  disabled={deleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white"
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

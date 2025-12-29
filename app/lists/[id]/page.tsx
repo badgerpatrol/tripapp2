@@ -419,6 +419,27 @@ function ViewListPageContent() {
             fetchTemplate();
             setToast({ message: "Item updated", type: "success" });
           }}
+          onDeleted={() => {
+            setEditItemDialog({ isOpen: false, item: null });
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Item deleted", type: "success" });
+          }}
         />
       )}
 
@@ -449,6 +470,27 @@ function ViewListPageContent() {
             };
             fetchTemplate();
             setToast({ message: "Task updated", type: "success" });
+          }}
+          onDeleted={() => {
+            setEditTodoItemDialog({ isOpen: false, item: null });
+            // Refresh the template data
+            const fetchTemplate = async () => {
+              if (!user) return;
+              try {
+                const token = await user.getIdToken();
+                const response = await fetch(`/api/lists/templates/${templateId}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  setTemplate(data.template);
+                }
+              } catch (err) {
+                console.error("Error refreshing template:", err);
+              }
+            };
+            fetchTemplate();
+            setToast({ message: "Task deleted", type: "success" });
           }}
         />
       )}

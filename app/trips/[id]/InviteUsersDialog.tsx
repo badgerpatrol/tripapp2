@@ -26,6 +26,7 @@ interface InviteUsersDialogProps {
       displayName: string | null;
     };
   }>;
+  signInMode?: boolean;
 }
 
 export default function InviteUsersDialog({
@@ -35,6 +36,7 @@ export default function InviteUsersDialog({
   onClose,
   onSuccess,
   currentMembers,
+  signInMode = false,
 }: InviteUsersDialogProps) {
   const { user } = useAuth();
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
@@ -598,54 +600,59 @@ export default function InviteUsersDialog({
               )}
             </div>
 
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-300 dark:border-zinc-600"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                  or invite new people who do not have accounts yet
-                </span>
-              </div>
-            </div>
-            {/* Add by name Input */}
-            <div>
-              <label
-                htmlFor="nonUserName"
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-              >
-                Add by name
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  id="nonUserName"
-                  value={nonUserName}
-                  onChange={(e) => setNonUserName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddNonUser();
-                    }
-                  }}
-                  placeholder="Enter name..."
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddNonUser}
-                  disabled={isSubmitting || !nonUserName.trim()}
-                  className="px-4 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add
-                </button>
-              </div>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Add people who don&apos;t have an account yet. They will appear in the members list above.
-              </p>
-            </div>
+            {/* Add by name section - only shown when signInMode is enabled */}
+            {signInMode && (
+              <>
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-zinc-300 dark:border-zinc-600"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="px-3 bg-white dark:bg-zinc-800 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                      or invite new people who do not have accounts yet
+                    </span>
+                  </div>
+                </div>
+                {/* Add by name Input */}
+                <div>
+                  <label
+                    htmlFor="nonUserName"
+                    className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                  >
+                    Add by name
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      id="nonUserName"
+                      value={nonUserName}
+                      onChange={(e) => setNonUserName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddNonUser();
+                        }
+                      }}
+                      placeholder="Enter name..."
+                      disabled={isSubmitting}
+                      className="flex-1 px-4 py-3 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddNonUser}
+                      disabled={isSubmitting || !nonUserName.trim()}
+                      className="px-4 py-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    Add people who don&apos;t have an account yet. They will appear in the members list above.
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* Done Button */}
             <div className="flex justify-center pt-4">

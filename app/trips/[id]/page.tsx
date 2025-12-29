@@ -117,6 +117,7 @@ interface TripDetail {
   userOwes?: number;
   userIsOwed?: number;
   totalUnassigned?: number;
+  signInMode?: boolean;
 }
 
 export default function TripDetailPage() {
@@ -3147,6 +3148,7 @@ export default function TripDetailPage() {
           onClose={() => setIsInviteDialogOpen(false)}
           onSuccess={handleInviteSuccess}
           currentMembers={trip.participants}
+          signInMode={trip.signInMode}
         />
       )}
 

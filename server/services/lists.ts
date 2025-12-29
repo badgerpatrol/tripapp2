@@ -301,7 +301,10 @@ export async function getTemplate(actorId: string, templateId: string) {
     throw new Error("Template not found");
   }
 
-  if (!canViewTemplate(actorId, template)) {
+  // For trip lists, verify trip membership instead of template ownership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else if (!canViewTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot view this template");
   }
 
@@ -309,7 +312,7 @@ export async function getTemplate(actorId: string, templateId: string) {
 }
 
 /**
- * Update a template (owner only)
+ * Update a template (owner or trip member for trip lists)
  */
 export async function updateTemplate(
   actorId: string,
@@ -324,7 +327,10 @@ export async function updateTemplate(
     throw new Error("Template not found");
   }
 
-  if (!canEditTemplate(actorId, template)) {
+  // For trip lists, verify trip membership; otherwise require ownership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot edit this template");
   }
 
@@ -532,7 +538,7 @@ export async function forkPublicTemplate(
 }
 
 /**
- * Delete a template (owner only)
+ * Delete a template (owner or trip member for trip lists)
  */
 export async function deleteTemplate(actorId: string, templateId: string) {
   const template = await prisma.listTemplate.findUnique({
@@ -543,7 +549,10 @@ export async function deleteTemplate(actorId: string, templateId: string) {
     throw new Error("Template not found");
   }
 
-  if (!canEditTemplate(actorId, template)) {
+  // For trip lists, verify trip membership; otherwise require ownership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot delete this template");
   }
 
@@ -665,6 +674,106 @@ export async function updateTodoItem(
   });
 
   return updatedItem;
+}
+
+/**
+ * Delete a single kit item from a list
+ */
+export async function deleteKitItemFromTemplate(
+  actorId: string,
+  templateId: string,
+  itemId: string
+) {
+  // Verify list exists and user has permission
+  const template = await prisma.listTemplate.findUnique({
+    where: { id: templateId },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  // For trip lists, verify trip membership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else {
+    // For regular lists, verify ownership
+    if (!canEditTemplate(actorId, template)) {
+      throw new Error("Forbidden: Cannot edit this list");
+    }
+  }
+
+  // Verify item exists and belongs to this list
+  const item = await prisma.kitItemTemplate.findUnique({
+    where: { id: itemId },
+  });
+
+  if (!item || item.templateId !== templateId) {
+    throw new Error("Item not found");
+  }
+
+  // Delete the item
+  await prisma.kitItemTemplate.delete({
+    where: { id: itemId },
+  });
+
+  await logEvent(
+    "ListItem",
+    itemId,
+    EventType.LIST_ITEM_REMOVED,
+    actorId,
+    { listId: templateId, type: "KIT" }
+  );
+}
+
+/**
+ * Delete a single todo item from a list
+ */
+export async function deleteTodoItemFromTemplate(
+  actorId: string,
+  templateId: string,
+  itemId: string
+) {
+  // Verify list exists and user has permission
+  const template = await prisma.listTemplate.findUnique({
+    where: { id: templateId },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  // For trip lists, verify trip membership
+  if (template.tripId) {
+    await requireTripMember(actorId, template.tripId);
+  } else {
+    // For regular lists, verify ownership
+    if (!canEditTemplate(actorId, template)) {
+      throw new Error("Forbidden: Cannot edit this list");
+    }
+  }
+
+  // Verify item exists and belongs to this list
+  const item = await prisma.todoItemTemplate.findUnique({
+    where: { id: itemId },
+  });
+
+  if (!item || item.templateId !== templateId) {
+    throw new Error("Item not found");
+  }
+
+  // Delete the item
+  await prisma.todoItemTemplate.delete({
+    where: { id: itemId },
+  });
+
+  await logEvent(
+    "ListItem",
+    itemId,
+    EventType.LIST_ITEM_REMOVED,
+    actorId,
+    { listId: templateId, type: "TODO" }
+  );
 }
 
 // ============================================================================
