@@ -246,6 +246,26 @@ export default function TripDetailPage() {
   // Track if we've set the initial RSVP collapse state
   const hasInitializedRsvpCollapse = useRef(false);
 
+  // Compute display status - show "LIVE" if current date is within trip dates, "FINISHED" if past
+  const getDisplayStatus = (tripData: TripDetail) => {
+    if (tripData.startDate && tripData.endDate) {
+      const now = new Date();
+      const start = new Date(tripData.startDate);
+      const end = new Date(tripData.endDate);
+      // Set times to compare dates only
+      now.setHours(0, 0, 0, 0);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      if (now > end) {
+        return "FINISHED";
+      }
+      if (now >= start && now <= end) {
+        return "LIVE";
+      }
+    }
+    return tripData.status;
+  };
+
   const toggleSection = (section: keyof typeof collapsedSections) => {
     setCollapsedSections(prev => ({
       ...prev,
@@ -1811,17 +1831,26 @@ export default function TripDetailPage() {
                     <h1 className="text-3xl font-bold text-white break-words drop-shadow-lg">
                       {trip.name}
                     </h1>
-                    <span
-                      className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded-full ${
-                        trip.status === "PLANNING"
-                          ? "bg-blue-500/80 text-white"
-                          : trip.status === "ACTIVE"
-                          ? "bg-green-500/80 text-white"
-                          : "bg-zinc-500/80 text-white"
-                      }`}
-                    >
-                      {trip.status}
-                    </span>
+                    {(() => {
+                      const displayStatus = getDisplayStatus(trip);
+                      return (
+                        <span
+                          className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded-full ${
+                            displayStatus === "LIVE"
+                              ? "bg-red-500/80 text-white"
+                              : displayStatus === "FINISHED"
+                              ? "bg-purple-500/80 text-white"
+                              : displayStatus === "PLANNING"
+                              ? "bg-blue-500/80 text-white"
+                              : displayStatus === "ACTIVE"
+                              ? "bg-green-500/80 text-white"
+                              : "bg-zinc-500/80 text-white"
+                          }`}
+                        >
+                          {displayStatus}
+                        </span>
+                      );
+                    })()}
                   </div>
                   {isOwner && !isViewer && (
                     <button
@@ -1863,17 +1892,26 @@ export default function TripDetailPage() {
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <span
-                    className={`px-3 py-1 text-sm font-medium rounded-full flex-shrink-0 self-start ${
-                      trip.status === "PLANNING"
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                        : trip.status === "ACTIVE"
-                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-                        : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                    }`}
-                  >
-                    {trip.status}
-                  </span>
+                  {(() => {
+                    const displayStatus = getDisplayStatus(trip);
+                    return (
+                      <span
+                        className={`px-3 py-1 text-sm font-medium rounded-full flex-shrink-0 self-start ${
+                          displayStatus === "LIVE"
+                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+                            : displayStatus === "FINISHED"
+                            ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                            : displayStatus === "PLANNING"
+                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                            : displayStatus === "ACTIVE"
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+                            : "bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                        }`}
+                      >
+                        {displayStatus}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             )}

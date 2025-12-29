@@ -28,14 +28,18 @@
 24) Tab bar: persistent; uses Next parallel routes under /app/(tabs).
 25) Lists: Always sortable/filterable; long-press context menu; affordances visible.
 26) Forms: Large tap targets; default values pre-filled; clear error states inline.
-27) Color & tokens: Define in tokens.css — single source of truth for palette and spacing.
-28) Accessibility: Focus order, role/aria for context menus; high-contrast tap states.
-29) For any database changes:
+27) Accessibility: Focus order, role/aria for context menus; high-contrast tap states.
+28) For any database changes:
       Make schema changes in schema.prisma
       Create migration: pnpm db:migrate (creates SQL files in prisma/migrations/)
       Commit migration files to git
       Deploy to Vercel (git push triggers deployment)
       Add build hook: Vercel runs prisma migrate deploy automatically
       Migrations apply during deployment
-30) Use the same 'zinc' style for all pages and forms
-31) Dont push anything to github yourself, ever. Leave all that to me.
+29) Dont push anything to github yourself, ever. Leave all that to me.
+30) ## Before UI/Frontend Work
+Always read `docs/UI-STRUCTURE.md` before making changes to the UI or adding new pages/components.
+31) ## UI Style Guide
+Follow `STYLE_GUIDE.md` for all UI styling decisions. This document defines the canonical patterns for typography, colors, spacing, components, forms, lists, and accessibility. Use the Kit list page and Create Trip form as reference implementations.
+32) ## Design Principles
+Always follow `docs/DESIGN_PRINCIPLES.md` for architectural and privacy decisions. This includes critical rules like email address handling and data separation between Firebase and PostgreSQL.
