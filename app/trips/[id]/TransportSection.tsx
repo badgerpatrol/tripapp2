@@ -222,7 +222,7 @@ export default function TransportSection({
               </button>
               <button
                 onClick={() => setIsRequirementDialogOpen(true)}
-                className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                className="tap-target px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
               >
                 I Need a Lift
               </button>

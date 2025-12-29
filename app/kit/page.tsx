@@ -287,7 +287,7 @@ function KitPageContent() {
                 {searchQuery && activeTab === "public-gallery" && (
                   <button
                     onClick={fetchPublicTemplates}
-                    className="px-3 py-2 text-sm font-medium bg-zinc-600 hover:bg-zinc-700 text-white rounded-lg"
+                    className="px-3 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
                   >
                     Search
                   </button>
