@@ -781,7 +781,7 @@ export default function TripDetailPage() {
         userId: a.userId,
         shareAmount: 0,
         normalizedShareAmount: 0,
-        splitType: "AMOUNT" as const,
+        splitType: "EXACT" as const,
       }));
 
       const response = await fetch(`/api/spends/${spendId}/assignments`, {
