@@ -13,6 +13,7 @@ export interface ListTypeHandler {
     prisma: PrismaClient;
     sourceTemplateId: string;
     targetTemplateId: string;
+    tripId?: string; // Set when copying to a trip list (for denormalized tripId on items)
   }): Promise<void>;
 
   /**
@@ -24,6 +25,7 @@ export interface ListTypeHandler {
     sourceTemplateId: string;
     targetTemplateId: string;
     mode: "MERGE_ADD" | "MERGE_ADD_ALLOW_DUPES";
+    tripId?: string; // Set when merging into a trip list (for denormalized tripId on items)
   }): Promise<{ added: number; skipped: number }>;
 
   /**
@@ -34,6 +36,7 @@ export interface ListTypeHandler {
     itemId: string;
     state: boolean;
     actorId: string;
+    isShared: boolean; // Pre-computed from perPerson to avoid re-fetching item
   }): Promise<void>;
 
   /**

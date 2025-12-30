@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { recordPayment } from "@/server/services/settlements";
 import { RecordPaymentSchema } from "@/types/schemas";
 import { prisma } from "@/lib/prisma";
@@ -71,7 +71,7 @@ export async function POST(
     }
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, settlement.tripId);
+    await requireTripMembershipOnly(auth.uid, settlement.tripId);
 
     // 4. Additional authorization - verify user is either the receiver or a trip organizer
     const isReceiver = settlement.toUserId === auth.uid;

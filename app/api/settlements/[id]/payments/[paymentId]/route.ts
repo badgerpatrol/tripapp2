@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { RecordPaymentSchema } from "@/types/schemas";
 import { prisma } from "@/lib/prisma";
 
@@ -50,7 +50,7 @@ export async function PATCH(
     }
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, payment.settlement.tripId);
+    await requireTripMembershipOnly(auth.uid, payment.settlement.tripId);
 
     // 4. Additional authorization - verify user is either the recorder, receiver, or a trip organizer
     const isRecorder = payment.recordedById === auth.uid;
@@ -261,7 +261,7 @@ export async function DELETE(
     }
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, payment.settlement.tripId);
+    await requireTripMembershipOnly(auth.uid, payment.settlement.tripId);
 
     // 4. Additional authorization - verify user is either the recorder, receiver, or a trip organizer
     const isRecorder = payment.recordedById === auth.uid;

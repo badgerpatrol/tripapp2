@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { ListReportDialog } from "./ListReportDialog";
 import QuickAddItemSheet from "./QuickAddItemSheet";
 import QuickAddTodoItemSheet from "./QuickAddTodoItemSheet";
 import { useLongPress } from "@/hooks/useLongPress";
+import { usePolling } from "@/hooks/usePolling";
+import { useToastStore } from "@/lib/stores/toastStore";
 
 // Wrapper component for list header with long press support
 interface ListHeaderButtonProps {
@@ -133,6 +135,99 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     list: ListInstance | null;
   }>({ isOpen: false, list: null });
 
+  // Toast store for showing notifications
+  const addToast = useToastStore((state) => state.addToast);
+
+  // Track previous tick state for change detection during polling
+  interface TickInfo {
+    tickId: string;
+    userId: string;
+    displayName: string;
+  }
+  const previousTicksRef = useRef<Map<string, TickInfo[]>>(new Map());
+
+  // Helper: Build a map of itemId -> ticks for comparison
+  const buildTickMap = useCallback((listsData: ListInstance[]): Map<string, TickInfo[]> => {
+    const tickMap = new Map<string, TickInfo[]>();
+    for (const list of listsData) {
+      const items = list.type === "TODO" ? list.todoItems : list.kitItems;
+      if (!items) continue;
+      for (const item of items) {
+        // Only track shared items (not per-person)
+        if (item.perPerson) continue;
+        const ticks = (item.ticks || []).map(t => ({
+          tickId: t.id,
+          userId: t.userId,
+          displayName: t.user.displayName,
+        }));
+        tickMap.set(item.id, ticks);
+      }
+    }
+    return tickMap;
+  }, []);
+
+  // Helper: Detect tick changes made by other users on shared items
+  interface TickChange {
+    itemId: string;
+    itemLabel: string;
+    userName: string;
+    action: "completed" | "unchecked";
+  }
+  const detectTickChanges = useCallback((
+    previousTicks: Map<string, TickInfo[]>,
+    newLists: ListInstance[],
+    currentUserId: string
+  ): TickChange[] => {
+    const changes: TickChange[] = [];
+    const newTickMap = buildTickMap(newLists);
+
+    // Build a label lookup for items
+    const itemLabels = new Map<string, string>();
+    for (const list of newLists) {
+      const items = list.type === "TODO" ? list.todoItems : list.kitItems;
+      if (!items) continue;
+      for (const item of items) {
+        itemLabels.set(item.id, item.label);
+      }
+    }
+
+    // Check for added ticks (item was completed)
+    for (const [itemId, newTicks] of newTickMap) {
+      const oldTicks = previousTicks.get(itemId) || [];
+      const oldTickIds = new Set(oldTicks.map(t => t.tickId));
+
+      for (const tick of newTicks) {
+        // Skip if this tick existed before or if it's the current user's tick
+        if (oldTickIds.has(tick.tickId) || tick.userId === currentUserId) continue;
+        changes.push({
+          itemId,
+          itemLabel: itemLabels.get(itemId) || "item",
+          userName: tick.displayName,
+          action: "completed",
+        });
+      }
+    }
+
+    // Check for removed ticks (item was unchecked)
+    for (const [itemId, oldTicks] of previousTicks) {
+      const newTicks = newTickMap.get(itemId) || [];
+      const newTickIds = new Set(newTicks.map(t => t.tickId));
+
+      for (const tick of oldTicks) {
+        // Skip if this tick still exists or if it's the current user's tick
+        if (newTickIds.has(tick.tickId) || tick.userId === currentUserId) continue;
+        changes.push({
+          itemId,
+          itemLabel: itemLabels.get(itemId) || "item",
+          userName: tick.displayName,
+          action: "unchecked",
+        });
+      }
+    }
+
+    return changes;
+  }, [buildTickMap]);
+
   // Handler for long press on list headers to open quick add sheet
   const handleListLongPress = useCallback((list: ListInstance) => {
     setQuickAddSheet({
@@ -177,6 +272,11 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       const fetchedLists = data.instances || [];
       setLists(fetchedLists);
 
+      // Initialize tick map for change detection (only on initial load, not during polling)
+      if (previousTicksRef.current.size === 0) {
+        previousTicksRef.current = buildTickMap(fetchedLists);
+      }
+
       // Notify parent of list count
       if (onListsLoaded) {
         onListsLoaded(fetchedLists.length);
@@ -213,6 +313,69 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       setLoading(false);
     }
   };
+
+  // Polling callback: fetch fresh data and detect changes by other users
+  const pollForChanges = useCallback(async () => {
+    if (!user || !expandedListId) return;
+
+    try {
+      const token = await user.getIdToken();
+      const params = new URLSearchParams();
+      if (typeFilter !== "ALL") params.set("type", typeFilter);
+      if (completionStatusFilter !== "all") params.set("completionStatus", completionStatusFilter);
+
+      const response = await fetch(`/api/trips/${tripId}/lists?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) return; // Silently fail on poll errors
+
+      const data = await response.json();
+      const newLists: ListInstance[] = data.instances || [];
+
+      // Detect changes made by other users on shared items
+      const changes = detectTickChanges(previousTicksRef.current, newLists, user.uid);
+
+      // Show toast for each change
+      for (const change of changes) {
+        addToast({
+          message: `${change.userName} ${change.action} "${change.itemLabel}"`,
+          type: "info",
+        });
+      }
+
+      // Update lists state if there are any changes
+      if (changes.length > 0) {
+        setLists(newLists);
+      }
+
+      // Always update the previous ticks ref
+      previousTicksRef.current = buildTickMap(newLists);
+    } catch (err) {
+      // Silently fail on poll errors - don't disrupt the user
+      console.error("Polling error:", err);
+    }
+  }, [user, expandedListId, tripId, typeFilter, completionStatusFilter, detectTickChanges, buildTickMap, addToast]);
+
+  // Check if the expanded list has any shared items (perPerson = false)
+  const expandedListHasSharedItems = (() => {
+    if (!expandedListId) return false;
+    const expandedList = lists.find(l => l.id === expandedListId);
+    if (!expandedList) return false;
+    const items = expandedList.type === "TODO" ? expandedList.todoItems : expandedList.kitItems;
+    return items?.some(item => !item.perPerson) ?? false;
+  })();
+
+  // Enable polling when a list is expanded (viewing details) and has shared items
+  // Limit to 120 polls (1 hour at 30 second intervals) to prevent indefinite polling
+  const { isPolling } = usePolling({
+    callback: pollForChanges,
+    interval: 30000, // 30 seconds
+    enabled: !!expandedListId && !!user && expandedListHasSharedItems,
+    maxPolls: 120,
+  });
 
   const handleToggleItem = async (listType: ListType, itemId: string, currentState: boolean) => {
     if (!user) return;
@@ -790,6 +953,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         <h3 className="font-medium text-zinc-900 dark:text-white truncate">
                           {list.title}
                         </h3>
+                        {/* Live indicator when polling is active for this list */}
+                        {isExpanded && isPolling && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                            Live
+                          </span>
+                        )}
                         {list.hasTemplateUpdated && (
                           <span
                             className="px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
@@ -943,7 +1113,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                               <label className="flex items-start gap-3 flex-1 cursor-pointer">
                                 <input
                                   type="checkbox"
-                                  checked={isTickedByUser}
+                                  checked={isTickedByUser || isTickedByOther}
                                   onChange={() => handleToggleItem("TODO", item.id, isTickedByUser)}
                                   disabled={isDisabled}
                                   className={`mt-1 w-4 h-4 rounded focus:ring-blue-500 ${isDisabled ? "text-zinc-400 cursor-not-allowed" : "text-blue-600"}`}
@@ -1006,7 +1176,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                             >
                               <input
                                 type="checkbox"
-                                checked={isTickedByUser}
+                                checked={isTickedByUser || isTickedByOther}
                                 onChange={() => handleToggleItem("KIT", item.id, isTickedByUser)}
                                 disabled={isDisabled}
                                 className={`mt-1 w-4 h-4 rounded focus:ring-green-500 ${isDisabled ? "text-zinc-400 cursor-not-allowed" : "text-green-600"}`}

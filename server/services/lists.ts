@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ListType, EventType } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
-import { requireTripMember } from "@/server/authz";
+import { requireTripMembershipOnly } from "@/server/authz";
 import { getHandler } from "./listHandlers/registry";
 import { canViewTemplate, canEditTemplate } from "@/types/schemas";
 import type {
@@ -303,7 +303,7 @@ export async function getTemplate(actorId: string, templateId: string) {
 
   // For trip lists, verify trip membership instead of template ownership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else if (!canViewTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot view this template");
   }
@@ -329,7 +329,7 @@ export async function updateTemplate(
 
   // For trip lists, verify trip membership; otherwise require ownership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot edit this template");
   }
@@ -551,7 +551,7 @@ export async function deleteTemplate(actorId: string, templateId: string) {
 
   // For trip lists, verify trip membership; otherwise require ownership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot delete this template");
   }
@@ -695,7 +695,7 @@ export async function deleteKitItemFromTemplate(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular lists, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -745,7 +745,7 @@ export async function deleteTodoItemFromTemplate(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular lists, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -793,7 +793,7 @@ export async function copyTemplateToTrip(
   const { tripId, mode } = payload;
 
   // Verify trip membership
-  await requireTripMember(actorId, tripId);
+  await requireTripMembershipOnly(actorId, tripId);
 
   // Get the template
   const template = await getTemplate(actorId, templateId);
@@ -841,6 +841,7 @@ export async function copyTemplateToTrip(
       sourceTemplateId: templateId,
       targetTemplateId: existingTripList.id,
       mode,
+      tripId,
     });
 
     await logEvent(
@@ -911,6 +912,7 @@ async function createTripListFromTemplate(
     prisma,
     sourceTemplateId,
     targetTemplateId: tripList.id,
+    tripId,
   });
 
   await logEvent(
@@ -935,7 +937,7 @@ export async function createTripListAdHoc(
   const { tripId, type, title, description, inventory, todoItems, kitItems } = payload;
 
   // Verify trip membership
-  await requireTripMember(actorId, tripId);
+  await requireTripMembershipOnly(actorId, tripId);
 
   // Use a transaction to create both the master template and the trip list
   const result = await prisma.$transaction(async (tx) => {
@@ -1013,6 +1015,7 @@ export async function createTripListAdHoc(
       await tx.todoItemTemplate.createMany({
         data: todoItems.map((item, idx) => ({
           templateId: tripList.id,
+          tripId, // Denormalized for faster toggle lookups
           label: item.label,
           notes: item.notes,
           perPerson: item.perPerson ?? false,
@@ -1026,6 +1029,7 @@ export async function createTripListAdHoc(
       await tx.kitItemTemplate.createMany({
         data: kitItems.map((item, idx) => ({
           templateId: tripList.id,
+          tripId, // Denormalized for faster toggle lookups
           label: item.label,
           notes: item.notes,
           quantity: item.quantity ?? 1,
@@ -1078,7 +1082,7 @@ export async function listTripLists(
   query: ListTripInstancesQuery
 ) {
   // Verify trip membership
-  await requireTripMember(actorId, tripId);
+  await requireTripMembershipOnly(actorId, tripId);
 
   const where: any = { tripId };
 
@@ -1208,7 +1212,7 @@ export async function getTripList(actorId: string, listId: string) {
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, tripList.tripId);
+  await requireTripMembershipOnly(actorId, tripList.tripId);
 
   return tripList;
 }
@@ -1231,7 +1235,7 @@ export async function deleteTripList(actorId: string, listId: string) {
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, tripList.tripId);
+  await requireTripMembershipOnly(actorId, tripList.tripId);
 
   await prisma.listTemplate.delete({
     where: { id: listId },
@@ -1259,44 +1263,42 @@ export async function toggleItemState(
   itemId: string,
   state: boolean
 ) {
-  // Get the template to verify trip membership
-  let template: any;
+  // Get the item to verify trip membership using denormalized tripId
+  // Also fetch perPerson to avoid a second query in the handler
+  let item: { id: string; tripId: string | null; templateId: string; perPerson: boolean } | null = null;
 
   if (type === "TODO") {
-    const item = await prisma.todoItemTemplate.findUnique({
+    item = await prisma.todoItemTemplate.findUnique({
       where: { id: itemId },
-      include: { template: true },
+      select: { id: true, tripId: true, templateId: true, perPerson: true },
     });
-    if (!item) throw new Error("Item not found");
-    template = item.template;
   } else if (type === "KIT") {
-    const item = await prisma.kitItemTemplate.findUnique({
+    item = await prisma.kitItemTemplate.findUnique({
       where: { id: itemId },
-      include: { template: true },
+      select: { id: true, tripId: true, templateId: true, perPerson: true },
     });
-    if (!item) throw new Error("Item not found");
-    template = item.template;
   }
 
-  if (!template) {
+  if (!item) {
     throw new Error("Item not found");
   }
 
-  // Only allow toggling on trip lists
-  if (!template.tripId) {
+  // Only allow toggling on trip lists (tripId must be set on the item)
+  if (!item.tripId) {
     throw new Error("Can only toggle items on trip lists");
   }
 
-  // Verify trip membership
-  await requireTripMember(actorId, template.tripId);
+  // Verify trip membership - skip user existence check since already verified at API level
+  await requireTripMembershipOnly(actorId, item.tripId);
 
-  // Use handler to toggle
+  // Use handler to toggle - pass perPerson to avoid re-fetching the item
   const handler = getHandler(type);
   await handler.toggleItemState({
     prisma,
     itemId,
     state,
     actorId,
+    isShared: !item.perPerson,
   });
 
   await logEvent(
@@ -1304,7 +1306,7 @@ export async function toggleItemState(
     itemId,
     EventType.LIST_ITEM_TOGGLED,
     actorId,
-    { listId: template.id, type, state }
+    { listId: item.templateId, type, state }
   );
 }
 
@@ -1330,7 +1332,7 @@ export async function launchItemAction(
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, item.template.tripId);
+  await requireTripMembershipOnly(actorId, item.template.tripId);
 
   const handler = getHandler("TODO");
   if (!handler.launchItemAction) {
@@ -1372,7 +1374,7 @@ export async function addTodoItem(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular templates, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -1405,6 +1407,7 @@ export async function addTodoItem(
   const item = await prisma.todoItemTemplate.create({
     data: {
       templateId,
+      tripId: template.tripId, // Denormalized for faster toggle lookups
       label: payload.label,
       notes: payload.notes || null,
       orderIndex,
@@ -1433,7 +1436,7 @@ export async function addKitItem(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular templates, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -1466,6 +1469,7 @@ export async function addKitItem(
   const item = await prisma.kitItemTemplate.create({
     data: {
       templateId,
+      tripId: template.tripId, // Denormalized for faster toggle lookups
       label: payload.label,
       notes: payload.notes || null,
       quantity: payload.quantity ?? 1,
@@ -1502,7 +1506,7 @@ export async function deleteKitItem(actorId: string, itemId: string) {
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, item.template.tripId);
+  await requireTripMembershipOnly(actorId, item.template.tripId);
 
   if (item.perPerson) {
     // For per-person items, just delete the user's tick

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { createSpend, getTripSpends } from "@/server/services/spends";
 import { CreateSpendSchema, GetSpendsQuerySchema } from "@/types/schemas";
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     const query = validationResult.data;
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, query.tripId);
+    await requireTripMembershipOnly(auth.uid, query.tripId);
 
     // 4. Get spends
     const spends = await getTripSpends(query.tripId, query);
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     const spendData = validationResult.data;
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, spendData.tripId);
+    await requireTripMembershipOnly(auth.uid, spendData.tripId);
 
     // 4. Create the spend
     const spend = await createSpend(auth.uid, spendData);

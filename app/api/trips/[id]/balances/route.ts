@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { calculateTripBalances } from "@/server/services/settlements";
 import { TripBalanceSummarySchema } from "@/types/schemas";
 
@@ -36,7 +36,7 @@ export async function GET(
     const { id: tripId } = await params;
 
     // 2. Check if user is a trip member
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     // 3. Calculate balances and settlement plan
     const balanceSummary = await calculateTripBalances(tripId);

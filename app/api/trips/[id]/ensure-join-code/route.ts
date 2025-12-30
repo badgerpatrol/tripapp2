@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { prisma } from "@/lib/prisma";
 import { createOrUpdateSignUpViewer } from "@/server/services/trips";
 import { TripMemberRole } from "@/lib/generated/prisma";
@@ -29,8 +29,9 @@ export async function POST(
       );
     }
 
-    // 2. Verify user is a trip member with ADMIN role (OWNER is higher than ADMIN)
-    const membership = await requireTripMember(auth.uid, tripId, "ADMIN");
+    // 2. Verify user exists and is a trip member with ADMIN role
+    await requireAuth(auth.uid);
+    const membership = await requireTripMembershipOnly(auth.uid, tripId, TripMemberRole.ADMIN);
 
     // 3. Get the trip
     const trip = await prisma.trip.findUnique({

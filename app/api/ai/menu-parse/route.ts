@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { parseMenuImage } from "@/server/ai/menuParser";
 import { logEvent } from "@/server/eventLog";
 import { createSystemLog } from "@/server/systemLog";
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     const { tripId, image, currencyHint } = validationResult.data;
 
     // 3. Verify trip membership
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     // 4. Get trip details for currency
     const trip = await prisma.trip.findUnique({

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { removeTripMember, updateRsvpStatus } from "@/server/services/invitations";
 import { TripMemberRole, RsvpStatus, RsvpWindowStatus } from "@/lib/generated/prisma";
 import { UpdateRsvpSchema } from "@/types/schemas";
@@ -213,7 +213,7 @@ export async function DELETE(
     const { id: tripId, userId: userIdToRemove } = await params;
 
     // 2. Check if user is a trip member with at least ADMIN role
-    const membership = await requireTripMember(auth.uid, tripId, TripMemberRole.ADMIN);
+    const membership = await requireTripMembershipOnly(auth.uid, tripId, TripMemberRole.ADMIN);
 
     if (!membership) {
       return NextResponse.json(

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { getSpendById } from "@/server/services/spends";
 import { reopenSpend } from "@/server/services/spends";
 import { prisma } from "@/lib/prisma";
@@ -42,7 +42,7 @@ export async function POST(
     }
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, existingSpend.tripId);
+    await requireTripMembershipOnly(auth.uid, existingSpend.tripId);
 
     // 4. Additional authorization - verify user is either the spender or a trip organizer
     const isSpender = existingSpend.paidBy.id === auth.uid;

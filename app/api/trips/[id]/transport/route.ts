@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { getTripTransport } from "@/server/services/transport";
 
 /**
@@ -32,7 +32,7 @@ export async function GET(
     const tripId = id;
 
     // Verify user is a trip member
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     const transport = await getTripTransport(tripId);
 

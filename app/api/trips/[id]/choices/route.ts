@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { TripMemberRole } from "@/lib/generated/prisma";
 import { CreateChoiceSchema, GetChoicesQuerySchema } from "@/types/schemas";
 import { createChoice, getTripChoices } from "@/server/services/choices";
@@ -35,7 +35,7 @@ export async function GET(
     const tripId = id;
 
     // Verify user is a trip member
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     // Parse query params
     const { searchParams } = new URL(request.url);
@@ -92,7 +92,7 @@ export async function POST(
     const tripId = id;
 
     // Verify user is at least ADMIN (organisers can create choices)
-    await requireTripMember(auth.uid, tripId, TripMemberRole.ADMIN);
+    await requireTripMembershipOnly(auth.uid, tripId, TripMemberRole.ADMIN);
 
     const body = await request.json();
     const data = CreateChoiceSchema.parse(body);

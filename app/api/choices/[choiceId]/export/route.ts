@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { TripMemberRole } from "@/lib/generated/prisma";
 import { getItemsReport, getUsersReport } from "@/server/services/choices";
 import { prisma } from "@/lib/prisma";
@@ -138,7 +138,7 @@ export async function GET(
     }
 
     // Verify user is at least ADMIN (organisers can export)
-    await requireTripMember(auth.uid, choice.tripId, TripMemberRole.ADMIN);
+    await requireTripMembershipOnly(auth.uid, choice.tripId, TripMemberRole.ADMIN);
 
     // Parse query params
     const { searchParams } = new URL(request.url);

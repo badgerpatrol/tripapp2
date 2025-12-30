@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -30,7 +30,7 @@ export async function GET(
     await requireAuth(auth.uid);
 
     // 2. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     // 3. Get settlements with payments
     const settlements = await prisma.settlement.findMany({

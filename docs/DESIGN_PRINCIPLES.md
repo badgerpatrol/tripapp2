@@ -69,3 +69,54 @@ This document captures key architectural and design decisions for the TripApp sy
 - Pattern: `if (isLoading) return <LoadingSpinner />; if (data.length === 0) return <EmptyState />;`
 - Never default to rendering an empty state component before the fetch completes
 - For server components, use Suspense boundaries with appropriate fallbacks
+
+---
+
+## 4. API Authentication & Authorization Pattern
+
+**Principle:** API routes separate authentication (verifying identity) from authorization (verifying access), performing each check exactly once per request.
+
+**Pattern:**
+1. **Authentication** - Verify the caller's identity (who they are)
+2. **Authorization** - Verify access to the requested resource (what they can do)
+
+Authorization functions should NOT re-verify authentication. Each layer trusts the previous layer has completed its check.
+
+**Rationale:**
+- **Performance**: Avoids redundant database queries (e.g., looking up the same user multiple times)
+- **Separation of concerns**: Authentication and authorization are distinct responsibilities
+- **Single responsibility**: Each function does one thing well
+- **Predictable cost**: Each check adds exactly one query, making request cost predictable
+
+**Implementation:**
+
+```typescript
+// Standard API route structure
+export async function GET(request: NextRequest) {
+  // 1. AUTHENTICATION - Extract and verify token
+  const auth = await getAuthTokenFromHeader(request.headers.get("authorization"));
+  if (!auth) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  // 2. AUTHENTICATION - Verify user exists in database
+  await requireAuth(auth.uid);
+
+  // 3. AUTHORIZATION - Verify access to the specific resource
+  //    Use functions that assume authentication is already complete
+  await requireTripMembershipOnly(auth.uid, tripId);
+  // or: await requireGroupMembershipOnly(auth.uid, groupId);
+  // or: verify ownership/permissions on the specific resource
+
+  // 4. Handle request...
+}
+```
+
+**Authorization Function Naming Convention:**
+- `requireX(userId, ...)` - Includes authentication check. Use when calling from contexts where auth status is unknown.
+- `requireXOnly(userId, ...)` - Authorization only, no auth re-check. Use in API routes after `requireAuth`.
+
+**Anti-patterns to Avoid:**
+- Calling `requireAuth` multiple times in the same request
+- Authorization functions that internally call `requireAuth` when used after explicit auth
+- Checking the same permission multiple times at different layers

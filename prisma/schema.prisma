@@ -328,6 +328,8 @@ model Trip {
   choices      Choice[]
   transportOffers       TransportOffer[]
   transportRequirements TransportRequirement[]
+  todoItems    TodoItemTemplate[]
+  kitItems     KitItemTemplate[]
 
   @@index([createdById])
   @@index([status])
@@ -862,6 +864,7 @@ model ListTemplate {
 model TodoItemTemplate {
   id         String          @id @default(cuid())
   templateId String
+  tripId     String?         // Denormalized from ListTemplate for faster toggle lookups
   label      String
   notes      String?
   actionType TodoActionType?
@@ -871,9 +874,11 @@ model TodoItemTemplate {
   perPerson  Boolean         @default(false) // Whether this is a per-person item
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  trip     Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
   ticks    ItemTick[]   @relation("TodoItemTicks")
 
   @@index([templateId])
+  @@index([tripId])
   @@map("todo_item_templates")
 }
 
@@ -881,6 +886,7 @@ model TodoItemTemplate {
 model KitItemTemplate {
   id          String   @id @default(cuid())
   templateId  String
+  tripId      String?  // Denormalized from ListTemplate for faster toggle lookups
   label       String
   notes       String?
   quantity    Float    @default(1) // can be fractional
@@ -900,9 +906,11 @@ model KitItemTemplate {
   lastSeenDate     DateTime?
 
   template ListTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  trip     Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
   ticks    ItemTick[]   @relation("KitItemTicks")
 
   @@index([templateId])
+  @@index([tripId])
   @@map("kit_item_templates")
 }
 

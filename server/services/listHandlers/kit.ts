@@ -6,7 +6,7 @@ import type { ListTypeHandler } from "./base";
  */
 export const kitHandler: ListTypeHandler = {
   async copyTemplateItems(ctx) {
-    const { prisma, sourceTemplateId, targetTemplateId } = ctx;
+    const { prisma, sourceTemplateId, targetTemplateId, tripId } = ctx;
 
     // Fetch source template items
     const sourceItems = await prisma.kitItemTemplate.findMany({
@@ -18,6 +18,7 @@ export const kitHandler: ListTypeHandler = {
     await prisma.kitItemTemplate.createMany({
       data: sourceItems.map((item) => ({
         templateId: targetTemplateId,
+        tripId, // Denormalized for faster toggle lookups
         label: item.label,
         notes: item.notes,
         quantity: item.quantity,
@@ -40,7 +41,7 @@ export const kitHandler: ListTypeHandler = {
   },
 
   async mergeTemplateItems(ctx) {
-    const { prisma, sourceTemplateId, targetTemplateId, mode } = ctx;
+    const { prisma, sourceTemplateId, targetTemplateId, mode, tripId } = ctx;
 
     // Fetch source template items
     const sourceItems = await prisma.kitItemTemplate.findMany({
@@ -69,6 +70,7 @@ export const kitHandler: ListTypeHandler = {
         await prisma.kitItemTemplate.create({
           data: {
             templateId: targetTemplateId,
+            tripId, // Denormalized for faster toggle lookups
             label: sourceItem.label,
             notes: sourceItem.notes,
             quantity: sourceItem.quantity,
@@ -95,6 +97,7 @@ export const kitHandler: ListTypeHandler = {
           await prisma.kitItemTemplate.create({
             data: {
               templateId: targetTemplateId,
+              tripId, // Denormalized for faster toggle lookups
               label: sourceItem.label,
               notes: sourceItem.notes,
               quantity: sourceItem.quantity,
@@ -125,18 +128,7 @@ export const kitHandler: ListTypeHandler = {
   },
 
   async toggleItemState(ctx) {
-    const { prisma, itemId, state, actorId } = ctx;
-
-    // Get the item to check if it's perPerson
-    const item = await prisma.kitItemTemplate.findUnique({
-      where: { id: itemId },
-    });
-
-    if (!item) {
-      throw new Error("Item not found");
-    }
-
-    const isShared = !item.perPerson;
+    const { prisma, itemId, state, actorId, isShared } = ctx;
 
     if (state) {
       // Ticking the item - create an ItemTick for this user
