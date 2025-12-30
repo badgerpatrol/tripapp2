@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { getSpendById, updateSpend, deleteSpend } from "@/server/services/spends";
 import { UpdateSpendSchema } from "@/types/schemas";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +40,7 @@ export async function GET(
     }
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, spend.tripId);
+    await requireTripMembershipOnly(auth.uid, spend.tripId);
 
     // 4. Calculate assignment percentage
     const totalAssigned = spend.assignments.reduce(
@@ -139,7 +139,7 @@ export async function PUT(
     }
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, existingSpend.tripId);
+    await requireTripMembershipOnly(auth.uid, existingSpend.tripId);
 
     // 4. Additional authorization - verify user is either the spender or a trip organizer
     const isSpender = existingSpend.paidBy.id === auth.uid;
@@ -281,7 +281,7 @@ export async function DELETE(
     }
 
     // 3. Authorize - verify user is a member of the trip
-    await requireTripMember(auth.uid, existingSpend.tripId);
+    await requireTripMembershipOnly(auth.uid, existingSpend.tripId);
 
     // 4. Additional authorization - verify user is either the spender or a trip organizer
     const isSpender = existingSpend.paidBy.id === auth.uid;

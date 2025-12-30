@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { CreateTransportOfferSchema } from "@/types/schemas";
 import { createTransportOffer, getTripTransportOffers } from "@/server/services/transport";
 
@@ -34,7 +34,7 @@ export async function GET(
     const tripId = id;
 
     // Verify user is a trip member
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     const offers = await getTripTransportOffers(tripId);
 
@@ -81,7 +81,7 @@ export async function POST(
     const tripId = id;
 
     // Verify user is a trip member (any member can create offers)
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     const body = await request.json();
     const data = CreateTransportOfferSchema.parse(body);

@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { UpdateTransportOfferSchema } from "@/types/schemas";
 import {
   getTransportOffer,
@@ -39,7 +39,7 @@ export async function GET(
     const tripId = id;
 
     // Verify user is a trip member
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     const offer = await getTransportOffer(offerId);
 
@@ -101,7 +101,7 @@ export async function PATCH(
     const tripId = id;
 
     // Verify user is a trip member
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     const body = await request.json();
     const data = UpdateTransportOfferSchema.parse(body);
@@ -173,7 +173,7 @@ export async function DELETE(
     const tripId = id;
 
     // Verify user is a trip member
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     // First get the offer to verify it belongs to this trip
     const offer = await getTransportOffer(offerId);

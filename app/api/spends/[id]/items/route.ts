@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import {
   createSpendItem,
   getSpendItems,
@@ -31,6 +31,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await requireAuth(auth.uid);
+
     const { id: spendId } = await params;
 
     // Get spend to verify it exists and get tripId
@@ -40,7 +42,7 @@ export async function GET(
     }
 
     // Verify user is trip member
-    await requireTripMember(auth.uid, spend.tripId);
+    await requireTripMembershipOnly(auth.uid, spend.tripId);
 
     // Get items - assignments are already included in spend from getSpendById
     const items = await getSpendItems(spendId);
@@ -111,6 +113,8 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await requireAuth(auth.uid);
+
     const { id: spendId } = await params;
 
     // Get spend to verify it exists and get tripId
@@ -120,7 +124,7 @@ export async function POST(
     }
 
     // Verify user is trip member
-    await requireTripMember(auth.uid, spend.tripId);
+    await requireTripMembershipOnly(auth.uid, spend.tripId);
 
     // Check if user is spend owner or trip organizer
     const tripMember = await prisma.tripMember.findUnique({
@@ -157,7 +161,7 @@ export async function POST(
 
     // If userId is provided, verify they are a trip member
     if (itemData.userId) {
-      await requireTripMember(itemData.userId, spend.tripId);
+      await requireTripMembershipOnly(itemData.userId, spend.tripId);
     }
 
     // Create item

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { inviteUsersToTrip } from "@/server/services/invitations";
 import { InviteUsersSchema } from "@/types/schemas";
 import { TripMemberRole } from "@/lib/generated/prisma";
@@ -34,7 +34,7 @@ export async function POST(
     const { id: tripId } = await params;
 
     // 2. Check if user is a trip member with at least ADMIN role
-    const membership = await requireTripMember(auth.uid, tripId, TripMemberRole.ADMIN);
+    const membership = await requireTripMembershipOnly(auth.uid, tripId, TripMemberRole.ADMIN);
 
     if (!membership) {
       return NextResponse.json(

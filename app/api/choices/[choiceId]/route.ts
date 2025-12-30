@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { TripMemberRole } from "@/lib/generated/prisma";
 import { UpdateChoiceSchema } from "@/types/schemas";
 import {
@@ -88,7 +88,7 @@ export async function GET(
     }
 
     // Verify user is a trip member
-    await requireTripMember(auth.uid, choice.tripId);
+    await requireTripMembershipOnly(auth.uid, choice.tripId);
 
     const detail = await getChoiceDetail(choiceId, auth.uid);
 

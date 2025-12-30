@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ListType, EventType } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
-import { requireTripMember, requireTripMembershipOnly } from "@/server/authz";
+import { requireTripMembershipOnly } from "@/server/authz";
 import { getHandler } from "./listHandlers/registry";
 import { canViewTemplate, canEditTemplate } from "@/types/schemas";
 import type {
@@ -303,7 +303,7 @@ export async function getTemplate(actorId: string, templateId: string) {
 
   // For trip lists, verify trip membership instead of template ownership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else if (!canViewTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot view this template");
   }
@@ -329,7 +329,7 @@ export async function updateTemplate(
 
   // For trip lists, verify trip membership; otherwise require ownership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot edit this template");
   }
@@ -551,7 +551,7 @@ export async function deleteTemplate(actorId: string, templateId: string) {
 
   // For trip lists, verify trip membership; otherwise require ownership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else if (!canEditTemplate(actorId, template)) {
     throw new Error("Forbidden: Cannot delete this template");
   }
@@ -695,7 +695,7 @@ export async function deleteKitItemFromTemplate(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular lists, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -745,7 +745,7 @@ export async function deleteTodoItemFromTemplate(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular lists, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -793,7 +793,7 @@ export async function copyTemplateToTrip(
   const { tripId, mode } = payload;
 
   // Verify trip membership
-  await requireTripMember(actorId, tripId);
+  await requireTripMembershipOnly(actorId, tripId);
 
   // Get the template
   const template = await getTemplate(actorId, templateId);
@@ -937,7 +937,7 @@ export async function createTripListAdHoc(
   const { tripId, type, title, description, inventory, todoItems, kitItems } = payload;
 
   // Verify trip membership
-  await requireTripMember(actorId, tripId);
+  await requireTripMembershipOnly(actorId, tripId);
 
   // Use a transaction to create both the master template and the trip list
   const result = await prisma.$transaction(async (tx) => {
@@ -1082,7 +1082,7 @@ export async function listTripLists(
   query: ListTripInstancesQuery
 ) {
   // Verify trip membership
-  await requireTripMember(actorId, tripId);
+  await requireTripMembershipOnly(actorId, tripId);
 
   const where: any = { tripId };
 
@@ -1212,7 +1212,7 @@ export async function getTripList(actorId: string, listId: string) {
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, tripList.tripId);
+  await requireTripMembershipOnly(actorId, tripList.tripId);
 
   return tripList;
 }
@@ -1235,7 +1235,7 @@ export async function deleteTripList(actorId: string, listId: string) {
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, tripList.tripId);
+  await requireTripMembershipOnly(actorId, tripList.tripId);
 
   await prisma.listTemplate.delete({
     where: { id: listId },
@@ -1332,7 +1332,7 @@ export async function launchItemAction(
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, item.template.tripId);
+  await requireTripMembershipOnly(actorId, item.template.tripId);
 
   const handler = getHandler("TODO");
   if (!handler.launchItemAction) {
@@ -1374,7 +1374,7 @@ export async function addTodoItem(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular templates, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -1436,7 +1436,7 @@ export async function addKitItem(
 
   // For trip lists, verify trip membership
   if (template.tripId) {
-    await requireTripMember(actorId, template.tripId);
+    await requireTripMembershipOnly(actorId, template.tripId);
   } else {
     // For regular templates, verify ownership
     if (!canEditTemplate(actorId, template)) {
@@ -1506,7 +1506,7 @@ export async function deleteKitItem(actorId: string, itemId: string) {
   }
 
   // Verify trip membership
-  await requireTripMember(actorId, item.template.tripId);
+  await requireTripMembershipOnly(actorId, item.template.tripId);
 
   if (item.perPerson) {
     // For per-person items, just delete the user's tick

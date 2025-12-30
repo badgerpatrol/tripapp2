@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { parseReceiptImage } from "@/server/ai/receiptParser";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { logEvent } from "@/server/eventLog";
 import { createSystemLog } from "@/server/systemLog";
 import { EventType, LogSeverity } from "@/lib/generated/prisma";
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Validate trip access
-    await requireTripMember(auth.uid, tripId);
+    await requireTripMembershipOnly(auth.uid, tripId);
 
     // 4. Get trip details for currency
     const trip = await prisma.trip.findUnique({

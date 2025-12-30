@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireTripMember } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth, requireTripMembershipOnly } from "@/server/authz";
 import { TripMemberRole } from "@/lib/generated/prisma";
 import { CreateSpendFromChoiceSchema } from "@/types/schemas";
 import { createSpendFromChoice } from "@/server/services/choices";
@@ -47,7 +47,7 @@ export async function POST(
     }
 
     // Verify user is at least ADMIN (organisers can create spends)
-    await requireTripMember(auth.uid, choice.tripId, TripMemberRole.ADMIN);
+    await requireTripMembershipOnly(auth.uid, choice.tripId, TripMemberRole.ADMIN);
 
     const body = await request.json();
     const data = CreateSpendFromChoiceSchema.parse(body);
