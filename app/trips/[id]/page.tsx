@@ -30,7 +30,8 @@ import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
 import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
 import { AddListDialog } from "@/components/lists/AddListDialog";
-import TransportSection from "./TransportSection";
+// TEMPORARILY HIDDEN - Transport feature not ready yet
+// import TransportSection from "./TransportSection";
 import AddMilestoneDialog from "./AddMilestoneDialog";
 
 interface TripDetail {
@@ -2646,8 +2647,9 @@ export default function TripDetailPage() {
           </div>
         )}
 
+        {/* TEMPORARILY HIDDEN - Transport feature not ready yet
         {/* Transport / Lift Share Section (hidden for non-admins while in development) */}
-        {trip.userRsvpStatus === "ACCEPTED" && isGlobalAdmin && (
+        {/* trip.userRsvpStatus === "ACCEPTED" && isGlobalAdmin && (
           <TransportSection
             tripId={tripId}
             tripStartDate={trip.startDate || new Date().toISOString()}
@@ -2656,7 +2658,7 @@ export default function TripDetailPage() {
             onToggle={() => toggleSection('transport')}
             isViewer={isViewer}
           />
-        )}
+        ) */}
 
         {/* Balance Summary (for accepted members) - Hidden for now */}
         {false && (

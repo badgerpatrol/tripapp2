@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ListType, EventType } from "@/lib/generated/prisma";
 import { logEvent } from "@/server/eventLog";
-import { requireTripMember } from "@/server/authz";
+import { requireTripMember, requireTripMembershipOnly } from "@/server/authz";
 import { getHandler } from "./listHandlers/registry";
 import { canViewTemplate, canEditTemplate } from "@/types/schemas";
 import type {
@@ -841,6 +841,7 @@ export async function copyTemplateToTrip(
       sourceTemplateId: templateId,
       targetTemplateId: existingTripList.id,
       mode,
+      tripId,
     });
 
     await logEvent(
@@ -911,6 +912,7 @@ async function createTripListFromTemplate(
     prisma,
     sourceTemplateId,
     targetTemplateId: tripList.id,
+    tripId,
   });
 
   await logEvent(
@@ -1013,6 +1015,7 @@ export async function createTripListAdHoc(
       await tx.todoItemTemplate.createMany({
         data: todoItems.map((item, idx) => ({
           templateId: tripList.id,
+          tripId, // Denormalized for faster toggle lookups
           label: item.label,
           notes: item.notes,
           perPerson: item.perPerson ?? false,
@@ -1026,6 +1029,7 @@ export async function createTripListAdHoc(
       await tx.kitItemTemplate.createMany({
         data: kitItems.map((item, idx) => ({
           templateId: tripList.id,
+          tripId, // Denormalized for faster toggle lookups
           label: item.label,
           notes: item.notes,
           quantity: item.quantity ?? 1,
@@ -1259,44 +1263,42 @@ export async function toggleItemState(
   itemId: string,
   state: boolean
 ) {
-  // Get the template to verify trip membership
-  let template: any;
+  // Get the item to verify trip membership using denormalized tripId
+  // Also fetch perPerson to avoid a second query in the handler
+  let item: { id: string; tripId: string | null; templateId: string; perPerson: boolean } | null = null;
 
   if (type === "TODO") {
-    const item = await prisma.todoItemTemplate.findUnique({
+    item = await prisma.todoItemTemplate.findUnique({
       where: { id: itemId },
-      include: { template: true },
+      select: { id: true, tripId: true, templateId: true, perPerson: true },
     });
-    if (!item) throw new Error("Item not found");
-    template = item.template;
   } else if (type === "KIT") {
-    const item = await prisma.kitItemTemplate.findUnique({
+    item = await prisma.kitItemTemplate.findUnique({
       where: { id: itemId },
-      include: { template: true },
+      select: { id: true, tripId: true, templateId: true, perPerson: true },
     });
-    if (!item) throw new Error("Item not found");
-    template = item.template;
   }
 
-  if (!template) {
+  if (!item) {
     throw new Error("Item not found");
   }
 
-  // Only allow toggling on trip lists
-  if (!template.tripId) {
+  // Only allow toggling on trip lists (tripId must be set on the item)
+  if (!item.tripId) {
     throw new Error("Can only toggle items on trip lists");
   }
 
-  // Verify trip membership
-  await requireTripMember(actorId, template.tripId);
+  // Verify trip membership - skip user existence check since already verified at API level
+  await requireTripMembershipOnly(actorId, item.tripId);
 
-  // Use handler to toggle
+  // Use handler to toggle - pass perPerson to avoid re-fetching the item
   const handler = getHandler(type);
   await handler.toggleItemState({
     prisma,
     itemId,
     state,
     actorId,
+    isShared: !item.perPerson,
   });
 
   await logEvent(
@@ -1304,7 +1306,7 @@ export async function toggleItemState(
     itemId,
     EventType.LIST_ITEM_TOGGLED,
     actorId,
-    { listId: template.id, type, state }
+    { listId: item.templateId, type, state }
   );
 }
 
@@ -1405,6 +1407,7 @@ export async function addTodoItem(
   const item = await prisma.todoItemTemplate.create({
     data: {
       templateId,
+      tripId: template.tripId, // Denormalized for faster toggle lookups
       label: payload.label,
       notes: payload.notes || null,
       orderIndex,
@@ -1466,6 +1469,7 @@ export async function addKitItem(
   const item = await prisma.kitItemTemplate.create({
     data: {
       templateId,
+      tripId: template.tripId, // Denormalized for faster toggle lookups
       label: payload.label,
       notes: payload.notes || null,
       quantity: payload.quantity ?? 1,

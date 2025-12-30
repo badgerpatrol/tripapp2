@@ -68,6 +68,18 @@ export async function requireTripMember(
   // First verify user exists
   await requireAuth(userId);
 
+  return requireTripMembershipOnly(userId, tripId, minRole);
+}
+
+/**
+ * Verifies trip membership without re-checking user existence.
+ * Use this when user has already been verified earlier in the request.
+ */
+export async function requireTripMembershipOnly(
+  userId: string,
+  tripId: string,
+  minRole?: TripMemberRole
+) {
   // Check trip membership
   const membership = await prisma.tripMember.findUnique({
     where: {
