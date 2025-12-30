@@ -359,12 +359,21 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     }
   }, [user, expandedListId, tripId, typeFilter, completionStatusFilter, detectTickChanges, buildTickMap, addToast]);
 
-  // Enable polling when a list is expanded (viewing details)
+  // Check if the expanded list has any shared items (perPerson = false)
+  const expandedListHasSharedItems = (() => {
+    if (!expandedListId) return false;
+    const expandedList = lists.find(l => l.id === expandedListId);
+    if (!expandedList) return false;
+    const items = expandedList.type === "TODO" ? expandedList.todoItems : expandedList.kitItems;
+    return items?.some(item => !item.perPerson) ?? false;
+  })();
+
+  // Enable polling when a list is expanded (viewing details) and has shared items
   // Limit to 120 polls (1 hour at 30 second intervals) to prevent indefinite polling
   const { isPolling } = usePolling({
     callback: pollForChanges,
     interval: 30000, // 30 seconds
-    enabled: !!expandedListId && !!user,
+    enabled: !!expandedListId && !!user && expandedListHasSharedItems,
     maxPolls: 120,
   });
 
