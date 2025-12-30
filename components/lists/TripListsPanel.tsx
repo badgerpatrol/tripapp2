@@ -361,7 +361,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
 
   // Enable polling when a list is expanded (viewing details)
   // Limit to 120 polls (1 hour at 30 second intervals) to prevent indefinite polling
-  usePolling({
+  const { isPolling } = usePolling({
     callback: pollForChanges,
     interval: 30000, // 30 seconds
     enabled: !!expandedListId && !!user,
@@ -944,6 +944,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         <h3 className="font-medium text-zinc-900 dark:text-white truncate">
                           {list.title}
                         </h3>
+                        {/* Live indicator when polling is active for this list */}
+                        {isExpanded && isPolling && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                            Live
+                          </span>
+                        )}
                         {list.hasTemplateUpdated && (
                           <span
                             className="px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"

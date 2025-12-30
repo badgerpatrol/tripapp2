@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 export interface UsePollingOptions {
   callback: () => Promise<void>;
@@ -13,10 +13,11 @@ export interface UsePollingOptions {
  * and resumes when it becomes visible again.
  * Stops after maxPolls if specified.
  */
-export function usePolling({ callback, interval, enabled, maxPolls }: UsePollingOptions) {
+export function usePolling({ callback, interval, enabled, maxPolls }: UsePollingOptions): { isPolling: boolean } {
   const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const callbackRef = useRef(callback);
   const pollCountRef = useRef(0);
+  const [isPolling, setIsPolling] = useState(false);
 
   // Keep callback ref up to date to avoid stale closures
   useEffect(() => {
@@ -27,11 +28,18 @@ export function usePolling({ callback, interval, enabled, maxPolls }: UsePolling
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
+    // Check if already at max polls before starting
+    if (maxPolls !== undefined && pollCountRef.current >= maxPolls) {
+      setIsPolling(false);
+      return;
+    }
+    setIsPolling(true);
     intervalRef.current = setInterval(() => {
       // Check if we've reached the max polls limit
       if (maxPolls !== undefined && pollCountRef.current >= maxPolls) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
+        setIsPolling(false);
         return;
       }
       pollCountRef.current += 1;
@@ -44,6 +52,7 @@ export function usePolling({ callback, interval, enabled, maxPolls }: UsePolling
       clearInterval(intervalRef.current);
       intervalRef.current = undefined;
     }
+    setIsPolling(false);
   }, []);
 
   useEffect(() => {
@@ -77,4 +86,6 @@ export function usePolling({ callback, interval, enabled, maxPolls }: UsePolling
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [enabled, startPolling, stopPolling]);
+
+  return { isPolling };
 }
