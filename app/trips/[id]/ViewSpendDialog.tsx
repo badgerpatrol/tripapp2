@@ -164,10 +164,19 @@ export default function ViewSpendDialog({
     onClose();
   };
 
+  // Calculate assignment values upfront - use direct sums, not percentages
+  const assignedAmount = spend.assignments?.reduce((sum, a) => sum + (a.shareAmount || 0), 0) || 0;
+  const unassignedAmount = spend.amount - assignedAmount;
+  const assignedPercentage = spend.amount > 0 ? (assignedAmount / spend.amount) * 100 : 0;
+  const unassignedPercentage = spend.amount > 0 ? (unassignedAmount / spend.amount) * 100 : 0;
+  const userAssignment = currentUserId ? spend.assignments?.find(a => a.userId === currentUserId) : undefined;
+  const userOwes = userAssignment?.shareAmount ?? 0;
+  const userOwesPercentage = spend.amount > 0 ? (userOwes / spend.amount) * 100 : 0;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 md:p-8">
+      <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
@@ -291,143 +300,102 @@ export default function ViewSpendDialog({
             </span>
           </div>
 
-          {/* Amount Summary */}
-          <div className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-
+          {/* Combined Amount & Assignment Summary */}
+          <div className="mb-6 p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-700">
             <div className="space-y-2">
+              {/* FX Rate info (only if different currency) */}
               {spend.fxRate !== 1 && (
                 <>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-zinc-600 dark:text-zinc-400">
                       Original Amount:
                     </span>
-                    <div className="text-right">
-                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {spend.currency} {spend.amount.toFixed(2)}
-                      </span>
-                    </div>
+                    <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {spend.currency} {spend.amount.toFixed(2)}
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
+                  <div className="flex justify-between items-center">
                     <span className="text-sm text-zinc-600 dark:text-zinc-400">
                       Exchange Rate:
                     </span>
-                    <div className="text-right">
-                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {spend.fxRate.toFixed(6)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Amount:
+                    <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {spend.fxRate.toFixed(6)}
                     </span>
-                    <div className="text-right">
-                      <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
-                      </span>
-                    </div>
                   </div>
-                </>
-              )}
-              {spend.fxRate === 1 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Amount:
-                  </span>
-                  <div className="text-right">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Amount ({trip.baseCurrency}):
+                    </span>
                     <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                       {trip.baseCurrency} {spend.normalizedAmount.toFixed(2)}
                     </span>
                   </div>
-                </div>
+                  <div className="border-t border-zinc-200 dark:border-zinc-700 my-2"></div>
+                </>
               )}
 
-            </div>
-          </div>
-
-          {/* Assignment Summary */}
-          {(() => {
-            const assignedPercentage = spend.assignedPercentage || 0;
-            const assignedAmount = (assignedPercentage / 100) * spend.amount;
-            const unassignedPercentage = 100 - assignedPercentage;
-            const unassignedAmount = (unassignedPercentage / 100) * spend.amount;
-
-            const userAssignment = currentUserId && spend.assignments?.find(a => a.userId === currentUserId);
-            const showYouOwe = userAssignment && userAssignment.shareAmount !== undefined && userAssignment.shareAmount > 0;
-
-            
-            return (
-              <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                
-                <div className="space-y-2">
-                  {showYouOwe && userAssignment && userAssignment.shareAmount !== undefined && (
-                    <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                          You owe:
-                        </span>
-                        <div className="text-right">
-                          <span className="text-sm font-bold text-red-700 dark:text-red-300">
-                            {spend.currency} {userAssignment.shareAmount.toFixed(2)}
-                          </span>
-                          <span className="text-xs ml-1 text-red-700 dark:text-red-500">
-                            ({((userAssignment.shareAmount / spend.amount) * 100).toFixed(1)}%)
-                          </span>
-                        </div>
-                      </div>
-                      <div className="border-t border-blue-200 dark:border-blue-800"></div>
-                    </>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Total assigned:
-                    </span>
-                    <div className="text-right">
-                      <span className={`text-sm font-semibold ${
-                        assignedPercentage > 100
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-zinc-900 dark:text-zinc-100"
-                      }`}>
-                        {spend.currency} {assignedAmount.toFixed(2)}
-                      </span>
-                      <span className={`text-xs ml-1 ${
-                        assignedPercentage > 100
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-zinc-600 dark:text-zinc-400"
-                      }`}>
-                        ({assignedPercentage.toFixed(1)}%)
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-800">
-                    <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Unassigned:
-                    </span>
-                    <div className="text-right">
-                      <span className={`text-sm font-bold ${
-                        unassignedPercentage < 0
-                          ? "text-red-600 dark:text-red-400"
-                          : unassignedPercentage < 0.1
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-yellow-600 dark:text-yellow-400"
-                      }`}>
-                        {spend.currency} {unassignedAmount.toFixed(2)}
-                      </span>
-                      <span className={`text-xs ml-1 ${
-                        unassignedPercentage < 0
-                          ? "text-red-600 dark:text-red-400"
-                          : unassignedPercentage < 0.1
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-yellow-600 dark:text-yellow-400"
-                      }`}>
-                        ({unassignedPercentage.toFixed(1)}%)
-                      </span>
-                    </div>
-                  </div>
+              {/* You owe row - always visible */}
+              <div className="flex justify-between items-center">
+                <span className={`text-sm font-medium ${userOwes > 0 ? "text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400"}`}>
+                  You owe:
+                </span>
+                <div className="text-right">
+                  <span className={`text-sm font-bold ${userOwes > 0 ? "text-red-700 dark:text-red-300" : "text-zinc-700 dark:text-zinc-300"}`}>
+                    {spend.currency} {userOwes.toFixed(2)}
+                  </span>
+                  <span className={`text-xs ml-1 ${userOwes > 0 ? "text-red-700 dark:text-red-500" : "text-zinc-500"}`}>
+                    ({userOwesPercentage.toFixed(1)}%)
+                  </span>
                 </div>
               </div>
-            );
-          })()}
+
+              {/* Total assigned */}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Assigned:
+                </span>
+                <div className="text-right">
+                  <span className={`text-sm font-semibold ${
+                    assignedPercentage > 100 ? "text-red-600 dark:text-red-400" : "text-zinc-900 dark:text-zinc-100"
+                  }`}>
+                    {spend.currency} {assignedAmount.toFixed(2)}
+                  </span>
+                  <span className={`text-xs ml-1 ${
+                    assignedPercentage > 100 ? "text-red-600 dark:text-red-400" : "text-zinc-600 dark:text-zinc-400"
+                  }`}>
+                    ({assignedPercentage.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+
+              {/* Unassigned */}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Unassigned:
+                </span>
+                <div className="text-right">
+                  <span className={`text-sm font-bold ${
+                    unassignedAmount < 0
+                      ? "text-red-600 dark:text-red-400"
+                      : Math.abs(unassignedAmount) < 0.01
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-yellow-600 dark:text-yellow-400"
+                  }`}>
+                    {spend.currency} {unassignedAmount.toFixed(2)}
+                  </span>
+                  <span className={`text-xs ml-1 ${
+                    unassignedAmount < 0
+                      ? "text-red-600 dark:text-red-400"
+                      : Math.abs(unassignedAmount) < 0.01
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-yellow-600 dark:text-yellow-400"
+                  }`}>
+                    ({unassignedPercentage.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           
 
@@ -579,8 +547,11 @@ export default function ViewSpendDialog({
 
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-3 pt-6 mt-6 border-t border-zinc-200 dark:border-zinc-700">
+        </div>
+
+        {/* Fixed Footer with Action Buttons */}
+        <div className="flex-shrink-0 border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-4 md:px-8 rounded-b-xl">
+          <div className="flex flex-col gap-3">
             {/* Join Spend (standalone row when shown) */}
             {showJoin && (
               <button
