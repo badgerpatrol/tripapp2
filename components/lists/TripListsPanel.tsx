@@ -108,9 +108,11 @@ interface TripListsPanelProps {
   listTypeFilter?: ListType; // If set, only show lists of this type (TODO or KIT)
   hideAddButton?: boolean; // If true, hides the main +Add button (for when parent controls it)
   onAddClick?: () => void; // Callback when add is triggered (allows parent to control the dialog)
+  hideListHeader?: boolean; // If true, hides the per-list header (title, Live, Edit) - for when parent shows it
+  onPollingChange?: (isPolling: boolean) => void; // Callback when polling status changes
 }
 
-export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, onListsData, listTypeFilter, hideAddButton = false, onAddClick }: TripListsPanelProps) {
+export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice, onOpenMilestoneDialog, onActionComplete, onRefreshLists, inWorkflowMode = false, onOpenList, selectedListId, isOrganizer = true, hideContainer = false, onListsLoaded, onListsData, listTypeFilter, hideAddButton = false, onAddClick, hideListHeader = false, onPollingChange }: TripListsPanelProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [lists, setLists] = useState<ListInstance[]>([]);
@@ -376,6 +378,13 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     enabled: !!expandedListId && !!user && expandedListHasSharedItems,
     maxPolls: 120,
   });
+
+  // Notify parent when polling status changes
+  useEffect(() => {
+    if (onPollingChange) {
+      onPollingChange(isPolling);
+    }
+  }, [isPolling, onPollingChange]);
 
   const handleToggleItem = async (listType: ListType, itemId: string, currentState: boolean) => {
     if (!user) return;
@@ -932,111 +941,113 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
             return (
               <div
                 key={list.id}
-                className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden"
+                className={hideListHeader ? "" : "border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden"}
               >
-                {/* List Header */}
-                <div className="flex items-center min-w-0 overflow-hidden">
-                  <ListHeaderButton
-                    list={list}
-                    onClick={() => {
-                      if (shouldExpandInline) {
-                        setExpandedListId(isExpanded ? null : list.id);
-                      } else if (onOpenList) {
-                        onOpenList(list.id, list.title);
-                      }
-                    }}
-                    onLongPress={handleListLongPress}
-                  >
-                    <div className="flex flex-col gap-2">
-                      {/* Title at top */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-medium text-zinc-900 dark:text-white truncate">
-                          {list.title}
-                        </h3>
-                        {/* Live indicator when polling is active for this list */}
-                        {isExpanded && isPolling && (
-                          <span className="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                            Live
-                          </span>
-                        )}
-                        {list.hasTemplateUpdated && (
-                          <span
-                            className="px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
-                            title="The original template has been modified since this list was added to the trip"
-                          >
-                            Original list has changed
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Progress bars below title */}
-                      <div className="flex flex-col gap-1.5">
-                        {/* Personal Progress Bar */}
-                        {personalTotal > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12">You</span>
-                            <div className="flex-1 max-w-48 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                              <div
-                                className="h-1.5 rounded-full transition-all bg-blue-600"
-                                style={{ width: `${personalPercentage}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400">{personalCompleted}/{personalTotal}</span>
-                          </div>
-                        )}
-                        {/* Shared Progress Bar */}
-                        {sharedTotal > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12">Shared</span>
-                            <div className="flex-1 max-w-48 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
-                              <div
-                                className="h-1.5 rounded-full transition-all bg-green-600"
-                                style={{ width: `${sharedPercentage}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400">{sharedCompleted}/{sharedTotal}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </ListHeaderButton>
-
-                {/* Edit Button - styled as a visible button */}
-                {isOrganizer && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (list.type === "KIT") {
-                        router.push(`/lists/edit-kit/${list.id}?returnTo=/trips/${tripId}`);
-                      } else {
-                        router.push(`/lists/edit/${list.id}?returnTo=/trips/${tripId}`);
-                      }
-                    }}
-                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
-                    title="Edit list"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                {/* List Header - hidden when parent shows it */}
+                {!hideListHeader && (
+                  <div className="flex items-center min-w-0 overflow-hidden">
+                    <ListHeaderButton
+                      list={list}
+                      onClick={() => {
+                        if (shouldExpandInline) {
+                          setExpandedListId(isExpanded ? null : list.id);
+                        } else if (onOpenList) {
+                          onOpenList(list.id, list.title);
+                        }
+                      }}
+                      onLongPress={handleListLongPress}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                    Edit
-                  </button>
+                      <div className="flex flex-col gap-2">
+                        {/* Title at top */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-medium text-zinc-900 dark:text-white truncate">
+                            {list.title}
+                          </h3>
+                          {/* Live indicator when polling is active for this list */}
+                          {isExpanded && isPolling && (
+                            <span className="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                              Live
+                            </span>
+                          )}
+                          {list.hasTemplateUpdated && (
+                            <span
+                              className="px-1.5 py-0.5 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                              title="The original template has been modified since this list was added to the trip"
+                            >
+                              Original list has changed
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Progress bars below title */}
+                        <div className="flex flex-col gap-1.5">
+                          {/* Personal Progress Bar */}
+                          {personalTotal > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12">You</span>
+                              <div className="flex-1 max-w-48 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                <div
+                                  className="h-1.5 rounded-full transition-all bg-blue-600"
+                                  style={{ width: `${personalPercentage}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400">{personalCompleted}/{personalTotal}</span>
+                            </div>
+                          )}
+                          {/* Shared Progress Bar */}
+                          {sharedTotal > 0 && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400 w-12">Shared</span>
+                              <div className="flex-1 max-w-48 bg-zinc-200 dark:bg-zinc-700 rounded-full h-1.5">
+                                <div
+                                  className="h-1.5 rounded-full transition-all bg-green-600"
+                                  style={{ width: `${sharedPercentage}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400">{sharedCompleted}/{sharedTotal}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </ListHeaderButton>
+
+                    {/* Edit Button - styled as a visible button */}
+                    {isOrganizer && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (list.type === "KIT") {
+                            router.push(`/lists/edit-kit/${list.id}?returnTo=/trips/${tripId}`);
+                          } else {
+                            router.push(`/lists/edit/${list.id}?returnTo=/trips/${tripId}`);
+                          }
+                        }}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 m-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+                        title="Edit list"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                        Edit
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
 
                 {/* Expanded Items - only in workflow mode */}
                 {isExpanded && shouldExpandInline && (
-                  <div className="border-t border-zinc-200 dark:border-zinc-700 p-4 bg-zinc-50 dark:bg-zinc-900/50 overflow-hidden">
+                  <div className={`${hideListHeader ? "" : "border-t border-zinc-200 dark:border-zinc-700"} p-4 bg-zinc-50 dark:bg-zinc-900/50 overflow-hidden`}>
                     {/* Quick Add Item */}
                     {isOrganizer && (
                       <div className="mb-4">

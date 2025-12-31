@@ -193,8 +193,8 @@ export default function TripDetailPage() {
 
   // List workflow modal state
   const [isListWorkflowModalOpen, setIsListWorkflowModalOpen] = useState(false);
-  const [listWorkflowTitle, setListWorkflowTitle] = useState("");
-  const [listWorkflowDescription, setListWorkflowDescription] = useState("");
+  const [listWorkflowListTitle, setListWorkflowListTitle] = useState("");
+  const [selectedListType, setSelectedListType] = useState<"TODO" | "KIT">("TODO");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
   const [checklistsCount, setChecklistsCount] = useState<number | null>(null); // null = not yet loaded
@@ -2121,8 +2121,8 @@ export default function TripDetailPage() {
                   }}
                   onOpenList={(listId, listTitle) => {
                     setSelectedListId(listId);
-                    setListWorkflowTitle("Get things done");
-                    setListWorkflowDescription(`Complete tasks in ${listTitle}`);
+                    setListWorkflowListTitle(listTitle);
+                    setSelectedListType("TODO");
                     setIsListWorkflowModalOpen(true);
                   }}
                   onListsLoaded={setChecklistsCount}
@@ -2228,8 +2228,8 @@ export default function TripDetailPage() {
                   }}
                   onOpenList={(listId, listTitle) => {
                     setSelectedListId(listId);
-                    setListWorkflowTitle("Pack your kit");
-                    setListWorkflowDescription(`Pack items in ${listTitle}`);
+                    setListWorkflowListTitle(listTitle);
+                    setSelectedListType("KIT");
                     setIsListWorkflowModalOpen(true);
                   }}
                   onListsLoaded={setKitListsCount}
@@ -3556,9 +3556,9 @@ export default function TripDetailPage() {
         }}
         onMilestoneCreated={handleEditSuccess}
         onChoiceCreated={fetchChoices}
-        title={listWorkflowTitle}
-        description={listWorkflowDescription}
+        listTitle={listWorkflowListTitle}
         selectedListId={selectedListId || undefined}
+        selectedListType={selectedListType}
         currentMembers={trip?.participants || []}
       />
 

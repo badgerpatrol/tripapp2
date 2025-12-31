@@ -37,11 +37,15 @@
       Add build hook: Vercel runs prisma migrate deploy automatically
       Migrations apply during deployment
 29) Dont push anything to github yourself, ever. Leave all that to me.
-30) ## Before UI/Frontend Work
-Always read `docs/UI-STRUCTURE.md` before making changes to the UI or adding new pages/components.
-31) ## UI Style Guide
-Follow `STYLE_GUIDE.md` for all UI styling decisions. This document defines the canonical patterns for typography, colors, spacing, components, forms, lists, and accessibility. Use the Kit list page and Create Trip form as reference implementations.
-32) ## Design Principles
+30) ## Before UI/Frontend Work (MANDATORY FILE READS)
+Before making ANY UI changes, you MUST read these files at the start of the task:
+- `docs/UI-STRUCTURE.md` - for page structure and component organization
+- `docs/STYLE_GUIDE.md` - for all styling decisions (typography, colors, spacing, components, forms, lists)
+- `docs/DESIGN_PRINCIPLES.md` - for architectural and privacy decisions
+
+Do not rely on memory or assumptions. Read these files fresh for each UI task.
+
+31) ## Design Principles
 Always follow `docs/DESIGN_PRINCIPLES.md` for architectural and privacy decisions. This includes critical rules like email address handling and data separation between Firebase and PostgreSQL.
 
 ---

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { TripListsPanel } from "./TripListsPanel";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,9 @@ interface ListWorkflowModalProps {
   tripCurrency?: string;
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
-  description?: string;
+  listTitle?: string; // The list title to show in header
   selectedListId?: string; // ID of a specific list to display
+  selectedListType?: "TODO" | "KIT"; // Type of the selected list (for edit route)
   onMilestoneCreated?: () => void; // Callback when a milestone is created
   onChoiceCreated?: () => void; // Callback when a choice is created
   currentMembers?: Array<{
@@ -37,14 +38,16 @@ export function ListWorkflowModal({
   tripCurrency = "GBP",
   isOpen,
   onClose,
-  title = "Get Started with Your Trip",
-  description = "Work through your to-do list to prepare for your trip",
+  listTitle = "",
   selectedListId,
+  selectedListType = "TODO",
   onMilestoneCreated,
   onChoiceCreated,
   currentMembers = [],
 }: ListWorkflowModalProps) {
+  const router = useRouter();
   const { user } = useAuth();
+  const [isPolling, setIsPolling] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isCreateChoiceDialogOpen, setIsCreateChoiceDialogOpen] = useState(false);
   const [isManageChoiceDialogOpen, setIsManageChoiceDialogOpen] = useState(false);
@@ -136,14 +139,47 @@ export function ListWorkflowModal({
       <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" style={{ maxWidth: 'min(56rem, calc(100vw - 2rem))' }}>
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between min-w-0 overflow-hidden">
-          <div className="min-w-0">
+          <div className="min-w-0 flex items-center gap-2 flex-wrap">
             <h2 className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-white truncate">
-              {title}
+              {listTitle}
             </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 truncate">
-              {description}
-            </p>
+            {/* Live indicator when polling is active */}
+            {isPolling && (
+              <span className="flex items-center gap-1 px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                Live
+              </span>
+            )}
           </div>
+          {/* Edit Button */}
+          {selectedListId && (
+            <button
+              onClick={() => {
+                if (selectedListType === "KIT") {
+                  router.push(`/lists/edit-kit/${selectedListId}?returnTo=/trips/${tripId}`);
+                } else {
+                  router.push(`/lists/edit/${selectedListId}?returnTo=/trips/${tripId}`);
+                }
+              }}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+              title="Edit list"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+              Edit
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -165,6 +201,8 @@ export function ListWorkflowModal({
             onRefreshLists={() => setRefreshKey(prev => prev + 1)}
             inWorkflowMode={true}
             selectedListId={selectedListId}
+            hideListHeader={true}
+            onPollingChange={setIsPolling}
           />
         </div>
 
