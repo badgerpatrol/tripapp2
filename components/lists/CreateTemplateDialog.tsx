@@ -23,7 +23,7 @@ interface TodoItem {
 interface KitItem {
   label: string;
   notes: string;
-  quantity: number;
+  quantity: string;
   perPerson: boolean;
   required: boolean;
   weightGrams: number | null;
@@ -50,7 +50,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
     { label: "", notes: "", actionType: null, actionData: null, orderIndex: 0 },
   ]);
   const [kitItems, setKitItems] = useState<KitItem[]>([
-    { label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: 0 },
+    { label: "", notes: "", quantity: "1", perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: 0 },
   ]);
 
   const handleSubmit = async () => {
@@ -100,7 +100,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
         payload.kitItems = validItems.map((item, idx) => ({
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
-          quantity: (item as KitItem).quantity || 1,
+          quantity: parseFloat((item as KitItem).quantity) || 1,
           perPerson: (item as KitItem).perPerson || false,
           required: (item as KitItem).required ?? true,
           weightGrams: (item as KitItem).weightGrams || undefined,
@@ -143,7 +143,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
     setVisibility("PRIVATE");
     setTags("");
     setTodoItems([{ label: "", notes: "", actionType: null, actionData: null, orderIndex: 0 }]);
-    setKitItems([{ label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: 0 }]);
+    setKitItems([{ label: "", notes: "", quantity: "1", perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: 0 }]);
     setError(null);
   };
 
@@ -169,7 +169,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
   const addKitItem = () => {
     setKitItems([
       ...kitItems,
-      { label: "", notes: "", quantity: 1, perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: kitItems.length },
+      { label: "", notes: "", quantity: "1", perPerson: false, required: true, weightGrams: null, category: null, cost: null, url: null, orderIndex: kitItems.length },
     ]);
   };
 
@@ -359,7 +359,7 @@ export function CreateTemplateDialog({ isOpen, onClose, onSuccess }: CreateTempl
                       <input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => updateKitItem(index, "quantity", parseFloat(e.target.value) || 1)}
+                        onChange={(e) => updateKitItem(index, "quantity", e.target.value)}
                         placeholder="Quantity"
                         min="0"
                         step="0.1"

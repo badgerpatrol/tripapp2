@@ -21,6 +21,7 @@ export default function QuickAddTodoItemSheet({
 }: QuickAddTodoItemSheetProps) {
   const { user } = useAuth();
   const [label, setLabel] = useState("");
+  const [notes, setNotes] = useState("");
   const [perPerson, setPerPerson] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export default function QuickAddTodoItemSheet({
   useEffect(() => {
     if (!isOpen) {
       setLabel("");
+      setNotes("");
       setPerPerson(false);
       setError(null);
     }
@@ -62,6 +64,7 @@ export default function QuickAddTodoItemSheet({
         },
         body: JSON.stringify({
           label: label.trim(),
+          notes: notes.trim() || undefined,
           perPerson,
         }),
       });
@@ -127,6 +130,19 @@ export default function QuickAddTodoItemSheet({
               className="w-full px-4 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               disabled={saving}
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              Notes
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              disabled={saving}
             />
           </div>
 

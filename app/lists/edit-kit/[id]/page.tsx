@@ -13,7 +13,7 @@ interface KitItem {
   id?: string;
   label: string;
   notes: string;
-  quantity: number;
+  quantity: string;
   category: string;
   weightGrams: string;
   cost: string;
@@ -119,7 +119,7 @@ function EditKitListPageContent() {
             id: item.id,
             label: item.label,
             notes: item.notes || "",
-            quantity: item.quantity,
+            quantity: item.quantity.toString(),
             category: item.category || "",
             weightGrams: item.weightGrams?.toString() || "",
             cost: item.cost?.toString() || "",
@@ -147,7 +147,7 @@ function EditKitListPageContent() {
               id: crypto.randomUUID(),
               label: "",
               notes: "",
-              quantity: 1,
+              quantity: "1",
               category: "",
               weightGrams: "",
               cost: "",
@@ -199,7 +199,7 @@ function EditKitListPageContent() {
           id: item.id?.startsWith("kit-") ? undefined : item.id,
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
-          quantity: item.quantity || 1,
+          quantity: parseFloat(item.quantity) || 1,
           category: item.category.trim() || undefined,
           weightGrams: item.weightGrams ? parseInt(item.weightGrams) : undefined,
           cost: item.cost ? parseFloat(item.cost) : undefined,
@@ -261,7 +261,7 @@ function EditKitListPageContent() {
         id: crypto.randomUUID(),
         label: "",
         notes: "",
-        quantity: 1,
+        quantity: "1",
         category: "",
         weightGrams: "",
         cost: "",
@@ -390,6 +390,7 @@ function EditKitListPageContent() {
     // Add scanned items to the top of the list with proper order indices and inventory fields
     const newItems = scannedItems.map((item, idx) => ({
       ...item,
+      quantity: item.quantity.toString(),
       orderIndex: idx,
       date: "",
       needsRepair: false,
@@ -439,7 +440,7 @@ function EditKitListPageContent() {
           id: item.id?.startsWith("kit-") ? undefined : item.id, // Keep DB IDs, remove temp IDs
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
-          quantity: item.quantity || 1,
+          quantity: parseFloat(item.quantity) || 1,
           category: item.category.trim() || undefined,
           weightGrams: item.weightGrams ? parseInt(item.weightGrams) : undefined,
           cost: item.cost ? parseFloat(item.cost) : undefined,
@@ -779,7 +780,7 @@ function EditKitListPageContent() {
                       <input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => updateItem(item.id!, "quantity", parseFloat(e.target.value) || 1)}
+                        onChange={(e) => updateItem(item.id!, "quantity", e.target.value)}
                         placeholder="Quantity"
                         min="0"
                         step="0.1"

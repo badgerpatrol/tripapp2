@@ -13,7 +13,7 @@ interface KitItem {
   id: string;
   label: string;
   notes: string;
-  quantity: number;
+  quantity: string;
   category: string;
   weightGrams: string;
   cost: string;
@@ -60,7 +60,7 @@ function CreateKitListPageContent() {
         id: newId,
         label: "",
         notes: "",
-        quantity: 1,
+        quantity: "1",
         category: "",
         weightGrams: "",
         cost: "",
@@ -110,6 +110,7 @@ function CreateKitListPageContent() {
     // Add scanned items to the top of the list with inventory fields
     const itemsWithInventoryFields = scannedItems.map(item => ({
       ...item,
+      quantity: item.quantity.toString(),
       date: "",
       needsRepair: false,
       conditionNotes: "",
@@ -147,7 +148,7 @@ function CreateKitListPageContent() {
         const baseItem = {
           label: item.label.trim(),
           notes: item.notes.trim() || undefined,
-          quantity: item.quantity || 1,
+          quantity: parseFloat(item.quantity) || 1,
           category: item.category.trim() || undefined,
           weightGrams: item.weightGrams ? parseInt(item.weightGrams) : undefined,
           cost: item.cost ? parseFloat(item.cost) : undefined,
@@ -475,7 +476,7 @@ function CreateKitListPageContent() {
                         <input
                           type="number"
                           value={item.quantity}
-                          onChange={(e) => updateItem(item.id, "quantity", parseFloat(e.target.value) || 1)}
+                          onChange={(e) => updateItem(item.id, "quantity", e.target.value)}
                           placeholder="Quantity"
                           min="0"
                           step="0.1"

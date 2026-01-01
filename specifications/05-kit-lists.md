@@ -76,6 +76,19 @@ This document describes user stories for kit/packing list functionality.
 - Can modify: label, quantity, category, per-person flag
 - Changes save to template
 
+### US-KIT-016: Number Field Input Behavior
+**As a** user entering numeric values
+**I want to** be able to clear and retype number fields
+**So that** I can easily change quantities without the field resetting
+
+**Acceptance Criteria:**
+- Number fields (quantity, weight, cost) allow clearing the current value
+- When field is cleared, it remains empty while user is typing
+- Validation only occurs on form submission, not during typing
+- Empty or invalid quantity defaults to 1 on save
+- Empty weight/cost fields are saved as undefined/null
+- Field shows placeholder or empty state when cleared (not forced back to default)
+
 ### US-KIT-012: Delete Kit Item
 **As a** template owner
 **I want to** remove an item from my kit list

@@ -187,18 +187,32 @@ export function EditTodoItemDialog({
               />
             </div>
 
-            {/* Checkbox */}
-            <div>
-              <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={perPerson}
-                  onChange={(e) => setPerPerson(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-zinc-600 focus:ring-zinc-500"
-                  disabled={saving}
-                />
-                Per person
-              </label>
+            {/* Shared/Per Person toggle */}
+            <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setPerPerson(false)}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                  !perPerson
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+                disabled={saving}
+              >
+                Shared
+              </button>
+              <button
+                type="button"
+                onClick={() => setPerPerson(true)}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                  perPerson
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+                disabled={saving}
+              >
+                Per Person
+              </button>
             </div>
           </div>
 
