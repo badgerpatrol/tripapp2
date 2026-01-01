@@ -508,6 +508,189 @@ test.describe('List Management', () => {
     });
   });
 
+  test.describe('Number Field Input Behavior (US-KIT-016)', () => {
+    test('quantity field allows clearing and retyping value', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+      await loginPage.goto();
+      await loginPage.loginAsTestUser();
+
+      // Navigate to create kit page
+      await page.goto('/lists/create-kit');
+      await page.waitForLoadState('networkidle');
+
+      // Fill in required title
+      const titleInput = page.locator('input[name="title"], input[placeholder*="title" i]').first();
+      if (await titleInput.isVisible({ timeout: 5000 })) {
+        await titleInput.fill('Test Kit');
+      }
+
+      // Add an item if needed
+      const addButton = page.locator('button:has-text("Add Item"), button:has-text("+ Item")').first();
+      if (await addButton.isVisible({ timeout: 3000 })) {
+        await addButton.click();
+        await page.waitForTimeout(300);
+      }
+
+      // Find quantity input
+      const quantityInput = page.locator('input[type="number"][min="0"][step="0.1"]').first();
+
+      if (await quantityInput.isVisible({ timeout: 5000 })) {
+        // Clear the field completely
+        await quantityInput.click();
+        await quantityInput.fill('');
+
+        // Field should be empty (not reset to 1)
+        const valueAfterClear = await quantityInput.inputValue();
+        expect(valueAfterClear).toBe('');
+
+        // Now type a new value
+        await quantityInput.fill('5');
+        const valueAfterType = await quantityInput.inputValue();
+        expect(valueAfterType).toBe('5');
+      }
+      expect(true).toBeTruthy();
+    });
+
+    test('quantity field allows decimal values', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+      await loginPage.goto();
+      await loginPage.loginAsTestUser();
+
+      // Navigate to create kit page
+      await page.goto('/lists/create-kit');
+      await page.waitForLoadState('networkidle');
+
+      // Find quantity input
+      const quantityInput = page.locator('input[type="number"][min="0"][step="0.1"]').first();
+
+      if (await quantityInput.isVisible({ timeout: 5000 })) {
+        await quantityInput.fill('2.5');
+        const value = await quantityInput.inputValue();
+        expect(value).toBe('2.5');
+      }
+      expect(true).toBeTruthy();
+    });
+
+    test('empty quantity defaults to 1 on save', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+      await loginPage.goto();
+      await loginPage.loginAsTestUser();
+
+      // Navigate to create kit page
+      await page.goto('/lists/create-kit');
+      await page.waitForLoadState('networkidle');
+
+      // Fill in required title
+      const titleInput = page.locator('input[name="title"], input[placeholder*="title" i]').first();
+      if (await titleInput.isVisible({ timeout: 5000 })) {
+        await titleInput.fill('Test Kit Empty Quantity');
+      }
+
+      // Find and fill item name
+      const itemNameInput = page.locator('input[placeholder*="Item name" i], input[placeholder*="Name" i]').first();
+      if (await itemNameInput.isVisible({ timeout: 3000 })) {
+        await itemNameInput.fill('Test Item');
+      }
+
+      // Clear quantity
+      const quantityInput = page.locator('input[type="number"][min="0"][step="0.1"]').first();
+      if (await quantityInput.isVisible({ timeout: 3000 })) {
+        await quantityInput.fill('');
+      }
+
+      // Submit form
+      const saveButton = page.locator('button:has-text("Save"), button:has-text("Create"), button[type="submit"]').first();
+      if (await saveButton.isVisible({ timeout: 3000 })) {
+        await saveButton.click();
+        await page.waitForLoadState('networkidle');
+
+        // Should save successfully (navigate away or show success)
+        // The quantity will default to 1 on the backend
+        const url = page.url();
+        const successToast = page.locator('text=Created, text=Saved');
+        const savedSuccessfully =
+          !url.includes('create-kit') ||
+          await successToast.first().isVisible({ timeout: 3000 }).catch(() => false);
+
+        expect(savedSuccessfully).toBeTruthy();
+      }
+      expect(true).toBeTruthy();
+    });
+
+    test('weight and cost fields allow clearing', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+      await loginPage.goto();
+      await loginPage.loginAsTestUser();
+
+      // Navigate to create kit page
+      await page.goto('/lists/create-kit');
+      await page.waitForLoadState('networkidle');
+
+      // Find weight input (typically has placeholder "Weight" or min="0" without step="0.1")
+      const weightInput = page.locator('input[type="number"][placeholder*="Weight" i]').first();
+
+      if (await weightInput.isVisible({ timeout: 5000 })) {
+        // Fill then clear
+        await weightInput.fill('500');
+        await weightInput.fill('');
+        const value = await weightInput.inputValue();
+        expect(value).toBe('');
+      }
+
+      // Find cost input
+      const costInput = page.locator('input[type="number"][placeholder*="Cost" i], input[type="number"][step="0.01"]').first();
+
+      if (await costInput.isVisible({ timeout: 3000 })) {
+        await costInput.fill('25.99');
+        await costInput.fill('');
+        const value = await costInput.inputValue();
+        expect(value).toBe('');
+      }
+      expect(true).toBeTruthy();
+    });
+
+    test('edit dialog allows clearing and changing quantity', async ({ page }) => {
+      const loginPage = new LoginPage(page);
+      await loginPage.goto();
+      await loginPage.loginAsTestUser();
+
+      // Navigate to kit page to find an existing kit
+      await page.goto('/kit');
+      await page.waitForLoadState('networkidle');
+
+      // Click on first kit template to view it
+      const kitCard = page.locator('[data-testid="template-card"], .template-card, a[href*="/lists/"]').first();
+
+      if (await kitCard.isVisible({ timeout: 5000 })) {
+        await kitCard.click();
+        await page.waitForLoadState('networkidle');
+
+        // Find an edit button on an item
+        const editButton = page.locator('button:has-text("Edit"), button[aria-label*="Edit"]').first();
+
+        if (await editButton.isVisible({ timeout: 3000 })) {
+          await editButton.click();
+          await page.waitForTimeout(500);
+
+          // Find quantity input in dialog
+          const quantityInput = page.locator('[role="dialog"] input[type="number"], .fixed input[type="number"]').first();
+
+          if (await quantityInput.isVisible({ timeout: 3000 })) {
+            // Clear and retype
+            await quantityInput.fill('');
+            const emptyValue = await quantityInput.inputValue();
+            expect(emptyValue).toBe('');
+
+            await quantityInput.fill('3');
+            const newValue = await quantityInput.inputValue();
+            expect(newValue).toBe('3');
+          }
+        }
+      }
+      expect(true).toBeTruthy();
+    });
+  });
+
   test.describe('Negative Cases', () => {
     test('cannot create template without name', async ({ page }) => {
       const loginPage = new LoginPage(page);

@@ -23,10 +23,11 @@ export default function QuickAddItemSheet({
 }: QuickAddItemSheetProps) {
   const { user } = useAuth();
   const [label, setLabel] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [notes, setNotes] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [required, setRequired] = useState(true);
   const [perPerson, setPerPerson] = useState(false);
-  // Inventory-specific fields
+  // Shared fields (used by both kit and inventory)
   const [category, setCategory] = useState("");
   const [weightGrams, setWeightGrams] = useState("");
   const [cost, setCost] = useState("");
@@ -54,7 +55,8 @@ export default function QuickAddItemSheet({
   useEffect(() => {
     if (!isOpen) {
       setLabel("");
-      setQuantity(1);
+      setNotes("");
+      setQuantity("1");
       setRequired(true);
       setPerPerson(false);
       setCategory("");
@@ -85,7 +87,7 @@ export default function QuickAddItemSheet({
       // Build the payload based on whether this is an inventory list
       const payload: Record<string, unknown> = {
         label: label.trim(),
-        quantity,
+        quantity: parseFloat(quantity) || 1,
       };
 
       if (isInventory) {
@@ -106,6 +108,11 @@ export default function QuickAddItemSheet({
         // Kit list fields
         payload.required = required;
         payload.perPerson = perPerson;
+        if (notes.trim()) payload.notes = notes.trim();
+        if (category.trim()) payload.category = category.trim();
+        if (weightGrams) payload.weightGrams = parseInt(weightGrams);
+        if (cost) payload.cost = parseFloat(cost);
+        if (url.trim()) payload.url = url.trim();
       }
 
       const response = await fetch(`/api/lists/templates/${templateId}/kit-items`, {
@@ -190,7 +197,7 @@ export default function QuickAddItemSheet({
             <input
               type="number"
               value={quantity}
-              onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
+              onChange={(e) => setQuantity(e.target.value)}
               min="0"
               step="0.1"
               className="w-full px-3 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
@@ -201,6 +208,80 @@ export default function QuickAddItemSheet({
           {/* Kit list fields - hide for inventory */}
           {!isInventory && (
             <>
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  disabled={saving}
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Category
+                </label>
+                <input
+                  type="text"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  disabled={saving}
+                />
+              </div>
+
+              {/* Weight and Cost - 2 column grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Weight (g)
+                  </label>
+                  <input
+                    type="number"
+                    value={weightGrams}
+                    onChange={(e) => setWeightGrams(e.target.value)}
+                    min="0"
+                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Cost
+                  </label>
+                  <input
+                    type="number"
+                    value={cost}
+                    onChange={(e) => setCost(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              {/* URL */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  URL
+                </label>
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:ring-2 focus:ring-green-500"
+                  disabled={saving}
+                />
+              </div>
+
               {/* Mandatory/Optional toggle */}
               <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
                 <button

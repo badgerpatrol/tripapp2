@@ -41,3 +41,13 @@ body {
 .minw0 {
   min-width: 0;
 }
+
+/* Hide number input spinners/arrows */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

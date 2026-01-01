@@ -43,7 +43,7 @@ export function EditKitItemDialog({
   // Form state
   const [label, setLabel] = useState(item.label);
   const [notes, setNotes] = useState(item.notes || "");
-  const [quantity, setQuantity] = useState(item.quantity);
+  const [quantity, setQuantity] = useState(item.quantity.toString());
   const [category, setCategory] = useState(item.category || "");
   const [weightGrams, setWeightGrams] = useState(item.weightGrams?.toString() || "");
   const [cost, setCost] = useState(item.cost?.toString() || "");
@@ -72,7 +72,7 @@ export function EditKitItemDialog({
       const payload: Record<string, unknown> = {
         label: label.trim(),
         notes: notes.trim() || undefined,
-        quantity: quantity || 1,
+        quantity: parseFloat(quantity) || 1,
         category: category.trim() || undefined,
         weightGrams: weightGrams ? parseInt(weightGrams) : undefined,
         cost: cost ? parseFloat(cost) : undefined,
@@ -214,7 +214,7 @@ export function EditKitItemDialog({
                 <input
                   type="number"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
+                  onChange={(e) => setQuantity(e.target.value)}
                   min="0"
                   step="0.1"
                   className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-zinc-500 focus:border-transparent"
@@ -281,28 +281,60 @@ export function EditKitItemDialog({
               />
             </div>
 
-            {/* Checkboxes */}
-            <div className="flex gap-6">
-              <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={perPerson}
-                  onChange={(e) => setPerPerson(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-zinc-600 focus:ring-zinc-500"
-                  disabled={saving}
-                />
-                Per person
-              </label>
-              <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={required}
-                  onChange={(e) => setRequired(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 text-zinc-600 focus:ring-zinc-500"
-                  disabled={saving}
-                />
+            {/* Mandatory/Optional toggle */}
+            <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setRequired(true)}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                  required
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+                disabled={saving}
+              >
                 Mandatory
-              </label>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequired(false)}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                  !required
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+                disabled={saving}
+              >
+                Optional
+              </button>
+            </div>
+
+            {/* Shared/Per Person toggle */}
+            <div className="flex gap-2 p-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setPerPerson(false)}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                  !perPerson
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+                disabled={saving}
+              >
+                Shared
+              </button>
+              <button
+                type="button"
+                onClick={() => setPerPerson(true)}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                  perPerson
+                    ? "bg-white dark:bg-zinc-600 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+                disabled={saving}
+              >
+                Per Person
+              </button>
             </div>
           </div>
 
