@@ -1,5 +1,12 @@
-# Testing - not needed in production
+# Testing
 testing/
+tests/
+e2e/
+
+# Documentation
+docs/
+specifications/
+CLAUDE.md
 
 # Development scripts
 scripts/
@@ -10,3 +17,6 @@ scripts/
 
 # Python virtual environment
 .venv/
+
+# Development config
+vitest.config.ts

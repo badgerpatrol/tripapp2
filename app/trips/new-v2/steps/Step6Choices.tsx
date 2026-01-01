@@ -382,7 +382,7 @@ export default function Step6Choices({
               </span>
             )}
           </div>
-        </div>
+        </div> 
 
         <Button
           variant="secondary"
