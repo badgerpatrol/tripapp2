@@ -297,6 +297,79 @@ Import: `import { SegmentedControl } from "@/components/ui/SegmentedControl"`
 
 ## 7. Forms
 
+### Form Layout Structure
+
+All forms follow a consistent three-part layout with a static header, scrollable content area, and static footer:
+
+```
++----------------------------------+
+|  Title              [Status]     |  <- Static header (non-scrolling)
++----------------------------------+
+|                                  |
+|  Form fields and content         |  <- Scrollable content area
+|  (scrolls if needed)             |
+|                                  |
++----------------------------------+
+|  [Cancel]              [Save]    |  <- Static footer (non-scrolling)
++----------------------------------+
+```
+
+**Header:** Contains the form title and any status information (e.g., "Editing", "Draft", validation indicators). Always visible at the top.
+
+**Content Area:** Contains all form fields and scrolls independently if the content exceeds the available space. This ensures users can always see the header context and access the footer controls.
+
+**Footer:** Contains action buttons (Save, Cancel, Delete, etc.). Always visible at the bottom for easy access regardless of scroll position.
+
+### Popup/Modal Form Sizing
+
+When a form appears in a modal/popup, it should occupy nearly the full screen with an equal gap around all edges:
+
+```
++--------------------------------------+
+|  ┌────────────────────────────────┐  |
+|  │  Header                        │  |
+|  ├────────────────────────────────┤  |
+|  │                                │  |
+|  │  Scrollable content            │  |
+|  │                                │  |
+|  ├────────────────────────────────┤  |
+|  │  Footer                        │  |
+|  └────────────────────────────────┘  |
++--------------------------------------+
+   ↑ Equal gap on all sides (~16-24px)
+```
+
+This maximizes usable space on mobile while maintaining visual separation from the background. The modal should have rounded corners (`rounded-xl` or `rounded-2xl`) and the backdrop should be dimmed.
+
+```jsx
+// Typical form structure
+<div className="flex flex-col h-full">
+  {/* Static Header */}
+  <div className="flex-shrink-0 p-6 border-b border-zinc-200 dark:border-zinc-700">
+    <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+      Form Title
+    </h2>
+    {status && <span className="text-sm text-zinc-500">{status}</span>}
+  </div>
+
+  {/* Scrollable Content */}
+  <div className="flex-1 overflow-y-auto p-6">
+    <form className="space-y-6">
+      {/* Form fields */}
+    </form>
+  </div>
+
+  {/* Static Footer */}
+  <div className="flex-shrink-0 p-6 border-t border-zinc-200 dark:border-zinc-700
+                  bg-zinc-50 dark:bg-zinc-900/50">
+    <div className="flex gap-3">
+      <Button variant="secondary" className="flex-1">Cancel</Button>
+      <Button variant="primary" className="flex-1">Save</Button>
+    </div>
+  </div>
+</div>
+```
+
 ### Field Wrapper
 
 Import: `import { Field, Input, Select, Textarea } from "@/components/ui/field"`

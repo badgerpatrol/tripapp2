@@ -1,0 +1,22 @@
+# Testing
+testing/
+tests/
+e2e/
+
+# Documentation
+docs/
+specifications/
+CLAUDE.md
+
+# Development scripts
+scripts/
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Python virtual environment
+.venv/
+
+# Development config
+vitest.config.ts
