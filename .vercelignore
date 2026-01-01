@@ -1,0 +1,12 @@
+# Testing - not needed in production
+testing/
+
+# Development scripts
+scripts/
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Python virtual environment
+.venv/
