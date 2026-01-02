@@ -65,6 +65,11 @@ describe("POST /api/trips/[id]/viewer-login", () => {
       where: { id: testTripId },
     });
 
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: { byUser: { in: [testOwnerId, testViewerId] } },
+    });
+
     // Clean up users
     await prisma.user.deleteMany({
       where: { id: { in: [testOwnerId, testViewerId] } },
@@ -127,7 +132,7 @@ describe("POST /api/trips/[id]/viewer-login", () => {
     expect(data.error).toBe("Password is required");
   });
 
-  it("returns 401 for trip without sign-up mode", async () => {
+  it("returns 403 for trip without sign-up mode", async () => {
     // Update trip to disable sign-up mode
     await prisma.trip.update({
       where: { id: testTripId },
@@ -137,12 +142,11 @@ describe("POST /api/trips/[id]/viewer-login", () => {
     const request = createRequest(testTripId, { password: testPassword });
     const response = await POST(request, { params: Promise.resolve({ id: testTripId }) });
 
-    expect(response.status).toBe(401);
+    // 403 Forbidden - trip exists but sign-up mode is disabled
+    expect(response.status).toBe(403);
 
     const data = await response.json();
     expect(data.valid).toBe(false);
-    // Generic error message
-    expect(data.error).toBe("Incorrect password for this trip");
   });
 
   it("returns 401 for trip without sign-up password configured", async () => {

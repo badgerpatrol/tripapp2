@@ -100,6 +100,12 @@ describe("Trip Overview Service", () => {
     await prisma.timelineItem.deleteMany({ where: { tripId: testTripId } });
     await prisma.tripMember.deleteMany({ where: { tripId: testTripId } });
     await prisma.trip.deleteMany({ where: { id: testTripId } });
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: {
+        byUser: { in: [ownerUserId, inviteeUserId, memberUserId, nonMemberUserId] },
+      },
+    });
     await prisma.user.deleteMany({
       where: {
         id: { in: [ownerUserId, inviteeUserId, memberUserId, nonMemberUserId] },

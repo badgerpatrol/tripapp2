@@ -137,6 +137,9 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     list: ListInstance | null;
   }>({ isOpen: false, list: null });
 
+  // Ref for inline quick add input to maintain focus after adding items
+  const quickAddInputRef = useRef<HTMLInputElement>(null);
+
   // Toast store for showing notifications
   const addToast = useToastStore((state) => state.addToast);
 
@@ -672,6 +675,11 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     // Clear input but keep quick add open for next item
     setQuickAddValue("");
 
+    // Refocus the input for adding the next item
+    setTimeout(() => {
+      quickAddInputRef.current?.focus();
+    }, 0);
+
     // Send API request in background
     try {
       const token = await user.getIdToken();
@@ -1053,6 +1061,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                         {quickAddListId === list.id ? (
                           <div className="flex items-center gap-2 min-w-0">
                             <input
+                              ref={quickAddInputRef}
                               type="text"
                               value={quickAddValue}
                               onChange={(e) => setQuickAddValue(e.target.value)}

@@ -38,6 +38,12 @@ This document describes user stories for kit/packing list functionality.
 - Can reorder items
 - Changes save automatically or on confirmation
 
+**Layout:**
+- Fixed page header with back button and "Edit Kit List" title (compact, text-lg)
+- Header stays fixed below main navigation while content scrolls
+- Scrollable content area contains form fields and item list
+- Fixed footer with Save/Cancel buttons
+
 ### US-KIT-004: Delete Kit Template
 **As a** template owner
 **I want to** remove a kit template

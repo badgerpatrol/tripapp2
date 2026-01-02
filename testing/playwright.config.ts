@@ -37,7 +37,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
 
   // Number of workers
-  workers: process.env.CI ? 1 : undefined,
+  // Limited to 1 to avoid Firebase rate limiting (quota-exceeded errors)
+  // Firebase auth tokens are stored in IndexedDB which Playwright can't persist
+  workers: 1,
 
   // Reporter configuration
   reporter: [

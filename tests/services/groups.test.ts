@@ -20,6 +20,20 @@ describe("Groups Service", () => {
   let groupId: string;
 
   beforeEach(async () => {
+    // Clean up any leftover data from previous failed runs
+    await prisma.groupMember.deleteMany({
+      where: { userId: { in: [testUser1Id, testUser2Id, testUser3Id] } },
+    });
+    await prisma.group.deleteMany({
+      where: { ownerId: { in: [testUser1Id, testUser2Id, testUser3Id] } },
+    });
+    await prisma.eventLog.deleteMany({
+      where: { byUser: { in: [testUser1Id, testUser2Id, testUser3Id] } },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [testUser1Id, testUser2Id, testUser3Id] } },
+    });
+
     // Create test users
     await prisma.user.createMany({
       data: [
@@ -54,6 +68,14 @@ describe("Groups Service", () => {
     await prisma.group.deleteMany({
       where: {
         ownerId: {
+          in: [testUser1Id, testUser2Id, testUser3Id],
+        },
+      },
+    });
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: {
+        byUser: {
           in: [testUser1Id, testUser2Id, testUser3Id],
         },
       },
@@ -227,7 +249,7 @@ describe("Groups Service", () => {
       expect(member.userId).toBe(testUser2Id);
       expect(member.role).toBe(GroupMemberRole.MEMBER);
       expect(member.user).toBeDefined();
-      expect(member.user?.email).toBe("user2@test.com");
+      expect(member.user?.displayName).toBe("User Two");
     });
 
     it("should prevent duplicate memberships", async () => {

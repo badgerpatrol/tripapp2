@@ -38,6 +38,12 @@ This document describes user stories for checklist (TODO list) functionality.
 - Can reorder items
 - Changes save to template
 
+**Layout:**
+- Fixed page header with back button and "Edit Checklist" title (compact, text-lg)
+- Header stays fixed below main navigation while content scrolls
+- Scrollable content area contains form fields and item list
+- Fixed footer with Save/Cancel buttons
+
 ### US-CHECK-004: Delete Checklist Template
 **As a** template owner
 **I want to** remove a checklist template

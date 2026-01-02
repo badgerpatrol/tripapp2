@@ -25,6 +25,10 @@ describe("Authorization Helpers", () => {
       where: { userId: { in: [testUserId, testAdminId, testSuperAdminId] } },
     });
     await prisma.trip.deleteMany({ where: { id: testTripId } });
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: { byUser: { in: [testUserId, testAdminId, testSuperAdminId] } },
+    });
     await prisma.user.deleteMany({
       where: { id: { in: [testUserId, testAdminId, testSuperAdminId] } },
     });
@@ -34,6 +38,7 @@ describe("Authorization Helpers", () => {
       data: {
         id: testUserId,
         email: "user@test.com",
+        displayName: "Test User",
         role: UserRole.USER,
       },
     });
@@ -42,6 +47,7 @@ describe("Authorization Helpers", () => {
       data: {
         id: testAdminId,
         email: "admin@test.com",
+        displayName: "Test Admin",
         role: UserRole.ADMIN,
       },
     });
@@ -50,6 +56,7 @@ describe("Authorization Helpers", () => {
       data: {
         id: testSuperAdminId,
         email: "superadmin@test.com",
+        displayName: "Test SuperAdmin",
         role: UserRole.SUPERADMIN,
       },
     });
@@ -82,6 +89,10 @@ describe("Authorization Helpers", () => {
       where: { userId: { in: [testUserId, testAdminId, testSuperAdminId] } },
     });
     await prisma.trip.deleteMany({ where: { id: testTripId } });
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: { byUser: { in: [testUserId, testAdminId, testSuperAdminId] } },
+    });
     await prisma.user.deleteMany({
       where: { id: { in: [testUserId, testAdminId, testSuperAdminId] } },
     });
