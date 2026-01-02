@@ -284,28 +284,28 @@ function EditListPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 overflow-x-hidden flex flex-col">
-      <Header />
+    <div className="h-[calc(100vh-7rem)] bg-zinc-50 dark:bg-zinc-900 flex flex-col -mt-2 overflow-hidden">
+      {/* Fixed Page Header */}
+      <div className="flex-shrink-0 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700 z-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-1">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(returnTo)}
+              className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 className="text-lg font-semibold text-zinc-900 dark:text-white">
+              Edit Checklist
+            </h1>
+          </div>
+        </div>
+      </div>
 
       <div className="flex-1 overflow-y-auto pb-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <button
-                onClick={() => router.push(returnTo)}
-                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-              >
-                <svg className="w-5 h-5 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                Edit Checklist
-              </h1>
-            </div>
-          </div>
-
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 overflow-hidden">
           <form onSubmit={handleSubmit} id="edit-checklist-form" className="space-y-8">
           {/* Error */}
           {error && (

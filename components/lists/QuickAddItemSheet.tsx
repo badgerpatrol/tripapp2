@@ -130,7 +130,25 @@ export default function QuickAddItemSheet({
       }
 
       onItemAdded();
-      onClose();
+      // Reset form for next item instead of closing
+      setLabel("");
+      setNotes("");
+      setQuantity("1");
+      setRequired(true);
+      setPerPerson(false);
+      setCategory("");
+      setWeightGrams("");
+      setCost("");
+      setUrl("");
+      setDate("");
+      setNeedsRepair(false);
+      setConditionNotes("");
+      setLost(false);
+      setLastSeenText("");
+      setLastSeenDate("");
+      setError(null);
+      // Refocus the input for the next item
+      inputRef.current?.focus();
     } catch (err: any) {
       console.error("Error adding item:", err);
       setError(err.message);

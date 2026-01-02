@@ -669,9 +669,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       }
     }));
 
-    // Clear input and close quick add immediately
+    // Clear input but keep quick add open for next item
     setQuickAddValue("");
-    setQuickAddListId(null);
 
     // Send API request in background
     try {

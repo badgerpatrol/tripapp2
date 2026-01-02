@@ -75,7 +75,13 @@ export default function QuickAddTodoItemSheet({
       }
 
       onItemAdded();
-      onClose();
+      // Reset form for next item instead of closing
+      setLabel("");
+      setNotes("");
+      setPerPerson(false);
+      setError(null);
+      // Refocus the input for the next item
+      inputRef.current?.focus();
     } catch (err: any) {
       console.error("Error adding item:", err);
       setError(err.message);
