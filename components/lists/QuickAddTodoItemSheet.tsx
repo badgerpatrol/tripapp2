@@ -10,6 +10,7 @@ interface QuickAddTodoItemSheetProps {
   templateId: string;
   templateTitle: string;
   onItemAdded: () => void;
+  initialLabel?: string;
 }
 
 export default function QuickAddTodoItemSheet({
@@ -18,6 +19,7 @@ export default function QuickAddTodoItemSheet({
   templateId,
   templateTitle,
   onItemAdded,
+  initialLabel = "",
 }: QuickAddTodoItemSheetProps) {
   const { user } = useAuth();
   const [label, setLabel] = useState("");
@@ -27,14 +29,17 @@ export default function QuickAddTodoItemSheet({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input when sheet opens
+  // Focus input and set initial label when sheet opens
   useEffect(() => {
     if (isOpen) {
+      if (initialLabel) {
+        setLabel(initialLabel);
+      }
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, initialLabel]);
 
   // Reset form when sheet closes
   useEffect(() => {

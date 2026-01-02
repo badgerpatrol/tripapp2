@@ -9,6 +9,7 @@ import { AddListDialog } from "./AddListDialog";
 import { ListReportDialog } from "./ListReportDialog";
 import QuickAddItemSheet from "./QuickAddItemSheet";
 import QuickAddTodoItemSheet from "./QuickAddTodoItemSheet";
+import InlineItemAdd from "./InlineItemAdd";
 import { useLongPress } from "@/hooks/useLongPress";
 import { usePolling } from "@/hooks/usePolling";
 import { useToastStore } from "@/lib/stores/toastStore";
@@ -128,17 +129,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
   const [deleting, setDeleting] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(true);
   const [reportListId, setReportListId] = useState<string | null>(null);
-  const [quickAddListId, setQuickAddListId] = useState<string | null>(null);
-  const [quickAddValue, setQuickAddValue] = useState("");
 
   // Quick add sheet state (for long press on list headers)
   const [quickAddSheet, setQuickAddSheet] = useState<{
     isOpen: boolean;
     list: ListInstance | null;
   }>({ isOpen: false, list: null });
-
-  // Ref for inline quick add input to maintain focus after adding items
-  const quickAddInputRef = useRef<HTMLInputElement>(null);
 
   // Toast store for showing notifications
   const addToast = useToastStore((state) => state.addToast);
@@ -614,166 +610,6 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
     }
   };
 
-  const handleQuickAddItem = async (listId: string, listType: ListType) => {
-    if (!user || !quickAddValue.trim()) return;
-
-    const label = quickAddValue.trim();
-    const tempId = `temp-${Date.now()}`;
-
-    // Optimistically update the UI immediately
-    setLists(prevLists => prevLists.map(list => {
-      if (list.id !== listId) return list;
-
-      if (listType === "TODO") {
-        const newItem: TodoItem = {
-          id: tempId,
-          label,
-          notes: null,
-          actionType: null,
-          actionData: null,
-          parameters: null,
-          orderIndex: 0,
-          perPerson: false,
-          ticks: [],
-        };
-        // Shift existing items and add new one at top
-        const updatedItems = (list.todoItems || []).map(item => ({
-          ...item,
-          orderIndex: item.orderIndex + 1,
-        }));
-        return {
-          ...list,
-          todoItems: [newItem, ...updatedItems],
-        };
-      } else {
-        const newItem: KitItem = {
-          id: tempId,
-          label,
-          notes: null,
-          quantity: 1,
-          perPerson: false,
-          required: true,
-          weightGrams: null,
-          category: null,
-          cost: null,
-          url: null,
-          orderIndex: 0,
-          ticks: [],
-        };
-        // Shift existing items and add new one at top
-        const updatedItems = (list.kitItems || []).map(item => ({
-          ...item,
-          orderIndex: item.orderIndex + 1,
-        }));
-        return {
-          ...list,
-          kitItems: [newItem, ...updatedItems],
-        };
-      }
-    }));
-
-    // Clear input but keep quick add open for next item
-    setQuickAddValue("");
-
-    // Refocus the input for adding the next item
-    setTimeout(() => {
-      quickAddInputRef.current?.focus();
-    }, 0);
-
-    // Send API request in background
-    try {
-      const token = await user.getIdToken();
-
-      const endpoint = listType === "TODO"
-        ? `/api/lists/templates/${listId}/todo-items`
-        : `/api/lists/templates/${listId}/kit-items`;
-
-      const body = listType === "TODO"
-        ? { label, orderIndex: 0 }
-        : { label, quantity: 1, orderIndex: 0 };
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        // Revert on error
-        console.error("Failed to add item, reverting...");
-        setLists(prevLists => prevLists.map(list => {
-          if (list.id !== listId) return list;
-          if (listType === "TODO") {
-            return {
-              ...list,
-              todoItems: (list.todoItems || []).filter(item => item.id !== tempId).map(item => ({
-                ...item,
-                orderIndex: item.orderIndex - 1,
-              })),
-            };
-          } else {
-            return {
-              ...list,
-              kitItems: (list.kitItems || []).filter(item => item.id !== tempId).map(item => ({
-                ...item,
-                orderIndex: item.orderIndex - 1,
-              })),
-            };
-          }
-        }));
-      } else {
-        // Update the temp ID with the real ID from the server
-        const data = await response.json();
-        if (data.item?.id) {
-          setLists(prevLists => prevLists.map(list => {
-            if (list.id !== listId) return list;
-            if (listType === "TODO") {
-              return {
-                ...list,
-                todoItems: (list.todoItems || []).map(item =>
-                  item.id === tempId ? { ...item, id: data.item.id } : item
-                ),
-              };
-            } else {
-              return {
-                ...list,
-                kitItems: (list.kitItems || []).map(item =>
-                  item.id === tempId ? { ...item, id: data.item.id } : item
-                ),
-              };
-            }
-          }));
-        }
-      }
-    } catch (err) {
-      console.error("Error adding item:", err);
-      // Revert on error
-      setLists(prevLists => prevLists.map(list => {
-        if (list.id !== listId) return list;
-        if (listType === "TODO") {
-          return {
-            ...list,
-            todoItems: (list.todoItems || []).filter(item => item.id !== tempId).map(item => ({
-              ...item,
-              orderIndex: item.orderIndex - 1,
-            })),
-          };
-        } else {
-          return {
-            ...list,
-            kitItems: (list.kitItems || []).filter(item => item.id !== tempId).map(item => ({
-              ...item,
-              orderIndex: item.orderIndex - 1,
-            })),
-          };
-        }
-      }));
-    }
-  };
-
   const getActionButtonText = (actionType: TodoActionType): string => {
     switch (actionType) {
       case "INVITE_USERS":
@@ -1058,56 +894,12 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                     {/* Quick Add Item */}
                     {isOrganizer && (
                       <div className="mb-4">
-                        {quickAddListId === list.id ? (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <input
-                              ref={quickAddInputRef}
-                              type="text"
-                              value={quickAddValue}
-                              onChange={(e) => setQuickAddValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && quickAddValue.trim()) {
-                                  handleQuickAddItem(list.id, list.type);
-                                } else if (e.key === "Escape") {
-                                  setQuickAddListId(null);
-                                  setQuickAddValue("");
-                                }
-                              }}
-                              placeholder={list.type === "TODO" ? "New task..." : "New item..."}
-                              className="flex-1 min-w-0 px-3 py-2 text-base border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleQuickAddItem(list.id, list.type)}
-                              disabled={!quickAddValue.trim()}
-                              className="shrink-0 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-lg transition-colors"
-                            >
-                              Add
-                            </button>
-                            <button
-                              onClick={() => {
-                                setQuickAddListId(null);
-                                setQuickAddValue("");
-                              }}
-                              className="shrink-0 p-2 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
-                              title="Cancel"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setQuickAddListId(list.id)}
-                            className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Add {list.type === "TODO" ? "task" : "item"}
-                          </button>
-                        )}
+                        <InlineItemAdd
+                          listType={list.type}
+                          templateId={list.id}
+                          templateTitle={list.title}
+                          onItemAdded={() => fetchLists()}
+                        />
                       </div>
                     )}
 
