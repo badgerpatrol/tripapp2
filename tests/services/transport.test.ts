@@ -86,6 +86,10 @@ describe("Transport Service Tests", () => {
     await prisma.transportRequirement.deleteMany({ where: { tripId: TEST_TRIP_ID } });
     await prisma.tripMember.deleteMany({ where: { tripId: TEST_TRIP_ID } });
     await prisma.trip.deleteMany({ where: { id: TEST_TRIP_ID } });
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: { byUser: { in: [TEST_USER_1, TEST_USER_2, TEST_USER_3] } },
+    });
     await prisma.user.deleteMany({
       where: { id: { in: [TEST_USER_1, TEST_USER_2, TEST_USER_3] } },
     });

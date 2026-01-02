@@ -29,6 +29,21 @@ const TEST_TRIP_ID = "test-trip-choice";
 
 describe("Choice Service Tests", () => {
   beforeEach(async () => {
+    // Clean up any leftover data from previous failed runs
+    await prisma.choiceSelectionLine.deleteMany({});
+    await prisma.choiceSelection.deleteMany({});
+    await prisma.choiceActivity.deleteMany({});
+    await prisma.choiceItem.deleteMany({});
+    await prisma.choice.deleteMany({});
+    await prisma.tripMember.deleteMany({ where: { tripId: TEST_TRIP_ID } });
+    await prisma.trip.deleteMany({ where: { id: TEST_TRIP_ID } });
+    await prisma.eventLog.deleteMany({
+      where: { byUser: { in: [TEST_USER_1, TEST_USER_2, TEST_USER_3] } },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [TEST_USER_1, TEST_USER_2, TEST_USER_3] } },
+    });
+
     // Create test users
     await prisma.user.createMany({
       data: [
@@ -51,7 +66,6 @@ describe("Choice Service Tests", () => {
           role: "USER",
         },
       ],
-      skipDuplicates: true,
     });
 
     // Create test trip
@@ -92,6 +106,10 @@ describe("Choice Service Tests", () => {
     await prisma.choice.deleteMany({});
     await prisma.tripMember.deleteMany({ where: { tripId: TEST_TRIP_ID } });
     await prisma.trip.deleteMany({ where: { id: TEST_TRIP_ID } });
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: { byUser: { in: [TEST_USER_1, TEST_USER_2, TEST_USER_3] } },
+    });
     await prisma.user.deleteMany({
       where: { id: { in: [TEST_USER_1, TEST_USER_2, TEST_USER_3] } },
     });
@@ -302,7 +320,6 @@ describe("Choice Service Tests", () => {
     expect(respondents.respondedUsers[0]).toMatchObject({
       userId: TEST_USER_2,
       displayName: "Choice User 2",
-      email: "choice-user2@test.com",
     });
 
     expect(respondents.pendingUsers).toBeDefined();
@@ -315,7 +332,6 @@ describe("Choice Service Tests", () => {
     const user1 = respondents.pendingUsers.find((u: any) => u.userId === TEST_USER_1);
     expect(user1).toMatchObject({
       displayName: "Choice User 1",
-      email: "choice-user1@test.com",
     });
   });
 

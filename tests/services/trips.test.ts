@@ -24,6 +24,11 @@ describe("Trip Service", () => {
       where: { createdById: testUserId },
     });
 
+    // Delete event logs before users (foreign key constraint)
+    await prisma.eventLog.deleteMany({
+      where: { byUser: testUserId },
+    });
+
     // Clean up user
     await prisma.user.deleteMany({
       where: { id: testUserId },
@@ -124,6 +129,9 @@ describe("Trip Service", () => {
       expect(startItem).toBeDefined();
       expect(endItem).toBeDefined();
 
+      const spendingStart = timelineItems.find((item) =>
+        item.title.includes("Spending Window Opens")
+      );
       const spendingEnd = timelineItems.find((item) =>
         item.title.includes("Spending Window Closes")
       );

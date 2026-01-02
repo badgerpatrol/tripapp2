@@ -78,10 +78,19 @@ export class HomePage extends BasePage {
 
   /**
    * Wait for home page to finish loading
+   * This waits for:
+   * 1. Loading indicator to disappear
+   * 2. Either the page title (authenticated) or login form (not authenticated) to appear
    */
   async waitForLoading(): Promise<void> {
     // Wait for loading indicator to disappear
     await this.loadingIndicator.waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+
+    // Wait for either the authenticated state (page title) or login form to appear
+    await Promise.race([
+      this.pageTitle.waitFor({ state: 'visible', timeout: 15000 }),
+      this.page.locator('h1:has-text("TripPlanner")').waitFor({ state: 'visible', timeout: 15000 }),
+    ]).catch(() => {});
   }
 
   /**
@@ -139,10 +148,15 @@ export class HomePage extends BasePage {
 
   /**
    * Start creating a new trip via FAB
+   * Note: FAB visibility depends on userProfile being loaded (async after auth sync)
    */
   async startCreateTrip(): Promise<void> {
-    // Wait for FAB to be visible and clickable
-    await this.fabButton.waitFor({ state: 'visible', timeout: 10000 });
+    // Wait for the page to fully load first
+    await this.waitForLoading();
+
+    // Wait for FAB to be visible - this depends on userProfile being loaded
+    // which happens asynchronously after the /api/auth/sync call completes
+    await this.fabButton.waitFor({ state: 'visible', timeout: 20000 });
     await this.fabButton.click();
     await this.page.waitForURL('/trips/new-v2', { timeout: 10000 });
   }
@@ -212,9 +226,10 @@ export class HomePage extends BasePage {
 
   /**
    * Check if FAB is visible (user can create trips)
+   * Waits up to 10 seconds for the FAB to appear since userProfile loads async
    */
   async canCreateTrip(): Promise<boolean> {
-    return this.isVisible(this.fabButton);
+    return this.isVisible(this.fabButton, 10000);
   }
 
   /**

@@ -78,8 +78,41 @@ export class LoginPage extends BasePage {
 
   /**
    * Login with valid test credentials
+   * Skips login if already authenticated (session restored from storageState)
    */
   async loginAsTestUser(): Promise<void> {
+    // Wait for page to load - either login form or home page
+    await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+
+    // Check if already logged in (session restored from auth setup)
+    // Wait longer as page might be loading async data
+    const isAlreadyLoggedIn = await this.page.locator('h1:has-text("My Stuff")').isVisible({ timeout: 5000 }).catch(() => false);
+    if (isAlreadyLoggedIn) {
+      return; // Already logged in, skip Firebase login
+    }
+
+    // Check for Firebase quota exceeded error - if so, wait and retry once
+    const quotaError = await this.page.locator('text=quota-exceeded').isVisible({ timeout: 1000 }).catch(() => false);
+    if (quotaError) {
+      console.log('Firebase quota exceeded, waiting 5 seconds before retry...');
+      await this.page.waitForTimeout(5000);
+      // Reload and try again
+      await this.page.reload();
+      await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    }
+
+    // Check if we're on the login form
+    const isLoginForm = await this.isDisplayed();
+    if (!isLoginForm) {
+      // Not on login form - wait a bit and check again for home page
+      const laterCheck = await this.page.locator('h1:has-text("My Stuff")').isVisible({ timeout: 3000 }).catch(() => false);
+      if (laterCheck) {
+        return; // Now logged in
+      }
+      // Still not on home or login, return and let test handle it
+      return;
+    }
+
     const email = process.env.TEST_USER_EMAIL || 'test@example.com';
     const password = process.env.TEST_USER_PASSWORD || 'testpassword123';
     await this.login(email, password);
