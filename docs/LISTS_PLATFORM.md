@@ -237,6 +237,61 @@ Every state change logged:
 - Returns `{ added, skipped }` counts
 - Handler-specific logic (TODO vs KIT)
 
+### Adding Items to Lists
+
+The item addition flow is consistent across all contexts (global kit/checklist sections and within trips).
+
+#### Two Entry Points
+
+1. **Quick Add (Inline)** - [InlineItemAdd.tsx](components/lists/InlineItemAdd.tsx)
+   - Compact one-field input that expands when clicked
+   - User types item name and presses Enter or clicks "Add"
+   - "Full" button opens detailed form sheet
+   - Input stays focused after adding, ready for next item
+   - Collapses with X button or Escape key
+
+2. **Detailed Add (Sheet)** - [QuickAddItemSheet.tsx](components/lists/QuickAddItemSheet.tsx) / [QuickAddTodoItemSheet.tsx](components/lists/QuickAddTodoItemSheet.tsx)
+   - Full form with all item fields:
+     - **Kit Items**: label, quantity, notes, category, weight, cost, URL, mandatory/optional, shared/per-person
+     - **Todo Items**: label, notes, shared/per-person
+   - Sheet stays open after adding item (resets form, refocuses input)
+   - Allows rapid entry of multiple detailed items
+
+#### Item Ordering
+
+New items are always added at the **top** of the list (position 0):
+
+```typescript
+// InlineItemAdd.tsx - sends orderIndex: 0
+const body = listType === "TODO"
+  ? { label: value.trim(), orderIndex: 0 }
+  : { label: value.trim(), quantity: 1, orderIndex: 0 };
+```
+
+The backend ([lists.ts](server/services/lists.ts)) handles order preservation:
+- When `orderIndex: 0` is specified, existing items are shifted down (`orderIndex + 1`)
+- Items are always returned sorted by `orderIndex` ascending
+- This ensures the most recently added item appears at the top
+
+#### API Endpoints
+
+- **TODO items**: `POST /api/lists/templates/:id/todo-items`
+  - Payload: `{ label, notes?, orderIndex?, perPerson? }`
+
+- **KIT items**: `POST /api/lists/templates/:id/kit-items`
+  - Payload: `{ label, quantity?, notes?, orderIndex?, perPerson?, required?, category?, weightGrams?, cost?, url? }`
+
+#### UX Behavior Summary
+
+| Feature | Behavior |
+|---------|----------|
+| Quick add input | Stays open after adding, ready for next item |
+| Detailed form sheet | Stays open after adding, form resets, input refocuses |
+| New item position | Always appears at top of list |
+| Enter key | Submits quick add form |
+| Escape key | Closes quick add input |
+| "Full" button | Opens detailed form with current input as initial value |
+
 ## Testing Strategy
 
 ### Unit Tests (To Add)

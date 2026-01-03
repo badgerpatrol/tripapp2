@@ -1,6 +1,7 @@
 import type { ListTypeHandler } from "./base";
 import { todoHandler } from "./todo";
 import { kitHandler } from "./kit";
+import { listHandler } from "./list";
 import { ListType } from "@/lib/generated/prisma";
 
 /**
@@ -10,6 +11,7 @@ import { ListType } from "@/lib/generated/prisma";
 const registry: Record<ListType, ListTypeHandler> = {
   TODO: todoHandler,
   KIT: kitHandler,
+  LIST: listHandler,
 };
 
 /**

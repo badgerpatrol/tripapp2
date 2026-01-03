@@ -28,7 +28,9 @@ import { SpendListView } from "@/components/SpendListView";
 import { SpendFilters } from "@/components/SpendFilters";
 import SettlementPlanSection from "@/components/SettlementPlanSection";
 import { TripListsPanel } from "@/components/lists/TripListsPanel";
+import { TripMixedListsPanel } from "@/components/lists/TripMixedListsPanel";
 import { ListWorkflowModal } from "@/components/lists/ListWorkflowModal";
+import { MixedListWorkflowModal } from "@/components/lists/MixedListWorkflowModal";
 import { AddListDialog } from "@/components/lists/AddListDialog";
 // TEMPORARILY HIDDEN - Transport feature not ready yet
 // import TransportSection from "./TransportSection";
@@ -197,14 +199,23 @@ export default function TripDetailPage() {
   const [selectedListType, setSelectedListType] = useState<"TODO" | "KIT">("TODO");
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [listsRefreshKey, setListsRefreshKey] = useState(0);
+
+  // Mixed list workflow modal state
+  const [isMixedListModalOpen, setIsMixedListModalOpen] = useState(false);
+  const [mixedListModalTitle, setMixedListModalTitle] = useState("");
+  const [selectedMixedListId, setSelectedMixedListId] = useState<string | null>(null);
   const [checklistsCount, setChecklistsCount] = useState<number | null>(null); // null = not yet loaded
   const [kitListsCount, setKitListsCount] = useState<number | null>(null); // null = not yet loaded
+  const [mixedListsCount, setMixedListsCount] = useState<number | null>(null); // null = not yet loaded
   const [isAddChecklistDialogOpen, setIsAddChecklistDialogOpen] = useState(false);
   const [isAddKitListDialogOpen, setIsAddKitListDialogOpen] = useState(false);
+  const [isAddMixedListDialogOpen, setIsAddMixedListDialogOpen] = useState(false);
   const [checklistIds, setChecklistIds] = useState<string[]>([]);
   const [checklistSourceTemplateIds, setChecklistSourceTemplateIds] = useState<string[]>([]);
   const [kitListIds, setKitListIds] = useState<string[]>([]);
   const [kitListSourceTemplateIds, setKitListSourceTemplateIds] = useState<string[]>([]);
+  const [mixedListIds, setMixedListIds] = useState<string[]>([]);
+  const [mixedListSourceTemplateIds, setMixedListSourceTemplateIds] = useState<string[]>([]);
 
   // Toggle state for showing spends when spending is closed
   const [costsTab, setCostsTab] = useState<"spends" | "settlement">("spends");
@@ -228,6 +239,7 @@ export default function TripDetailPage() {
     timeline: boolean;
     checklists: boolean;
     kitLists: boolean;
+    mixedLists: boolean;
     transport: boolean;
   }>({
     rsvp: false,
@@ -238,6 +250,7 @@ export default function TripDetailPage() {
     timeline: false,
     checklists: false,
     kitLists: false,
+    mixedLists: false,
     transport: false,
   });
 
@@ -284,6 +297,7 @@ export default function TripDetailPage() {
       timeline: false,
       checklists: false,
       kitLists: false,
+      mixedLists: false,
       transport: false,
     });
   };
@@ -298,6 +312,7 @@ export default function TripDetailPage() {
       timeline: true,
       checklists: true,
       kitLists: true,
+      mixedLists: true,
       transport: true,
     });
   };
@@ -2254,7 +2269,70 @@ export default function TripDetailPage() {
             />
           </div>
         ) : null}
-        
+
+        {/* Mixed Lists Section (for accepted members) - only show for organizers or when mixed lists exist */}
+        {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (mixedListsCount !== null && mixedListsCount > 0)) ? (
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
+            {/* Header row with title, +Add button, and toggle */}
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Mixed Lists</h2>
+              <div className="flex items-center gap-2">
+                {!collapsedSections.mixedLists && canInvite && !isViewer && (
+                  <button
+                    onClick={() => setIsAddMixedListDialogOpen(true)}
+                    className="tap-target px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors text-xs sm:text-sm whitespace-nowrap"
+                  >
+                    + Add
+                  </button>
+                )}
+                <button
+                  onClick={() => toggleSection('mixedLists')}
+                  className="tap-target p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+                  aria-label={collapsedSections.mixedLists ? "Expand section" : "Collapse section"}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {collapsedSections.mixedLists ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Mixed Lists content - only show when not collapsed */}
+            {!collapsedSections.mixedLists && (
+              <div className="mt-3">
+                <TripMixedListsPanel
+                  key={`mixedlists-${listsRefreshKey}`}
+                  tripId={trip.id}
+                  isOrganizer={canInvite && !isViewer}
+                  onListsLoaded={setMixedListsCount}
+                  onListsData={(ids, sourceIds) => {
+                    setMixedListIds(ids);
+                    setMixedListSourceTemplateIds(sourceIds);
+                  }}
+                  onOpenList={(listId, listTitle) => {
+                    setSelectedMixedListId(listId);
+                    setMixedListModalTitle(listTitle);
+                    setIsMixedListModalOpen(true);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        ) : trip.userRsvpStatus === "ACCEPTED" && !canInvite && mixedListsCount === null ? (
+          /* Hidden TripMixedListsPanel to fetch mixed list count for non-organizers */
+          <div className="hidden">
+            <TripMixedListsPanel
+              tripId={trip.id}
+              isOrganizer={false}
+              onListsLoaded={setMixedListsCount}
+            />
+          </div>
+        ) : null}
+
         {/*
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 mb-6">
           <div className="flex items-center justify-center gap-3">
@@ -3562,6 +3640,21 @@ export default function TripDetailPage() {
         currentMembers={trip?.participants || []}
       />
 
+      {/* Mixed List Workflow Modal */}
+      <MixedListWorkflowModal
+        tripId={trip?.id || ""}
+        isOpen={isMixedListModalOpen}
+        onClose={() => {
+          setIsMixedListModalOpen(false);
+          setSelectedMixedListId(null);
+          // Refresh the main lists panel to show updated counts/progress
+          setListsRefreshKey(prev => prev + 1);
+        }}
+        listTitle={mixedListModalTitle}
+        selectedListId={selectedMixedListId || undefined}
+        isOrganizer={canInvite && !isViewer}
+      />
+
       {/* Join Trip Dialog (for viewers to participate) */}
       {publicTripInfo?.signUpEnabled && (
         <JoinTripDialog
@@ -3616,6 +3709,20 @@ export default function TripDetailPage() {
         listTypeFilter="KIT"
         existingListIds={kitListIds}
         existingSourceTemplateIds={kitListSourceTemplateIds}
+      />
+
+      {/* Add Mixed List Dialog */}
+      <AddListDialog
+        isOpen={isAddMixedListDialogOpen}
+        onClose={() => setIsAddMixedListDialogOpen(false)}
+        tripId={tripId}
+        onSuccess={() => {
+          setIsAddMixedListDialogOpen(false);
+          setListsRefreshKey(prev => prev + 1);
+        }}
+        listTypeFilter="LIST"
+        existingListIds={mixedListIds}
+        existingSourceTemplateIds={mixedListSourceTemplateIds}
       />
     </div>
   );

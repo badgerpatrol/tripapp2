@@ -37,6 +37,9 @@ export default function Navigation() {
     !pathname?.startsWith("/lists/edit-kit") &&
     !returnTo.startsWith("/kit");
 
+  // Check if we're in mixed lists context
+  const isMixedListsPage = pathname?.startsWith("/mixed-lists");
+
   const isGroupsPage = pathname?.startsWith("/groups");
   const isUsersPage = pathname?.startsWith("/admin/users");
   const isLogsPage = pathname?.startsWith("/admin/logs");
@@ -81,6 +84,18 @@ export default function Navigation() {
             }`}
           >
             Kit
+          </button>
+
+          {/* Mixed Lists Button */}
+          <button
+            onClick={() => router.push("/mixed-lists")}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+              isMixedListsPage
+                ? "bg-blue-600 text-white"
+                : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            }`}
+          >
+            Mixed Lists
           </button>
 
           {/* Groups Button - Only visible to admin users */}

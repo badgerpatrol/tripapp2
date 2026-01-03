@@ -36,6 +36,7 @@ export async function createTemplate(
       tags: payload.tags ?? [],
       isTripTemplate: payload.isTripTemplate ?? false,
       inventory: payload.inventory ?? false,
+      displayMode: payload.displayMode ?? "grouped",
     },
   });
 
@@ -75,6 +76,45 @@ export async function createTemplate(
         lastSeenDate: item.lastSeenDate,
       })),
     });
+  } else if (payload.type === "LIST") {
+    // LIST type can have both TODO and KIT items
+    if (payload.todoItems && payload.todoItems.length > 0) {
+      await prisma.todoItemTemplate.createMany({
+        data: payload.todoItems.map((item, idx) => ({
+          templateId: template.id,
+          label: item.label,
+          notes: item.notes,
+          actionType: item.actionType,
+          actionData: item.actionData,
+          parameters: item.parameters,
+          orderIndex: item.orderIndex ?? idx,
+        })),
+      });
+    }
+    if (payload.kitItems && payload.kitItems.length > 0) {
+      await prisma.kitItemTemplate.createMany({
+        data: payload.kitItems.map((item, idx) => ({
+          templateId: template.id,
+          label: item.label,
+          notes: item.notes,
+          quantity: item.quantity ?? 1,
+          perPerson: item.perPerson ?? false,
+          required: item.required ?? true,
+          weightGrams: item.weightGrams,
+          category: item.category,
+          cost: item.cost,
+          url: item.url,
+          orderIndex: item.orderIndex ?? idx,
+          // Inventory fields
+          date: item.date,
+          needsRepair: item.needsRepair ?? false,
+          conditionNotes: item.conditionNotes,
+          lost: item.lost ?? false,
+          lastSeenText: item.lastSeenText,
+          lastSeenDate: item.lastSeenDate,
+        })),
+      });
+    }
   }
 
   await logEvent(
@@ -346,6 +386,7 @@ export async function updateTemplate(
         tags: payload.tags,
         isTripTemplate: payload.isTripTemplate,
         inventory: payload.inventory,
+        displayMode: payload.displayMode,
       },
     });
 
@@ -401,6 +442,56 @@ export async function updateTemplate(
             lastSeenDate: item.lastSeenDate,
           })),
         });
+      }
+    } else if (template.type === "LIST") {
+      // LIST type can have both TODO and KIT items - update each independently
+      if (payload.todoItems !== undefined) {
+        await tx.todoItemTemplate.deleteMany({
+          where: { templateId },
+        });
+        if (payload.todoItems.length > 0) {
+          await tx.todoItemTemplate.createMany({
+            data: payload.todoItems.map((item, idx) => ({
+              templateId,
+              label: item.label,
+              notes: item.notes,
+              perPerson: item.perPerson ?? false,
+              actionType: item.actionType,
+              actionData: item.actionData as any,
+              parameters: item.parameters as any,
+              orderIndex: item.orderIndex ?? idx,
+            })),
+          });
+        }
+      }
+      if (payload.kitItems !== undefined) {
+        await tx.kitItemTemplate.deleteMany({
+          where: { templateId },
+        });
+        if (payload.kitItems.length > 0) {
+          await tx.kitItemTemplate.createMany({
+            data: payload.kitItems.map((item, idx) => ({
+              templateId,
+              label: item.label,
+              notes: item.notes,
+              quantity: item.quantity ?? 1,
+              perPerson: item.perPerson ?? false,
+              required: item.required ?? true,
+              weightGrams: item.weightGrams,
+              category: item.category,
+              cost: item.cost,
+              url: item.url,
+              orderIndex: item.orderIndex ?? idx,
+              // Inventory fields
+              date: item.date,
+              needsRepair: item.needsRepair ?? false,
+              conditionNotes: item.conditionNotes,
+              lost: item.lost ?? false,
+              lastSeenText: item.lastSeenText,
+              lastSeenDate: item.lastSeenDate,
+            })),
+          });
+        }
       }
     }
 
@@ -934,7 +1025,7 @@ export async function createTripListAdHoc(
   actorId: string,
   payload: CreateAdHocListInput
 ) {
-  const { tripId, type, title, description, inventory, todoItems, kitItems } = payload;
+  const { tripId, type, title, description, inventory, displayMode, todoItems, kitItems } = payload;
 
   // Verify trip membership
   await requireTripMembershipOnly(actorId, tripId);
@@ -949,6 +1040,7 @@ export async function createTripListAdHoc(
         title,
         description,
         inventory: inventory ?? false,
+        displayMode: displayMode ?? "grouped",
         visibility: "PRIVATE",
         createdInTrip: true, // Mark as created in a trip
       },
@@ -991,6 +1083,46 @@ export async function createTripListAdHoc(
           lastSeenDate: item.lastSeenDate,
         })),
       });
+    } else if (type === "LIST") {
+      // LIST type can have both TODO and KIT items
+      if (todoItems && todoItems.length > 0) {
+        await tx.todoItemTemplate.createMany({
+          data: todoItems.map((item, idx) => ({
+            templateId: masterTemplate.id,
+            label: item.label,
+            notes: item.notes,
+            perPerson: item.perPerson ?? false,
+            actionType: item.actionType,
+            actionData: item.actionData,
+            parameters: item.parameters,
+            orderIndex: item.orderIndex ?? idx,
+          })),
+        });
+      }
+      if (kitItems && kitItems.length > 0) {
+        await tx.kitItemTemplate.createMany({
+          data: kitItems.map((item, idx) => ({
+            templateId: masterTemplate.id,
+            label: item.label,
+            notes: item.notes,
+            quantity: item.quantity ?? 1,
+            perPerson: item.perPerson ?? false,
+            required: item.required ?? true,
+            weightGrams: item.weightGrams,
+            category: item.category,
+            cost: item.cost,
+            url: item.url,
+            orderIndex: item.orderIndex ?? idx,
+            // Inventory fields
+            date: item.date,
+            needsRepair: item.needsRepair ?? false,
+            conditionNotes: item.conditionNotes,
+            lost: item.lost ?? false,
+            lastSeenText: item.lastSeenText,
+            lastSeenDate: item.lastSeenDate,
+          })),
+        });
+      }
     }
 
     // Now create the trip-specific list that references the master template
@@ -1002,6 +1134,7 @@ export async function createTripListAdHoc(
         title,
         description,
         inventory: inventory ?? false,
+        displayMode: displayMode ?? "grouped",
         visibility: "PRIVATE",
         createdBy: actorId,
         createdInTrip: true,
@@ -1049,6 +1182,48 @@ export async function createTripListAdHoc(
           lastSeenDate: item.lastSeenDate,
         })),
       });
+    } else if (type === "LIST") {
+      // LIST type can have both TODO and KIT items
+      if (todoItems && todoItems.length > 0) {
+        await tx.todoItemTemplate.createMany({
+          data: todoItems.map((item, idx) => ({
+            templateId: tripList.id,
+            tripId, // Denormalized for faster toggle lookups
+            label: item.label,
+            notes: item.notes,
+            perPerson: item.perPerson ?? false,
+            actionType: item.actionType,
+            actionData: item.actionData,
+            parameters: item.parameters,
+            orderIndex: item.orderIndex ?? idx,
+          })),
+        });
+      }
+      if (kitItems && kitItems.length > 0) {
+        await tx.kitItemTemplate.createMany({
+          data: kitItems.map((item, idx) => ({
+            templateId: tripList.id,
+            tripId, // Denormalized for faster toggle lookups
+            label: item.label,
+            notes: item.notes,
+            quantity: item.quantity ?? 1,
+            perPerson: item.perPerson ?? false,
+            required: item.required ?? true,
+            weightGrams: item.weightGrams,
+            category: item.category,
+            cost: item.cost,
+            url: item.url,
+            orderIndex: item.orderIndex ?? idx,
+            // Inventory fields
+            date: item.date,
+            needsRepair: item.needsRepair ?? false,
+            conditionNotes: item.conditionNotes,
+            lost: item.lost ?? false,
+            lastSeenText: item.lastSeenText,
+            lastSeenDate: item.lastSeenDate,
+          })),
+        });
+      }
     }
 
     return { masterTemplate, tripList };

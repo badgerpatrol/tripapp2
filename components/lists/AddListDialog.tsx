@@ -248,7 +248,12 @@ export function AddListDialog({
           type: newListType,
           title: newListTitle.trim(),
           description: newListDescription.trim() || undefined,
-          ...(newListType === "TODO" ? { todoItems: [] } : { kitItems: [] }),
+          // Mixed lists (LIST) have both todoItems and kitItems
+          ...(newListType === "LIST"
+            ? { todoItems: [], kitItems: [] }
+            : newListType === "TODO"
+              ? { todoItems: [] }
+              : { kitItems: [] }),
         }),
       });
 
@@ -288,7 +293,9 @@ export function AddListDialog({
     ? "Add Checklist to Trip"
     : listTypeFilter === "KIT"
       ? "Add Kit List to Trip"
-      : "Add List to Trip";
+      : listTypeFilter === "LIST"
+        ? "Add Mixed List to Trip"
+        : "Add List to Trip";
 
   const myTemplatesLabel = listTypeFilter === "TODO"
     ? "Mine"

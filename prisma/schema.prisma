@@ -117,6 +117,7 @@ enum Visibility {
 enum ListType {
   TODO
   KIT
+  LIST
 }
 
 enum TodoActionType {
@@ -835,6 +836,7 @@ model ListTemplate {
   tags                 String[]   @default([])
   isTripTemplate       Boolean    @default(false)
   inventory            Boolean    @default(false) // If true, shows in inventory section
+  displayMode          String?    @default("grouped") // "grouped" | "interleaved" - for LIST type
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 

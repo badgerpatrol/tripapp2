@@ -707,6 +707,8 @@ export const KitItemTemplateInput = z.object({
   lastSeenDate: z.coerce.date().optional()
 }).strict();
 
+export const DisplayModeSchema = z.enum(["grouped", "interleaved"]);
+
 export const ListTemplateCreate = z.object({
   type: ListTypeSchema,
   title: z.string().min(1, "Title is required"),
@@ -715,11 +717,17 @@ export const ListTemplateCreate = z.object({
   tags: z.array(z.string()).max(12).optional(),
   isTripTemplate: z.boolean().default(false),
   inventory: z.boolean().default(false),
+  displayMode: DisplayModeSchema.optional().default("grouped"),
   // Discriminated items by type:
   todoItems: z.array(TodoItemTemplateInput).optional(),
   kitItems: z.array(KitItemTemplateInput).optional()
 })
-.refine(v => (v.type==="TODO" && v.todoItems) || (v.type==="KIT" && v.kitItems), {
+.refine(v => {
+  if (v.type === "TODO") return !!v.todoItems;
+  if (v.type === "KIT") return !!v.kitItems;
+  if (v.type === "LIST") return !!v.todoItems || !!v.kitItems;
+  return false;
+}, {
   message: "Provide items for the selected list type."
 })
 .strict();
@@ -769,6 +777,7 @@ export const ListTemplateUpdate = z.object({
   tags: z.array(z.string()).max(12).optional(),
   isTripTemplate: z.boolean().optional(),
   inventory: z.boolean().optional(),
+  displayMode: DisplayModeSchema.optional(),
   // When updating items, we replace all items
   todoItems: z.array(TodoItemTemplateUpdateInput).optional(),
   kitItems: z.array(KitItemTemplateUpdateInput).optional()
@@ -796,10 +805,16 @@ export const CreateAdHocListSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   inventory: z.boolean().default(false),
+  displayMode: DisplayModeSchema.optional().default("grouped"),
   todoItems: z.array(TodoItemTemplateInput).optional(),
   kitItems: z.array(KitItemTemplateInput).optional()
 })
-.refine(v => (v.type==="TODO" && v.todoItems) || (v.type==="KIT" && v.kitItems), {
+.refine(v => {
+  if (v.type === "TODO") return !!v.todoItems;
+  if (v.type === "KIT") return !!v.kitItems;
+  if (v.type === "LIST") return !!v.todoItems || !!v.kitItems;
+  return false;
+}, {
   message: "Provide items for the selected list type."
 })
 .strict();

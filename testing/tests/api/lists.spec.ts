@@ -450,6 +450,137 @@ test.describe('List Items API', () => {
     });
   });
 
+  test.describe('Item Addition Ordering (Quick Add)', () => {
+    test('todo item with orderIndex: 0 appears at top of list', async () => {
+      // Add first item (should be at bottom after second is added)
+      await api.post(`/api/lists/templates/${testTemplateId}/todo-items`, {
+        label: 'First Item',
+      });
+
+      // Add second item at position 0 (should appear at top)
+      const response = await api.post(`/api/lists/templates/${testTemplateId}/todo-items`, {
+        label: 'Second Item (Top)',
+        orderIndex: 0,
+      });
+
+      expect(response.ok()).toBeTruthy();
+
+      // Verify the second item has orderIndex 0
+      const body = await response.json();
+      expect(body.item.orderIndex).toBe(0);
+
+      // Get the template to verify item order
+      const templateResponse = await api.get(`/api/lists/templates/${testTemplateId}`);
+      const templateBody = await templateResponse.json();
+
+      // Items should be sorted by orderIndex
+      const items = templateBody.template.todoItems;
+      expect(items.length).toBe(2);
+      expect(items[0].label).toBe('Second Item (Top)');
+      expect(items[0].orderIndex).toBe(0);
+      expect(items[1].label).toBe('First Item');
+      expect(items[1].orderIndex).toBe(1);
+    });
+
+    test('kit item with orderIndex: 0 appears at top of list', async () => {
+      // Create a KIT template
+      const kitResponse = await api.createListTemplate({
+        title: `Kit Order Test ${Date.now()}`,
+        type: 'KIT',
+      });
+      const kitBody = await kitResponse.json();
+      const kitTemplateId = kitBody.template.id;
+
+      // Add first item
+      await api.post(`/api/lists/templates/${kitTemplateId}/kit-items`, {
+        label: 'First Kit Item',
+        quantity: 1,
+      });
+
+      // Add second item at position 0
+      const response = await api.post(`/api/lists/templates/${kitTemplateId}/kit-items`, {
+        label: 'Second Kit Item (Top)',
+        quantity: 1,
+        orderIndex: 0,
+      });
+
+      expect(response.ok()).toBeTruthy();
+      const body = await response.json();
+      expect(body.item.orderIndex).toBe(0);
+
+      // Verify order
+      const templateResponse = await api.get(`/api/lists/templates/${kitTemplateId}`);
+      const templateBody = await templateResponse.json();
+
+      const items = templateBody.template.kitItems;
+      expect(items.length).toBe(2);
+      expect(items[0].label).toBe('Second Kit Item (Top)');
+      expect(items[0].orderIndex).toBe(0);
+      expect(items[1].label).toBe('First Kit Item');
+      expect(items[1].orderIndex).toBe(1);
+
+      // Clean up
+      await api.delete(`/api/lists/templates/${kitTemplateId}`).catch(() => {});
+    });
+
+    test('multiple items added with orderIndex: 0 maintain reverse chronological order', async () => {
+      // Add items in order: A, B, C - each at position 0
+      // Expected final order: C, B, A (most recent at top)
+      await api.post(`/api/lists/templates/${testTemplateId}/todo-items`, {
+        label: 'Item A',
+        orderIndex: 0,
+      });
+
+      await api.post(`/api/lists/templates/${testTemplateId}/todo-items`, {
+        label: 'Item B',
+        orderIndex: 0,
+      });
+
+      await api.post(`/api/lists/templates/${testTemplateId}/todo-items`, {
+        label: 'Item C',
+        orderIndex: 0,
+      });
+
+      // Get the template to verify item order
+      const templateResponse = await api.get(`/api/lists/templates/${testTemplateId}`);
+      const templateBody = await templateResponse.json();
+
+      const items = templateBody.template.todoItems;
+      expect(items.length).toBe(3);
+      expect(items[0].label).toBe('Item C');
+      expect(items[0].orderIndex).toBe(0);
+      expect(items[1].label).toBe('Item B');
+      expect(items[1].orderIndex).toBe(1);
+      expect(items[2].label).toBe('Item A');
+      expect(items[2].orderIndex).toBe(2);
+    });
+
+    test('item without orderIndex is added at end of list', async () => {
+      // Add first item at position 0
+      await api.post(`/api/lists/templates/${testTemplateId}/todo-items`, {
+        label: 'First at Top',
+        orderIndex: 0,
+      });
+
+      // Add second item without orderIndex (should go to end)
+      const response = await api.post(`/api/lists/templates/${testTemplateId}/todo-items`, {
+        label: 'Second at End',
+      });
+
+      expect(response.ok()).toBeTruthy();
+      const body = await response.json();
+      expect(body.item.orderIndex).toBe(1);
+
+      // Verify order
+      const templateResponse = await api.get(`/api/lists/templates/${testTemplateId}`);
+      const templateBody = await templateResponse.json();
+
+      const items = templateBody.template.todoItems;
+      expect(items[0].label).toBe('First at Top');
+      expect(items[1].label).toBe('Second at End');
+    });
+  });
+
   test.describe('DELETE /api/lists/templates/:templateId/items/:itemId', () => {
     test('removes item from template', async () => {
       // Add an item first

@@ -270,7 +270,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       }
 
       const data = await response.json();
-      const fetchedLists = data.instances || [];
+      // Filter out LIST type - those are handled by TripMixedListsPanel
+      const fetchedLists = (data.instances || []).filter((l: ListInstance) => l.type !== "LIST");
       setLists(fetchedLists);
 
       // Initialize tick map for change detection (only on initial load, not during polling)
@@ -334,7 +335,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       if (!response.ok) return; // Silently fail on poll errors
 
       const data = await response.json();
-      const newLists: ListInstance[] = data.instances || [];
+      // Filter out LIST type - those are handled by TripMixedListsPanel
+      const newLists: ListInstance[] = (data.instances || []).filter((l: ListInstance) => l.type !== "LIST");
 
       // Detect changes made by other users on shared items
       const changes = detectTickChanges(previousTicksRef.current, newLists, user.uid);
@@ -905,7 +907,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
 
                     {list.type === "TODO" ? (
                       <div className="space-y-2">
-                        {(list.todoItems || []).map((item) => {
+                        {(list.todoItems || []).sort((a, b) => a.orderIndex - b.orderIndex).map((item) => {
                           // Check if current user has ticked this item
                           const userTick = item.ticks?.find(t => t.userId === user?.uid);
                           const isTickedByUser = !!userTick;
@@ -969,7 +971,7 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {(list.kitItems || []).map((item) => {
+                        {(list.kitItems || []).sort((a, b) => a.orderIndex - b.orderIndex).map((item) => {
                           // Check if current user has ticked this item
                           const userTick = item.ticks?.find(t => t.userId === user?.uid);
                           const isTickedByUser = !!userTick;
@@ -1135,7 +1137,8 @@ export function TripListsPanel({ tripId, onOpenInviteDialog, onOpenCreateChoice,
       {/* List Report Dialog */}
       {reportListId && (() => {
         const reportList = lists.find(l => l.id === reportListId);
-        if (!reportList) return null;
+        // LIST type is filtered out, so reportList.type will only be TODO or KIT
+        if (!reportList || reportList.type === "LIST") return null;
         return (
           <ListReportDialog
             isOpen={true}
