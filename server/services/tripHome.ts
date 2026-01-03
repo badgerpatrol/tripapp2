@@ -122,8 +122,8 @@ export async function getTripHomeSummary(
   await requireTripMembershipOnly(userId, tripId);
 
   // Fetch all data in parallel
-  const [trip, balances, choices, kitData] = await Promise.all([
-    // Get trip with members and timeline
+  const [trip, balances, choices, kitData, tasksData] = await Promise.all([
+    // Get trip with members
     prisma.trip.findUnique({
       where: { id: tripId, deletedAt: null },
       include: {
@@ -139,10 +139,6 @@ export async function getTripHomeSummary(
             },
           },
           orderBy: { joinedAt: "asc" },
-        },
-        timelineItems: {
-          where: { deletedAt: null },
-          orderBy: { order: "asc" },
         },
       },
     }),
@@ -171,6 +167,8 @@ export async function getTripHomeSummary(
     }),
     // Get kit items
     getKitSummary(tripId),
+    // Get TODO checklist items
+    getTasksSummary(tripId),
   ]);
 
   if (!trip) {
@@ -248,13 +246,11 @@ export async function getTripHomeSummary(
       : null,
   };
 
-  // Calculate tasks stats
-  const openTasks = trip.timelineItems.filter((t) => !t.isCompleted);
-  const completedTasks = trip.timelineItems.filter((t) => t.isCompleted);
+  // Tasks stats from TODO lists
   const tasksStats = {
-    openCount: openTasks.length,
-    completedCount: completedTasks.length,
-    topTasks: openTasks.slice(0, 3).map((t) => t.title),
+    openCount: tasksData.totalItems - tasksData.completedItems,
+    completedCount: tasksData.completedItems,
+    topTasks: tasksData.topIncomplete,
   };
 
   // Calculate trip health
@@ -349,6 +345,50 @@ async function getKitSummary(tripId: string): Promise<KitSummary> {
 
   return {
     totalItems: allKitItems.length,
+    completedItems: completedItems.length,
+    topIncomplete: incompleteItems.slice(0, 3).map((item) => item.label),
+  };
+}
+
+// ============================================================================
+// Tasks Summary (TODO Lists)
+// ============================================================================
+
+interface TasksSummary {
+  totalItems: number;
+  completedItems: number;
+  topIncomplete: string[];
+}
+
+/**
+ * Get aggregated tasks stats for a trip (from TODO lists)
+ */
+async function getTasksSummary(tripId: string): Promise<TasksSummary> {
+  // Get all TODO lists for this trip
+  const todoLists = await prisma.listTemplate.findMany({
+    where: {
+      tripId,
+      type: "TODO",
+    },
+    include: {
+      todoItems: {
+        include: {
+          ticks: true,
+        },
+        orderBy: { orderIndex: "asc" },
+      },
+    },
+  });
+
+  // Flatten all todo items
+  const allTodoItems = todoLists.flatMap((list) => list.todoItems);
+
+  // Count items with at least one tick as "completed"
+  const completedItems = allTodoItems.filter((item) => item.ticks.length > 0);
+  const incompleteItems = allTodoItems.filter((item) => item.ticks.length === 0);
+
+  return {
+    totalItems: allTodoItems.length,
     completedItems: completedItems.length,
     topIncomplete: incompleteItems.slice(0, 3).map((item) => item.label),
   };

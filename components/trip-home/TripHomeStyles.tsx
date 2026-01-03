@@ -6,20 +6,20 @@
 export const styles = {
   // Container
   container: `
-    max-w-[430px] mx-auto min-h-screen flex flex-col gap-3.5 px-2.5 py-3.5
+    max-w-[430px] mx-auto min-h-screen flex flex-col gap-2 px-2.5 py-2
   `,
 
   // Top bar
-  topbar: `px-1.5 pt-1.5 pb-0.5 flex flex-col gap-1.5`,
+  topbar: `px-1.5 pt-1 pb-0 flex flex-col gap-1`,
   titleRow: `flex justify-between gap-2.5 items-start`,
-  tripTitle: `text-[22px] leading-tight font-bold tracking-wide text-zinc-100`,
-  subTitle: `text-[13.5px] tracking-wide text-zinc-400`,
+  tripTitle: `text-[22px] leading-none font-bold tracking-wide text-zinc-100`,
+  subTitle: `text-[13.5px] leading-tight tracking-wide text-zinc-400 -mt-0.5`,
 
   // Health chip
   chip: `
-    inline-flex items-center gap-2 px-3 py-2.5 rounded-full
+    inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
     border border-zinc-700/90 bg-zinc-800/55 text-zinc-400
-    text-[12.5px] min-h-[40px] select-none whitespace-nowrap
+    text-[11px] select-none whitespace-nowrap
   `,
   chipDot: (status: "on_track" | "needs_attention" | "blocked") => {
     const colors = {
@@ -31,10 +31,10 @@ export const styles = {
   },
 
   // Avatars
-  avatars: `flex gap-2.5 px-1.5 pt-1 pb-0.5 overflow-x-auto scrollbar-hide`,
+  avatars: `flex gap-2 px-1.5 py-1.5 overflow-x-auto scrollbar-hide`,
   avatar: (color: string) => `
-    relative w-[46px] h-[46px] rounded-full flex items-center justify-center
-    font-bold tracking-wide select-none flex-shrink-0
+    relative w-[40px] h-[40px] rounded-full flex items-center justify-center
+    font-bold tracking-wide select-none flex-shrink-0 text-sm
     ${color}
   `,
   avatarRing: (status: "accepted" | "pending" | "declined" | "maybe" | "none") => {
@@ -62,22 +62,23 @@ export const styles = {
   },
 
   // Grid
-  grid: `grid grid-cols-2 gap-3 px-1`,
+  grid: `grid grid-cols-2 gap-2 px-1`,
 
   // Cards
   card: `
-    bg-zinc-800/96 border border-zinc-700/95 rounded-[22px]
-    p-3.5 pb-3 shadow-lg min-h-[118px]
-    flex flex-col justify-between cursor-pointer select-none
+    bg-zinc-800/96 border border-zinc-700/95 rounded-[18px]
+    p-3 shadow-lg min-h-[100px]
+    flex flex-col cursor-pointer select-none
     transition-all duration-150 active:scale-[0.99]
   `,
+  cardContent: `flex-1 flex flex-col justify-center`,
   cardRaise: `
     bg-zinc-800/98 border-amber-500/35
     shadow-[0_0_0_1px_rgba(245,158,11,0.1),0_18px_50px_rgba(0,0,0,0.45)]
     -translate-y-0.5
   `,
   cardWide: `
-    col-span-2 min-h-[132px] relative overflow-hidden
+    col-span-2 min-h-[110px] relative overflow-hidden
     before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5
     before:bg-gradient-to-b before:from-blue-500 before:to-blue-500/55 before:opacity-95
   `,
@@ -102,39 +103,39 @@ export const styles = {
   cardSmall: `text-[13px] text-zinc-400 leading-snug`,
 
   // Wide card (decisions) tile layout
-  tileHead: `flex items-center justify-between gap-2.5`,
+  tileHead: `flex items-center justify-between gap-2`,
   tilePill: `
-    inline-flex items-center gap-2 px-2.5 py-1.5 rounded-full
+    inline-flex items-center gap-2 px-2 py-1 rounded-full
     border border-zinc-700/92 bg-zinc-800/58 text-zinc-400
-    text-[12.5px] whitespace-nowrap flex-shrink-0
+    text-[11px] whitespace-nowrap flex-shrink-0
   `,
-  tilePrimary: `mt-3.5 text-[22px] font-extrabold tracking-tight leading-tight text-zinc-100`,
-  tileMeta: `mt-2 text-[13.5px] text-zinc-400 leading-snug`,
+  tilePrimary: `mt-2 text-[20px] font-extrabold tracking-tight leading-tight text-zinc-100`,
+  tileMeta: `mt-1 text-[12px] text-zinc-400 leading-snug`,
   tileMetaHighlight: `text-amber-400 font-bold`,
-  tileFooter: `mt-3.5 text-[12.5px] text-zinc-500 flex items-center gap-2 flex-wrap`,
+  tileFooter: `mt-2 text-[11px] text-zinc-500 flex items-center gap-2 flex-wrap`,
   tileFooterLink: `text-blue-400 no-underline font-bold cursor-pointer hover:text-blue-300`,
 
   // Activity
-  activityPeek: `mt-auto px-1 pt-1.5 flex flex-col gap-2.5`,
-  activityRow: `
-    flex justify-between gap-2.5 items-center
-    px-3.5 py-3 rounded-[18px] border border-zinc-700/90 bg-zinc-800/55
-    cursor-pointer select-none
+  activityList: `flex flex-col gap-1.5 mt-1`,
+  activityItem: `
+    flex justify-between gap-2 items-center
+    px-2.5 py-2 rounded-[10px] bg-zinc-900/50
+    cursor-pointer select-none text-left w-full
   `,
-  activityText: `text-[13.5px] text-zinc-400 leading-snug`,
-  activityTextStrong: `text-zinc-100 font-bold`,
-  activityTime: `text-zinc-500 text-xs whitespace-nowrap`,
+  activityText: `text-[11px] text-zinc-400 leading-snug flex-1`,
+  activityTextStrong: `text-zinc-100 font-semibold`,
+  activityTime: `text-zinc-500 text-[10px] whitespace-nowrap flex-shrink-0`,
 
   // Bottom tabs
   tabs: `
     sticky bottom-0 pb-[env(safe-area-inset-bottom)]
-    flex gap-2.5 justify-between
+    flex gap-2 justify-between
     bg-gradient-to-t from-zinc-950/92 via-zinc-950/85 to-transparent
-    pt-2.5 mt-1.5
+    pt-2 mt-1
   `,
   tab: (active: boolean) => `
-    flex-1 min-h-[52px] rounded-[18px] border border-zinc-700/85 bg-zinc-800/55
-    flex justify-center items-center gap-2 text-zinc-400 text-[12.5px] select-none
+    flex-1 min-h-[44px] rounded-[14px] border border-zinc-700/85 bg-zinc-800/55
+    flex justify-center items-center gap-1.5 text-zinc-400 text-[11px] select-none
     ${active ? "bg-blue-500/16 border-blue-500/35 text-zinc-100" : ""}
   `,
 };

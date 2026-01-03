@@ -12,7 +12,6 @@ import {
   KitCard,
   ActivityFeed,
   TripHealthChip,
-  BottomTabs,
   styles,
 } from "@/components/trip-home";
 import type {
@@ -88,6 +87,7 @@ export default function TripHomePage() {
   }, [authLoading, user, router]);
 
   // Navigation handlers
+  const navigateToTrips = () => router.push("/trips");
   const navigateToLegacy = () => router.push(`/trips/${tripId}`);
   const navigateToDecisions = () => router.push(`/trips/${tripId}?tab=choices`);
   const navigateToTasks = () => router.push(`/trips/${tripId}?tab=timeline`);
@@ -186,13 +186,30 @@ export default function TripHomePage() {
       <main className={styles.container} aria-label="Trip Home">
         {/* Top bar */}
         <section className={styles.topbar}>
-          <div className={styles.titleRow}>
-            <div>
-              <h1 className={styles.tripTitle}>{summary.trip.name}</h1>
-              <p className={styles.subTitle}>
-                {dateRange && `${dateRange} · `}
-                {summary.people.total} people
-              </p>
+          <div className="flex items-start gap-1">
+            <button
+              onClick={navigateToTrips}
+              className="text-zinc-400 hover:text-zinc-200 -ml-1 p-1 flex-shrink-0 mt-0.5"
+              aria-label="Back to all trips"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className={`${styles.tripTitle} truncate`}>{summary.trip.name}</h1>
+              {dateRange && (
+                <p className={styles.subTitle}>{dateRange}</p>
+              )}
             </div>
             <TripHealthChip status={summary.health.status} />
           </div>
@@ -230,7 +247,7 @@ export default function TripHomePage() {
 
           <TasksCard
             openCount={summary.tasks.openCount}
-            topTasks={summary.tasks.topTasks}
+            totalCount={summary.tasks.openCount + summary.tasks.completedCount}
             onClick={navigateToTasks}
           />
 
@@ -240,18 +257,16 @@ export default function TripHomePage() {
             topIncomplete={summary.kit.topIncomplete}
             onClick={navigateToKit}
           />
+
+          {/* Activity feed */}
+          <ActivityFeed
+            activities={activities}
+            prompts={prompts}
+            onActivityClick={() => navigateToLegacy()}
+            onPromptClick={handlePromptClick}
+            onViewAll={navigateToLegacy}
+          />
         </section>
-
-        {/* Activity feed */}
-        <ActivityFeed
-          activities={activities}
-          prompts={prompts}
-          onActivityClick={() => navigateToLegacy()}
-          onPromptClick={handlePromptClick}
-        />
-
-        {/* Bottom tabs */}
-        <BottomTabs tripId={tripId} activeTab="home" />
       </main>
     </div>
   );

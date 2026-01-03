@@ -53,7 +53,9 @@ export function DashboardCard({
           </span>
         )}
       </div>
-      {children}
+      <div className={styles.cardContent}>
+        {children}
+      </div>
     </article>
   );
 }
