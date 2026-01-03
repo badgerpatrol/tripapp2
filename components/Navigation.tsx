@@ -86,7 +86,7 @@ export default function Navigation() {
             Kit
           </button>
 
-          {/* Mixed Lists Button */}
+          {/* Mixed Lists Button - TEMPORARILY HIDDEN
           <button
             onClick={() => router.push("/mixed-lists")}
             className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
@@ -97,6 +97,7 @@ export default function Navigation() {
           >
             Mixed Lists
           </button>
+          */}
 
           {/* Groups Button - Only visible to admin users */}
           {isAdmin && (

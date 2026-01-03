@@ -319,7 +319,7 @@ function HomeContent() {
                 return (
                   <a
                     key={trip.id}
-                    href={`/trips/${trip.id}`}
+                    href={`/trips/${trip.id}/home`}
                     className="block bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-6 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
                   >
                     <div className="flex justify-between items-start mb-4 gap-2 min-w-0">

@@ -2270,10 +2270,9 @@ export default function TripDetailPage() {
           </div>
         ) : null}
 
-        {/* Mixed Lists Section (for accepted members) - only show for organizers or when mixed lists exist */}
+        {/* Mixed Lists Section - TEMPORARILY HIDDEN
         {trip.userRsvpStatus === "ACCEPTED" && (canInvite || (mixedListsCount !== null && mixedListsCount > 0)) ? (
           <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 px-4 sm:px-6 md:px-8 pt-2 pb-4 sm:pb-6 md:pb-8 mb-6">
-            {/* Header row with title, +Add button, and toggle */}
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-zinc-100">Mixed Lists</h2>
               <div className="flex items-center gap-2">
@@ -2301,7 +2300,6 @@ export default function TripDetailPage() {
               </div>
             </div>
 
-            {/* Mixed Lists content - only show when not collapsed */}
             {!collapsedSections.mixedLists && (
               <div className="mt-3">
                 <TripMixedListsPanel
@@ -2323,7 +2321,6 @@ export default function TripDetailPage() {
             )}
           </div>
         ) : trip.userRsvpStatus === "ACCEPTED" && !canInvite && mixedListsCount === null ? (
-          /* Hidden TripMixedListsPanel to fetch mixed list count for non-organizers */
           <div className="hidden">
             <TripMixedListsPanel
               tripId={trip.id}
@@ -2332,6 +2329,7 @@ export default function TripDetailPage() {
             />
           </div>
         ) : null}
+        */}
 
         {/*
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-700 p-4 mb-6">
@@ -3640,20 +3638,20 @@ export default function TripDetailPage() {
         currentMembers={trip?.participants || []}
       />
 
-      {/* Mixed List Workflow Modal */}
+      {/* Mixed List Workflow Modal - TEMPORARILY HIDDEN
       <MixedListWorkflowModal
         tripId={trip?.id || ""}
         isOpen={isMixedListModalOpen}
         onClose={() => {
           setIsMixedListModalOpen(false);
           setSelectedMixedListId(null);
-          // Refresh the main lists panel to show updated counts/progress
           setListsRefreshKey(prev => prev + 1);
         }}
         listTitle={mixedListModalTitle}
         selectedListId={selectedMixedListId || undefined}
         isOrganizer={canInvite && !isViewer}
       />
+      */}
 
       {/* Join Trip Dialog (for viewers to participate) */}
       {publicTripInfo?.signUpEnabled && (
