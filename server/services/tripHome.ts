@@ -62,9 +62,9 @@ export interface TripHomeSummary {
       name: string;
       place: string | null;
       deadline: Date | null;
-      votedCount: number;
+      chosenCount: number;
       totalParticipants: number;
-      userHasVoted: boolean;
+      userHasChosen: boolean;
     } | null;
   };
 
@@ -222,12 +222,12 @@ export async function getTripHomeSummary(
 
   // Calculate decisions stats
   const acceptedMemberCount = peopleStats.accepted;
-  const userVotedChoiceIds = new Set(
+  const userChosenChoiceIds = new Set(
     choices
       .filter((c) => c.selections.some((s) => s.userId === userId))
       .map((c) => c.id)
   );
-  const waitingForYou = choices.filter((c) => !userVotedChoiceIds.has(c.id)).length;
+  const waitingForYou = choices.filter((c) => !userChosenChoiceIds.has(c.id)).length;
 
   const topChoice = choices[0];
   const decisionsStats = {
@@ -239,9 +239,9 @@ export async function getTripHomeSummary(
           name: topChoice.name,
           place: topChoice.place,
           deadline: topChoice.deadline,
-          votedCount: topChoice.selections.length,
+          chosenCount: topChoice.selections.length,
           totalParticipants: acceptedMemberCount,
-          userHasVoted: userVotedChoiceIds.has(topChoice.id),
+          userHasChosen: userChosenChoiceIds.has(topChoice.id),
         }
       : null,
   };
@@ -261,7 +261,7 @@ export async function getTripHomeSummary(
   }
 
   if (waitingForYou > 0) {
-    healthIssues.push(`${waitingForYou} decisions waiting for your vote`);
+    healthIssues.push(`${waitingForYou} decisions waiting for your choice`);
   }
 
   if (moneyStats.topTransfer) {
@@ -411,8 +411,8 @@ const eventTypeToAction: Partial<Record<EventType, string>> = {
   [EventType.CHOICE_CREATED]: "created a decision",
   [EventType.CHOICE_UPDATED]: "updated a decision",
   [EventType.CHOICE_CLOSED]: "closed a decision",
-  [EventType.CHOICE_SELECTION_CREATED]: "voted on a decision",
-  [EventType.CHOICE_SELECTION_UPDATED]: "changed their vote",
+  [EventType.CHOICE_SELECTION_CREATED]: "made a choice",
+  [EventType.CHOICE_SELECTION_UPDATED]: "updated their choice",
   [EventType.SETTLEMENT_CREATED]: "created a settlement",
   [EventType.PAYMENT_RECORDED]: "recorded a payment",
   [EventType.LIST_TEMPLATE_COPIED_TO_TRIP]: "added a list",
@@ -516,7 +516,7 @@ export async function getUserActionPrompts(
 
   const prompts: Array<{ type: string; message: string; actionUrl?: string }> = [];
 
-  // Check for pending votes
+  // Check for pending choices
   const pendingChoices = await prisma.choice.findMany({
     where: {
       tripId,
@@ -537,8 +537,8 @@ export async function getUserActionPrompts(
 
   if (pendingChoices.length > 0) {
     prompts.push({
-      type: "vote",
-      message: `Vote on: ${pendingChoices[0].name}`,
+      type: "choice",
+      message: `Choose: ${pendingChoices[0].name}`,
       actionUrl: `/trips/${tripId}/choices/${pendingChoices[0].id}`,
     });
   }

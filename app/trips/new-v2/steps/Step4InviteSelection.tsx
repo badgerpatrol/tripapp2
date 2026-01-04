@@ -8,7 +8,6 @@ import type { StepProps } from "../types";
 
 interface AvailableUser {
   id: string;
-  email: string;
   displayName: string | null;
   photoURL: string | null;
 }
@@ -140,63 +139,115 @@ export default function Step4InviteSelection({
             No groups yet. Create groups to easily invite people.
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {groups.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                  selectedGroupIds.includes(group.id)
-                    ? "bg-blue-600 text-white"
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                }`}
-              >
-                {group.name} ({group.memberCount})
-              </button>
-            ))}
+          <div className="space-y-2">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Select groups to see their members:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {groups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
+                    selectedGroupIds.includes(group.id)
+                      ? "bg-blue-600 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                  }`}
+                >
+                  {group.name} ({group.memberCount})
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {/* User list */}
         {selectedGroupIds.length > 0 && (
-          <div className="max-h-32 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg">
+          <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg">
             {loadingUsers ? (
               <div className="p-3 text-sm text-zinc-500 dark:text-zinc-400">Loading users...</div>
             ) : availableUsers.length === 0 ? (
               <div className="p-3 text-sm text-zinc-500 dark:text-zinc-400">No users available</div>
             ) : (
-              <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
-                {availableUsers.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => toggleUser(u.id)}
-                    className={`w-full p-2 flex items-center gap-2 text-left ${
-                      state.selectedUserIds.includes(u.id)
-                        ? "bg-blue-50 dark:bg-blue-900/20"
-                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800"
+              <>
+                {/* Select All header */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allUserIds = availableUsers.map((u) => u.id);
+                    const allSelected = allUserIds.every((id) => state.selectedUserIds.includes(id));
+                    if (allSelected) {
+                      // Deselect all available users
+                      updateState({
+                        selectedUserIds: state.selectedUserIds.filter((id) => !allUserIds.includes(id)),
+                      });
+                    } else {
+                      // Select all available users
+                      const newIds = new Set([...state.selectedUserIds, ...allUserIds]);
+                      updateState({ selectedUserIds: Array.from(newIds) });
+                    }
+                  }}
+                  className="w-full p-2 flex items-center gap-2 text-left border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <div
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      availableUsers.length > 0 && availableUsers.every((u) => state.selectedUserIds.includes(u.id))
+                        ? "bg-blue-600 border-blue-600"
+                        : availableUsers.some((u) => state.selectedUserIds.includes(u.id))
+                          ? "bg-blue-300 border-blue-300"
+                          : "border-zinc-300 dark:border-zinc-600"
                     }`}
                   >
-                    <div
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                    {availableUsers.length > 0 && availableUsers.every((u) => state.selectedUserIds.includes(u.id)) && (
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {availableUsers.some((u) => state.selectedUserIds.includes(u.id)) &&
+                     !availableUsers.every((u) => state.selectedUserIds.includes(u.id)) && (
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 12h14" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Select All ({availableUsers.length})
+                  </span>
+                </button>
+                {/* User list */}
+                <div className="max-h-32 overflow-y-auto divide-y divide-zinc-200 dark:divide-zinc-700">
+                  {availableUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => toggleUser(u.id)}
+                      className={`w-full p-2 flex items-center gap-2 text-left ${
                         state.selectedUserIds.includes(u.id)
-                          ? "bg-blue-600 border-blue-600"
-                          : "border-zinc-300 dark:border-zinc-600"
+                          ? "bg-blue-50 dark:bg-blue-900/20"
+                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800"
                       }`}
                     >
-                      {state.selectedUserIds.includes(u.id) && (
-                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                    <span className="text-sm text-zinc-900 dark:text-zinc-100 truncate">
-                      {u.displayName || u.email}
-                    </span>
-                  </button>
-                ))}
-              </div>
+                      <div
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                          state.selectedUserIds.includes(u.id)
+                            ? "bg-blue-600 border-blue-600"
+                            : "border-zinc-300 dark:border-zinc-600"
+                        }`}
+                      >
+                        {state.selectedUserIds.includes(u.id) && (
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                        {u.displayName || "Unknown"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         )}

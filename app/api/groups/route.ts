@@ -95,8 +95,8 @@ export async function GET(request: NextRequest) {
     // Verify user exists in database
     await requireAuth(auth.uid);
 
-    // Require ADMIN role to access Groups feature
-    await requireUserRole(auth.uid, UserRole.ADMIN);
+    // Note: No ADMIN role check here - users can see groups they are members of
+    // The listUserGroups service filters to only groups where user is owner/member
 
     // 2. Get user's groups
     const groups = await listUserGroups(auth.uid);

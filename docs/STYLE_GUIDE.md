@@ -24,6 +24,7 @@ This document defines the canonical UI styling patterns for TripApp. All new scr
 12. [Dark Mode](#12-dark-mode)
 13. [Responsive Design](#13-responsive-design)
 14. [Button Labels & Colors](#14-button-labels--colors)
+15. [Terminology](#15-terminology)
 
 ---
 
@@ -814,6 +815,34 @@ When pairing buttons, order them: secondary (left), primary/destructive (right)
 
 ### FAB Labels
 The FAB should use `aria-label="Add"` for accessibility, but displays only the `+` icon visually.
+
+---
+
+## 15. Terminology
+
+### Decisions / Choices
+
+When referring to the voting/selection feature in the UI, use consistent terminology:
+
+| Use | Don't Use |
+|-----|-----------|
+| **Choose** | Vote |
+| **Choice** | Vote |
+| **Made a choice** | Voted |
+| **Update their choice** | Changed their vote |
+| **X chosen** | X voted |
+| **Decisions waiting for your choice** | Decisions waiting for your vote |
+
+**Rationale:**
+- "Choose/Choice" aligns with the feature name "Choices"
+- Creates consistency with the underlying data model (selections, choices)
+- "Vote" implies a democratic process; "Choose" implies personal preference selection
+- Works better for both menu selections and activity decisions
+
+**Code references:**
+- Interface types use `chosenCount`, `userHasChosen` (not `votedCount`, `userHasVoted`)
+- Event descriptions use "made a choice", "updated their choice"
+- Prompts use "Choose: {name}" (not "Vote on: {name}")
 
 ---
 

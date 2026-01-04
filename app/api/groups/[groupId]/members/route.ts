@@ -41,10 +41,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     await requireAuth(auth.uid);
 
-    // Require ADMIN role to access Groups feature
-    await requireUserRole(auth.uid, UserRole.ADMIN);
-
-    // 2. Verify user is a member of this group
+    // 2. Verify user is a member of this group (no ADMIN role needed for viewing)
     await requireGroupMember(auth.uid, groupId);
 
     // 3. Get group members

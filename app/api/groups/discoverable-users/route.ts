@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthTokenFromHeader, requireAuth, requireUserRole } from "@/server/authz";
+import { getAuthTokenFromHeader, requireAuth } from "@/server/authz";
 import { getDiscoverableUsers } from "@/server/services/groups";
 import {
   DiscoverableUsersQuerySchema,
   DiscoverableUsersResponseSchema,
 } from "@/types/schemas";
-import { UserRole } from "@/lib/generated/prisma";
 
 /**
  * GET /api/groups/discoverable-users
@@ -28,8 +27,8 @@ export async function GET(request: NextRequest) {
 
     await requireAuth(auth.uid);
 
-    // Require ADMIN role to access Groups feature
-    await requireUserRole(auth.uid, UserRole.ADMIN);
+    // Note: No ADMIN role check here - the getDiscoverableUsers service
+    // validates that the caller is a member of all requested groups
 
     // 2. Parse and validate query parameters
     const { searchParams } = new URL(request.url);
@@ -76,7 +75,6 @@ export async function GET(request: NextRequest) {
       success: true,
       users: users.map((u) => ({
         id: u.id,
-        email: u.email,
         displayName: u.displayName,
         photoURL: u.photoURL,
       })),

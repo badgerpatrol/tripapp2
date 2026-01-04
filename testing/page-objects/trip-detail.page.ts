@@ -112,7 +112,14 @@ export class TripDetailPage extends BasePage {
   /**
    * Navigate to trip detail page
    */
-  async goto(tripId: string): Promise<void> {
+  async goto(): Promise<void> {
+    throw new Error('Use gotoTrip(tripId) instead - TripDetailPage requires a tripId');
+  }
+
+  /**
+   * Navigate to a specific trip detail page
+   */
+  async gotoTrip(tripId: string): Promise<void> {
     await this.navigateTo(`/trips/${tripId}`);
     await this.waitForLoading();
   }

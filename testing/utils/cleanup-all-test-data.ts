@@ -246,12 +246,12 @@ async function cleanupAllTestData() {
       const templateIds = testListTemplates.map(t => t.id);
 
       const kitItems = await prisma.kitItemTemplate.deleteMany({
-        where: { listTemplateId: { in: templateIds } },
+        where: { templateId: { in: templateIds } },
       });
       console.log(`   - Deleted ${kitItems.count} kit item templates`);
 
       const todoItems = await prisma.todoItemTemplate.deleteMany({
-        where: { listTemplateId: { in: templateIds } },
+        where: { templateId: { in: templateIds } },
       });
       console.log(`   - Deleted ${todoItems.count} todo item templates`);
 

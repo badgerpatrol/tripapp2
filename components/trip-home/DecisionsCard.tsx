@@ -10,9 +10,9 @@ interface DecisionsCardProps {
     name: string;
     place: string | null;
     deadline: string | null;
-    votedCount: number;
+    chosenCount: number;
     totalParticipants: number;
-    userHasVoted: boolean;
+    userHasChosen: boolean;
   } | null;
   onClick?: () => void;
   onOpenDecisions?: () => void;
@@ -63,7 +63,7 @@ export function DecisionsCard({
       }}
     >
       <div className={styles.tileHead}>
-        <span className={`${styles.cardLabelText} pl-2`}>Decisions</span>
+        <span className={styles.cardLabelText}>Decisions</span>
         {waitingForYou > 0 && (
           <span className={styles.cardPill}>
             <span className={styles.cardPillDot("amber")} />
@@ -85,7 +85,7 @@ export function DecisionsCard({
             )}
             {(topDecision.place || topDecision.deadline) && <span> · </span>}
             <span>
-              {topDecision.votedCount}/{topDecision.totalParticipants} voted
+              {topDecision.chosenCount}/{topDecision.totalParticipants} decided
             </span>
           </div>
         </>

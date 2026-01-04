@@ -41,9 +41,9 @@ export interface TripHomeSummary {
       name: string;
       place: string | null;
       deadline: string | null;
-      votedCount: number;
+      chosenCount: number;
       totalParticipants: number;
-      userHasVoted: boolean;
+      userHasChosen: boolean;
     } | null;
   };
 

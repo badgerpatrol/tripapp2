@@ -58,7 +58,7 @@ export class LoginPage extends BasePage {
    * Check if login page is displayed
    */
   async isDisplayed(): Promise<boolean> {
-    return this.isVisible(this.emailInput) && this.isVisible(this.passwordInput);
+    return (await this.isVisible(this.emailInput)) && (await this.isVisible(this.passwordInput));
   }
 
   /**

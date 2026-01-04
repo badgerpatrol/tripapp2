@@ -8,7 +8,8 @@ export { KitCard } from "./KitCard";
 export { ActivityFeed } from "./ActivityFeed";
 export { TripHealthChip } from "./TripHealthChip";
 export { BottomTabs } from "./BottomTabs";
-export { styles, getAvatarColor, getInitials } from "./TripHomeStyles";
+export { UserAvatarMenu } from "./UserAvatarMenu";
+export { styles, avatarColors, getAvatarColor, getInitials } from "./TripHomeStyles";
 export type {
   TripHomeSummary,
   Participant,

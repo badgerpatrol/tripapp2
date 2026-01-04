@@ -12,6 +12,7 @@ import {
   KitCard,
   ActivityFeed,
   TripHealthChip,
+  UserAvatarMenu,
   styles,
 } from "@/components/trip-home";
 import type {
@@ -82,17 +83,18 @@ export default function TripHomePage() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push("/login");
+      router.push("/");
     }
   }, [authLoading, user, router]);
 
   // Navigation handlers
   const navigateToTrips = () => router.push("/trips");
   const navigateToLegacy = () => router.push(`/trips/${tripId}`);
-  const navigateToDecisions = () => router.push(`/trips/${tripId}?tab=choices`);
-  const navigateToTasks = () => router.push(`/trips/${tripId}?tab=timeline`);
-  const navigateToKit = () => router.push(`/trips/${tripId}?tab=checklists`);
-  const navigateToSettle = () => router.push(`/trips/${tripId}?tab=settle`);
+  const navigateToDecisions = () => router.push(`/trips/${tripId}/decisions`);
+  const navigateToTasks = () => router.push(`/trips/${tripId}/tasks`);
+  const navigateToKit = () => router.push(`/trips/${tripId}/kit`);
+  const navigateToSpend = () => router.push(`/trips/${tripId}/spend`);
+  const navigateToPeople = () => router.push(`/trips/${tripId}/people`);
 
   const handlePromptClick = (prompt: ActionPrompt) => {
     if (prompt.actionUrl) {
@@ -184,36 +186,38 @@ export default function TripHomePage() {
   return (
     <div style={backgroundStyle}>
       <main className={styles.container} aria-label="Trip Home">
-        {/* Top bar */}
-        <section className={styles.topbar}>
-          <div className="flex items-start gap-1">
-            <button
-              onClick={navigateToTrips}
-              className="text-zinc-400 hover:text-zinc-200 -ml-1 p-1 flex-shrink-0 mt-0.5"
-              aria-label="Back to all trips"
+        {/* Header */}
+        <header className={styles.pageHeader}>
+          <button
+            onClick={navigateToTrips}
+            className={styles.pageBackButton}
+            aria-label="Back to all trips"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-            <div className="flex-1 min-w-0">
-              <h1 className={`${styles.tripTitle} truncate`}>{summary.trip.name}</h1>
-              {dateRange && (
-                <p className={styles.subTitle}>{dateRange}</p>
-              )}
-            </div>
-            <TripHealthChip status={summary.health.status} />
-          </div>
-        </section>
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <h1 className={`${styles.pageTitle} truncate`}>{summary.trip.name}</h1>
+          <TripHealthChip status={summary.health.status} />
+          <UserAvatarMenu
+            displayName={user?.displayName || null}
+            photoURL={user?.photoURL || null}
+          />
+        </header>
+
+        {/* Date subtitle */}
+        {dateRange && (
+          <p className="text-[11px] leading-tight tracking-wide text-zinc-400 ml-[27px] -mt-5 mb-1">{dateRange}</p>
+        )}
 
         {/* Avatar row */}
         <AvatarRow
@@ -227,14 +231,14 @@ export default function TripHomePage() {
             accepted={summary.people.accepted}
             total={summary.people.total}
             pending={summary.people.pending}
-            onClick={navigateToLegacy}
+            onClick={navigateToPeople}
           />
 
           <MoneyCard
             userBalance={summary.money.userBalance}
             transfersNeeded={summary.money.transfersNeeded}
             baseCurrency={summary.money.baseCurrency}
-            onClick={navigateToSettle}
+            onClick={navigateToSpend}
           />
 
           <DecisionsCard
